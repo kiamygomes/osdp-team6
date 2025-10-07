@@ -115,7 +115,7 @@ jobs:
       - store_artifacts:
           path: test-results/circleci
 
-  # Job 5: Integration Tests with Real Credentials (Optional - Branch Restricted)
+   # Job 5: Integration Tests with Real Credentials (Optional - Branch Restricted)
   integration_test:
     docker:
       - image: cimg/python:3.11
@@ -123,16 +123,38 @@ jobs:
     steps:
       - attach_workspace:
           at: . # Attach the workspace persisted from 'build'
+
+      # 🚨 ADD THIS NEW STEP 🚨
+      - run:
+          name: "Set Non-Interactive OAuth Flag"
+          command: |
+            # Set the flag to False/non-interactive mode for the CI environment
+            echo 'export OAUTH_INTERACTIVE_FLAG=false' >> $BASH_ENV
+            source $BASH_ENV
+            echo "OAUTH_INTERACTIVE_FLAG is set to: $OAUTH_INTERACTIVE_FLAG"
+
       - run:
           name: "Verify Environment Variables"
           command: |
             echo "Checking for required environment variables..."
+            # Check for the flag and the credentials
+            if [ -z "$OAUTH_INTERACTIVE_FLAG" ]; then
+              echo "ERROR: OAUTH_INTERACTIVE_FLAG is not set."
+              exit 1
+            fi
+
+            if [ "$OAUTH_INTERACTIVE_FLAG" == "true" ]; then
+              echo "FATAL ERROR: OAUTH_INTERACTIVE_FLAG is true on CI."
+              exit 1
+            fi
+
             if [ -z "$GMAIL_CLIENT_ID" ] || [ -z "$GMAIL_CLIENT_SECRET" ] || [ -z "$GMAIL_REFRESH_TOKEN" ]; then
               echo "WARNING: Missing Gmail environment variables. Integration tests may be skipped."
               echo "Required: GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN"
             else
               echo "All required environment variables are present."
             fi
+            
       - run:
           name: "Activate Venv and Create Test Results Directory"
           command: |
@@ -142,9 +164,8 @@ jobs:
           name: "Execute Integration Test Suite with Real API Calls"
           command: |
             source .venv/bin/activate
-            # Run integration tests that require real Gmail API connectivity
-            # These will use environment variables for authentication
-            # Note: No coverage tracking for integration tests - they test component interactions
+            # The python code for authentication must now rely on 
+            # OAUTH_INTERACTIVE_FLAG=false and the GMAIL_* environment variables.
             pytest -m "integration and not local_credentials" \
                    --junitxml=test-results/integration/junit.xml -v \
                    --no-cov
