@@ -1,8 +1,5 @@
 """Tests for the mail client service Pydantic models."""
 
-import pytest
-from pydantic import ValidationError
-
 from mail_client_service.models import (
     ErrorResponse,
     MessageDetail,
@@ -19,7 +16,7 @@ def test_message_summary_creation():
         from_="sender@example.com",
         to="recipient@example.com",
         date="2023-01-01",
-        subject="Test Subject"
+        subject="Test Subject",
     )
     # Assertions
     assert summary.id == "msg_123"
@@ -33,7 +30,7 @@ def test_message_summary_from_alias():
         **{"from": "sender@example.com"},  # Using alias
         to="recipient@example.com",
         date="2023-01-01",
-        subject="Test Subject"
+        subject="Test Subject",
     )
     # Assertions
     assert summary.from_ == "sender@example.com"
@@ -47,7 +44,7 @@ def test_message_detail_creation():
         to="recipient@example.com",
         date="2023-01-01",
         subject="Test Subject",
-        body="Message body"
+        body="Message body",
     )
     # Assertions
     assert detail.body == "Message body"
@@ -60,7 +57,7 @@ def test_message_list_response():
         from_="sender@example.com",
         to="recipient@example.com",
         date="2023-01-01",
-        subject="Subject"
+        subject="Subject",
     )
     # Act
     response = MessageListResponse(messages=[message], count=1)

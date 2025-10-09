@@ -18,6 +18,7 @@ def mock_client():
     """Create a mock client for testing."""
     return Mock(spec=Client)
 
+
 @pytest.fixture
 def mock_message():
     """Create a mock message for testing."""
@@ -29,6 +30,7 @@ def mock_message():
     msg.subject = "Test Subject"
     msg.body = "Test body content"
     return msg
+
 
 @pytest.fixture
 def test_client_with_mock(mock_client):
@@ -184,9 +186,12 @@ def test_message_summary_model():
 def test_message_detail_model():
     """Test MessageDetail model."""
     detail = MessageDetail(
-        id="msg_123", from_="sender@example.com",
-        to="recipient@example.com",date="2024-01-01",
-        subject="Test", body="Body",
+        id="msg_123",
+        from_="sender@example.com",
+        to="recipient@example.com",
+        date="2024-01-01",
+        subject="Test",
+        body="Body",
     )
     # Assertions
     assert detail.id == "msg_123"
