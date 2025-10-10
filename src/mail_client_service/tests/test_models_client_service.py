@@ -9,7 +9,7 @@ from mail_client_service.models import (
 )
 
 
-def test_message_summary_creation():
+def test_message_summary_creation() -> None:
     """Test MessageSummary model creation."""
     summary = MessageSummary(
         id="msg_123",
@@ -23,7 +23,7 @@ def test_message_summary_creation():
     assert summary.from_ == "sender@example.com"
 
 
-def test_message_summary_from_alias():
+def test_message_summary_from_alias() -> None:
     """Test MessageSummary 'from' field alias works."""
     summary = MessageSummary(
         id="msg_123",
@@ -36,7 +36,7 @@ def test_message_summary_from_alias():
     assert summary.from_ == "sender@example.com"
 
 
-def test_message_detail_creation():
+def test_message_detail_creation() -> None:
     """Test MessageDetail model creation."""
     detail = MessageDetail(
         id="msg_123",
@@ -50,7 +50,7 @@ def test_message_detail_creation():
     assert detail.body == "Message body"
 
 
-def test_message_list_response():
+def test_message_list_response() -> None:
     """Test MessageListResponse model."""
     message = MessageSummary(
         id="msg_1",
@@ -66,7 +66,7 @@ def test_message_list_response():
     assert response.count == 1
 
 
-def test_success_response():
+def test_success_response() -> None:
     """Test SuccessResponse model."""
     response = SuccessResponse(success=True, message="Success!")
     # Assertions
@@ -74,7 +74,7 @@ def test_success_response():
     assert response.message == "Success!"
 
 
-def test_error_response():
+def test_error_response() -> None:
     """Test ErrorResponse model."""
     response = ErrorResponse(error="Error occurred", detail="More info")
     # Assertions
@@ -82,7 +82,7 @@ def test_error_response():
     assert response.detail == "More info"
 
 
-def test_error_response_without_detail():
+def test_error_response_without_detail() -> None:
     """Test ErrorResponse without optional detail."""
     response = ErrorResponse(error="Error occurred")
     # Assertions
