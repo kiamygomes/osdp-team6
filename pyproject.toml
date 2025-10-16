@@ -44,7 +44,7 @@ per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "
 [tool.mypy]
 strict = true
 explicit_package_bases = true # Required for src layout
-mypy_path = ["src/mail_client_api/src", "src/gmail_client_impl/src"]
+mypy_path = [".", "src", "src/mail_client_api/src", "src/gmail_client_impl/src"]
 ignore_missing_imports = false
 warn_unused_ignores = false
 exclude = [

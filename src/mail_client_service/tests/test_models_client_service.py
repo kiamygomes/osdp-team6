@@ -48,6 +48,15 @@ def test_message_summary_from_alias() -> None:
 
 def test_message_detail_creation() -> None:
     """Test MessageDetail model creation."""
+    detail = MessageDetail(
+        id="msg_123",
+        **{"from": "sender@example.com"},  # Use alias
+        to="recipient@example.com",
+        date="2023-01-01",
+        subject="Test Subject",
+        body="Message body",
+    )
+    # Assertions
     # Arrange
     payload = {
         "id": "msg_123",
@@ -70,6 +79,7 @@ def test_message_list_response() -> None:
     # Arrange
     message = MessageSummary(
         id="msg_1",
+        **{"from": "sender@example.com"},  # Use alias
         **{"from": "sender@example.com"},  # Use alias
         to="recipient@example.com",
         date="2023-01-01",
