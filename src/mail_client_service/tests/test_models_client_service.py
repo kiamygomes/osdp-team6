@@ -13,7 +13,7 @@ def test_message_summary_creation() -> None:
     """Test MessageSummary model creation."""
     summary = MessageSummary(
         id="msg_123",
-        from_="sender@example.com",
+        **{"from": "sender@example.com"},  # Use alias
         to="recipient@example.com",
         date="2023-01-01",
         subject="Test Subject",
@@ -40,7 +40,7 @@ def test_message_detail_creation() -> None:
     """Test MessageDetail model creation."""
     detail = MessageDetail(
         id="msg_123",
-        from_="sender@example.com",
+        **{"from": "sender@example.com"},  # Use alias
         to="recipient@example.com",
         date="2023-01-01",
         subject="Test Subject",
@@ -54,7 +54,7 @@ def test_message_list_response() -> None:
     """Test MessageListResponse model."""
     message = MessageSummary(
         id="msg_1",
-        from_="sender@example.com",
+        **{"from": "sender@example.com"},  # Use alias
         to="recipient@example.com",
         date="2023-01-01",
         subject="Subject",
@@ -84,7 +84,7 @@ def test_error_response() -> None:
 
 def test_error_response_without_detail() -> None:
     """Test ErrorResponse without optional detail."""
-    response = ErrorResponse(error="Error occurred")
+    response = ErrorResponse(error="Error occurred", detail=None)
     # Assertions
     assert response.error == "Error occurred"
     assert response.detail is None

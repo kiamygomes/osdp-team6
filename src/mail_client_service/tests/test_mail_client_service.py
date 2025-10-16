@@ -64,7 +64,7 @@ def test_get_mail_client_runtime_error() -> None:
         with pytest.raises(HTTPException) as exc_info:
             get_mail_client()
         # Assertions
-        assert exc_info.value.status_code == HTTPException(status_code=503).status_code
+        assert exc_info.value.status_code == 503
         assert "Authentication error" in str(exc_info.value.detail)
 
 
@@ -76,7 +76,7 @@ def test_get_messages_summary_success(test_client_with_mock: Mock, mock_message:
 
     response = client.get("/messages")
     # Assertions
-    assert response.status_code == HTTPException(status_code=200).status_code
+    assert response.status_code == 200
     data = response.json()
     assert len(data) == 1
     assert data[0]["id"] == "msg_123"
@@ -90,7 +90,7 @@ def test_get_messages_summary_with_max_results(test_client_with_mock: Mock) -> N
 
     response = client.get("/messages?max_results=5")
     # Assertions
-    assert response.status_code == HTTPException(status_code=200).status_code
+    assert response.status_code == 200
     mock_client.get_messages.assert_called_once_with(max_results=5)
 
 
@@ -101,7 +101,7 @@ def test_get_messages_summary_client_exception(test_client_with_mock: Mock) -> N
 
     response = client.get("/messages")
     # Assertions
-    assert response.status_code == HTTPException(status_code=500).status_code
+    assert response.status_code == 500
     assert "Failed to fetch messages" in response.json()["detail"]
 
 
@@ -112,7 +112,7 @@ def test_get_message_detail_success(test_client_with_mock: Mock, mock_message: M
 
     response = client.get("/messages/msg_123")
     # Assertions
-    assert response.status_code == HTTPException
+    assert response.status_code == 200
     data = response.json()
     assert data["id"] == "msg_123"
     assert data["from_"] == "sender@example.com"
@@ -126,7 +126,7 @@ def test_get_message_detail_not_found(test_client_with_mock: Mock) -> None:
 
     response = client.get("/messages/nonexistent")
     # Assertions
-    assert response.status_code == HTTPException(status_code=404).status_code
+    assert response.status_code == 404
     assert "not found or inaccessible" in response.json()["detail"]
 
 
@@ -137,7 +137,7 @@ def test_mark_message_as_read_success(test_client_with_mock: Mock) -> None:
 
     response = client.post("/messages/msg_123/mark-as-read")
     # Assertions
-    assert response.status_code == HTTPException(status_code=200).status_code
+    assert response.status_code == 200
     assert "marked as read" in response.json()["message"]
     mock_client.mark_as_read.assert_called_once_with("msg_123")
 
@@ -149,7 +149,7 @@ def test_mark_message_as_read_failure(test_client_with_mock: Mock) -> None:
 
     response = client.post("/messages/msg_123/mark-as-read")
     # Assertions
-    assert response.status_code == HTTPException(status_code=500).status_code
+    assert response.status_code == 500
     assert "Failed to mark message" in response.json()["detail"]
 
 
@@ -160,7 +160,7 @@ def test_delete_message_success(test_client_with_mock: Mock) -> None:
 
     response = client.delete("/messages/msg_123")
     # Assertions
-    assert response.status_code == HTTPException(status_code=200).status_code
+    assert response.status_code == 200
     assert "deleted" in response.json()["message"]
     mock_client.delete_message.assert_called_once_with("msg_123")
 
@@ -172,7 +172,7 @@ def test_delete_message_failure(test_client_with_mock: Mock) -> None:
 
     response = client.delete("/messages/msg_123")
     # Assertions
-    assert response.status_code == HTTPException(status_code=500).status_code
+    assert response.status_code == 500
     assert "Failed to delete message" in response.json()["detail"]
 
 

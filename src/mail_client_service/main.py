@@ -5,6 +5,7 @@ from fastapi import APIRouter, Depends, FastAPI, HTTPException
 from fastapi.responses import JSONResponse
 from pydantic import BaseModel
 
+import gmail_client_impl 
 from mail_client_api import Client, get_client
 
 logger = logging.getLogger(__name__)
