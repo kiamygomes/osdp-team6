@@ -17,27 +17,31 @@ class ServiceMessage(Message):
 
     @property
     def id(self) -> str:
-        return getattr(self._detail, "id", "")
+        return self._detail.id or ""
 
     @property
     def from_(self) -> str:
-        return getattr(self._detail, "from_", "")
+        return self._detail.from_ or ""
 
     @property
     def to(self) -> str:
-        return getattr(self._detail, "to", "")
+        if isinstance(self._detail, MessageDetail):
+            return self._detail.to or ""
+        return ""
 
     @property
     def date(self) -> str:
-        return getattr(self._detail, "date", "")
+        return self._detail.date or ""
 
     @property
     def subject(self) -> str:
-        return getattr(self._detail, "subject", "")
+        return self._detail.subject or ""
 
     @property
     def body(self) -> str:
-        return getattr(self._detail, "body", "")
+        if isinstance(self._detail, MessageDetail):
+            return self._detail.body or ""
+        return ""
 
 
 class ServiceClientAdapter(Client):
