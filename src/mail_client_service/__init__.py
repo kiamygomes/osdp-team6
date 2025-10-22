@@ -1,3 +1,1 @@
-from .main import app
-
-__all__ = ["app"]
+from mail_client_service.main import app
