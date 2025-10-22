@@ -4,7 +4,9 @@ version = "0.1.0"
 description = "Template repository for a mail client"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+    "fastapi","pydantic","httpx","attrs",
+]
 
 [project.optional-dependencies]
 dev = [
@@ -42,9 +44,12 @@ per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "
 [tool.mypy]
 strict = true
 explicit_package_bases = true # Required for src layout
-mypy_path = ["src/mail_client_api/src", "src/mail_client_gmail_impl/src"]
+mypy_path = [".", "src", "src/mail_client_api/src", "src/gmail_client_impl/src"]
 ignore_missing_imports = false
 warn_unused_ignores = false
+exclude = [
+    "src/mail_client_service_client/",
+]
 
 # Allow untyped imports for specific modules
 [[tool.mypy.overrides]]
@@ -53,13 +58,19 @@ module = [
     "googleapiclient.*",
     "gmail_client_impl.*",
     "mail_client_api.*",
+    "mail_client_service.*",
+    "mail_client_adapter.*",
+    "src.mail_client_service_client.*",
+    "mail_client_service_client.*",
 ]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 pythonpath = [
     ".", 
-    "src"
+    "src",
+    "src/mail_client_api/src", 
+    "src/gmail_client_impl/src"
 ]
 testpaths = ["tests", "src/*/tests"]
 addopts = ["--cov", "--cov-report=term-missing", "--import-mode=importlib"]
@@ -73,7 +84,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["*/tests/*", "*/__main__.py"]
+omit = ["*/tests/*", "*/__main__.py", "src/mail_client_service_client/*", "src/mail_client_adapter/*"]
 
 [tool.coverage.report]
 fail_under = 85 # Justification: A high threshold ensures most code is tested.
@@ -81,4 +92,10 @@ exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
+]
+
+[dependency-groups]
+dev = [
+    "requests>=2.32.5",
+    "uvicorn>=0.37.0",
 ]
