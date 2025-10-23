@@ -29,7 +29,7 @@ def test_service_get_messages_with_real_client() -> None:
 
     try:
         client = TestClient(app)
-        response = client.get("/messages?max_results=2")
+        response = client.get("/messages")
 
         # If we get 503, credentials weren't available - skip the test
         if response.status_code == HTTPStatus.SERVICE_UNAVAILABLE:
