@@ -12,6 +12,7 @@ import logging
 from typing import Annotated
 
 from fastapi import APIRouter, Depends, FastAPI, HTTPException, Response
+from gmail_client_impl import register
 from mail_client_api import Client, get_client
 
 from .constants import (
@@ -34,6 +35,8 @@ from .constants import (
 from .models import MessageDetail, MessageSummary
 
 logger = logging.getLogger(__name__)
+
+register()
 
 
 app = FastAPI(
