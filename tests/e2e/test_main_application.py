@@ -192,6 +192,7 @@ if __name__ == "__main__":
                 check=True,
                 timeout=60,  # Shorter timeout for CI
                 cwd=str(main_script.parent),
+                env=os.environ.copy(), # Use current env vars
             )
 
             # Assert that the script's output contains expected text
@@ -221,9 +222,13 @@ if __name__ == "__main__":
     except subprocess.TimeoutExpired:
         pytest.fail("CI E2E test timed out")
     except subprocess.CalledProcessError as e:
-        pytest.fail(
-            f"CI E2E test failed when running main_ci.py.\nExit Code: {e.returncode}\nStdout: {e.stdout}\nStderr: {e.stderr}",
-        )
+        # Check if it's a credentials issue - if so, skip instead of failing
+        if "No valid credentials found" in e.stdout or "No valid credentials found" in e.stderr:
+            pytest.skip("Skipping CI E2E test: No valid Gmail credentials available in CircleCI environment")
+        else:
+            pytest.fail(
+                f"CI E2E test failed when running main_ci.py.\nExit Code: {e.returncode}\nStdout: {e.stdout}\nStderr: {e.stderr}",
+            )
     finally:
         # Clean up temporary file
         if ci_main_script.exists():
@@ -317,6 +322,7 @@ except ImportError as e:
             check=True,
             timeout=30,
             cwd=str(main_script.parent),  # Run from the script's directory
+            env=os.environ.copy(),  # Use current env vars
         )
 
         assert "All imports successful" in result.stdout
