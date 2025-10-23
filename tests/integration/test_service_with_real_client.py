@@ -13,17 +13,23 @@ from gmail_client_impl import GmailClient
 @pytest.mark.circleci
 def test_service_get_messages_with_real_client() -> None:
     """Test FastAPI endpoints call real GmailClient."""
+    credentials_available = False
+
     def get_real_client() -> GmailClient:
+        nonlocal credentials_available
         # Handle missing credentials in CircleCI env
         try:
-            return GmailClient(interactive=False)
+            client = GmailClient(interactive=False)
+            credentials_available = True
+            return client
         except RuntimeError:
             try:
-                return GmailClient(interactive=True)
+                client = GmailClient(interactive=True)
+                credentials_available = True
+                return client
             except (RuntimeError, FileNotFoundError):
-                # Re-raise the original error to be caught below
-                msg = "No valid credentials available"
-                raise RuntimeError(msg) from None
+                credentials_available = False
+                pytest.skip("No valid credentials available for integration test")
 
     app.dependency_overrides[get_mail_client] = get_real_client
 
@@ -31,16 +37,7 @@ def test_service_get_messages_with_real_client() -> None:
         client = TestClient(app)
         response = client.get("/messages")
 
-        # If we get 503, credentials weren't available - skip the test
-        if response.status_code == HTTPStatus.SERVICE_UNAVAILABLE:
-            response_data = response.json()
-            if "Authentication error" in response_data.get("detail", "") or \
-               "Failed to initialize" in response_data.get("detail", ""):
-                pytest.skip("No valid credentials available for integration test")
-            # If it's a different 503 error, fail the test
-            pytest.fail(f"Service unavailable: {response_data.get('detail')}")
-
-        # Otherwise, expect success
+        # This code only runs if credentials were available
         assert response.status_code == HTTPStatus.OK, f"Expected 200, got {response.status_code}: {response.json()}"
         messages = response.json()
         assert isinstance(messages, list), f"Expected list, got {type(messages)}"
