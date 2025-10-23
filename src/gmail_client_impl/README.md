@@ -159,6 +159,38 @@ except Exception as e:
 3. **Local Credentials File**
    - `credentials.json` (downloaded from Google Cloud Console)
 
+## Quick Start
+
+1. **Setup Google OAuth credentials** (see Authentication Setup section above)
+
+2. **First-time setup** (interactive):
+   ```bash
+   # This will open a browser for OAuth consent
+   uv run python -c "
+   import gmail_client_impl
+   from mail_client_api import get_client
+   client = get_client(interactive=True)
+   print('Setup complete!')
+   "
+   ```
+
+3. **Regular usage** (non-interactive):
+   ```python
+   import gmail_client_impl
+   from mail_client_api import get_client
+   
+   client = get_client(interactive=False)
+   
+   # List recent messages
+   for msg in client.get_messages(max_results=5):
+       print(f"{msg.date}: {msg.subject}")
+   
+   # Process messages
+   for msg in client.get_messages(max_results=10):
+       if "important" in msg.subject.lower():
+           client.mark_as_read(msg.id)
+   ```
+
 ## Testing
 ```bash
 uv run pytest src/gmail_client_impl/tests/ -q

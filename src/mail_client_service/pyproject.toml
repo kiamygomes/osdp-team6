@@ -1,0 +1,22 @@
+[project]
+name = "mail_client_service"
+version = "0.1.0"
+description = "FastAPI web service for mail client operations"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.104.0",
+    "pydantic>=2.0.0",
+    "uvicorn>=0.24.0",
+]
+
+[tool.uv.sources]
+mail_client_api = { workspace = true }
+gmail_client_impl = { workspace = true }
+
+[tool.hatch.build.targets.wheel]
+packages = ["."]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"

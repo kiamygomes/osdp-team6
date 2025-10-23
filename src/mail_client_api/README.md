@@ -75,6 +75,41 @@ client.mark_as_read(important.id)
 3. Publish a factory (`get_client_impl`) and assign it to `mail_client_api.get_client`.
 4. Honour the `interactive` flag (prompting only when `True`).
 
+## Quick Start
+
+1. **Install an implementation** (e.g., Gmail client):
+   ```python
+   import gmail_client_impl  # This registers the implementation
+   ```
+
+2. **Use the client**:
+   ```python
+   from mail_client_api import get_client
+   
+   client = get_client(interactive=False)
+   
+   # List recent messages
+   for message in client.get_messages(max_results=5):
+       print(f"{message.from_}: {message.subject}")
+   
+   # Get full message content
+   if messages := list(client.get_messages(max_results=1)):
+       full_msg = client.get_message(messages[0].id)
+       print(f"Body: {full_msg.body}")
+   ```
+
+3. **Alternative: Use the HTTP adapter for remote access**:
+   ```python
+   from mail_client_adapter import ServiceClientAdapter
+   
+   # Requires running: uv run uvicorn src.mail_client_service.main:app --reload
+   client = ServiceClientAdapter("http://localhost:8000")
+   
+   # Same interface as above
+   for message in client.get_messages(max_results=5):
+       print(f"{message.from_}: {message.subject}")
+   ```
+
 ## Testing
 ```bash
 uv run pytest src/mail_client_api/tests/ -q

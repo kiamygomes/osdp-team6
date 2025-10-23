@@ -21,8 +21,10 @@ This project is built on the principle of "programming integrated over time." Th
 
 The project is a `uv` workspace containing four primary packages:
 
-3.  **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for what actions a mail client can perform (e.g., `get_messages`).
-4.  **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation that uses the Google API to perform the actions defined in the `Client` abstraction.
+1.  **`mail_client_api`**: Defines the abstract `Client` base class (ABC). This is the contract for what actions a mail client can perform (e.g., `get_messages`).
+2.  **`gmail_client_impl`**: Provides the `GmailClient` class, a concrete implementation that uses the Google API to perform the actions defined in the `Client` abstraction.
+3.  **`mail_client_service`**: A FastAPI web service that wraps the Gmail client functionality and exposes it through HTTP REST endpoints.
+4.  **`mail_client_adapter`**: An HTTP client adapter that implements the `Client` interface by making calls to remote mail services, enabling distributed access to mail functionality.
 
 ## Project Structure
 
@@ -30,7 +32,10 @@ The project is a `uv` workspace containing four primary packages:
 ta-assignment/
 ├── src/                          # Source packages (uv workspace members)
 │   ├── mail_client_api/          # Abstract mail client base class (ABC)  
-│   └── gmail_client_impl/        # Gmail-specific client implementation
+│   ├── gmail_client_impl/        # Gmail-specific client implementation
+│   ├── mail_client_service/      # FastAPI web service wrapper
+│   ├── mail_client_adapter/      # HTTP client adapter implementation
+│   └── mail_client_service_client/ # Auto-generated HTTP client
 ├── tests/                        # Integration and E2E tests
 │   ├── integration/              # Component integration tests
 │   └── e2e/                      # End-to-end application tests
@@ -107,6 +112,12 @@ To run the main demonstration script:
 ```bash
 uv run python main.py
 ```
+
+To run the FastAPI mail client service:
+```bash
+uv run uvicorn src.mail_client_service.main:app --reload
+```
+This starts the web service at `http://localhost:8000` with automatic reloading on code changes.
 
 ### Running the Toolchain
 

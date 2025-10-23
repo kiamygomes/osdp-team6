@@ -316,15 +316,20 @@ Status codes indicate the type of error (see Error Handling Strategy table above
 
 ### Development
 ```bash
-# Install dependencies
-pip install fastapi uvicorn
+# Using uv (recommended - from project root)
+uv run uvicorn src.mail_client_service.main:app --reload
 
-# Run the service
+# Alternative: using pip/uvicorn directly
+pip install fastapi uvicorn
 uvicorn mail_client_service.main:app --reload
 ```
 
 ### Production
 ```bash
+# Using uv (recommended)
+uv run uvicorn src.mail_client_service.main:app --host 0.0.0.0 --port 8000
+
+# Alternative: using uvicorn directly
 uvicorn mail_client_service.main:app --host 0.0.0.0 --port 8000
 ```
 

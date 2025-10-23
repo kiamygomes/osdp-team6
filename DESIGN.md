@@ -1,4 +1,4 @@
-# Design Document: HW1 New Components
+# Design Document: Mail Client System Architecture
 
 ## Introduction
 
@@ -8,23 +8,39 @@ This repository serves as a professional-grade template for a modern Python proj
 
 The project emphasizes a strict separation of concerns, dependency injection, and a comprehensive, automated toolchain to enforce code quality and best practices. The system is built on the principle of "programming integrated over time" with component-based design where each component has a single responsibility.
 
-## HW1 New Components
+## System Components
 
-For HW1, we added two new components to the existing mail client system:
+The mail client system consists of four main components that work together to provide flexible, distributed mail functionality:
 
-### 1. Mail Client Service (`mail_client_service`)
-A FastAPI web service that wraps the existing Gmail client functionality and exposes it through HTTP endpoints. The service:
+### 1. Mail Client API (`mail_client_api`)
+The foundational abstract base class that defines the contract for all mail client implementations:
+- Defines the `Client` ABC with abstract methods for mail operations
+- Provides the `Message` interface for consistent data structures
+- Includes factory functions for dependency injection
+- Ensures interface stability across different implementations
+
+### 2. Gmail Client Implementation (`gmail_client_impl`)
+A concrete implementation of the `Client` interface that integrates with Google's Gmail API:
+- Implements all abstract methods from the `Client` interface
+- Handles OAuth2 authentication and token management
+- Translates Gmail API responses to standard `Message` objects
+- Provides direct access to Gmail functionality
+
+### 3. Mail Client Service (`mail_client_service`)
+A FastAPI web service that wraps the Gmail client functionality and exposes it through HTTP endpoints:
 - Uses dependency injection to get a mail client instance
-- Provides REST endpoints for mail operations
+- Provides REST endpoints for mail operations (`GET`, `POST`, `DELETE`)
 - Handles error mapping to appropriate HTTP status codes
 - Uses Pydantic models for request/response serialization
+- Includes comprehensive error handling and logging
 
-### 2. Mail Client Adapter (`mail_client_adapter`) 
-An HTTP client that implements the existing `Client` interface by making calls to remote mail services. The adapter:
+### 4. Mail Client Adapter (`mail_client_adapter`) 
+An HTTP client that implements the `Client` interface by making calls to remote mail services:
 - Implements the same `Client` interface as the Gmail client
 - Uses an auto-generated HTTP client to communicate with services
-- Translates HTTP responses back to domain Message objects
-- Provides the same method signatures as the original interface
+- Translates HTTP responses back to domain `Message` objects
+- Provides transparent remote access with identical method signatures
+- Enables distributed mail client functionality
 
 ### Data Models
 

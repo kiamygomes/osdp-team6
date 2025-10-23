@@ -174,8 +174,53 @@ Example:
 ok = client.mark_as_read("abc123")
 print("Marked as read:", ok)
 ```
+## Quick Start
+
+1. **Start the mail client service**:
+   ```bash
+   uv run uvicorn src.mail_client_service.main:app --reload
+   ```
+
+2. **Use the adapter**:
+   ```python
+   from mail_client_adapter import ServiceClientAdapter
+   
+   # Connect to the running service
+   client = ServiceClientAdapter("http://localhost:8000")
+   
+   # Use exactly like any other Client implementation
+   messages = list(client.get_messages(max_results=5))
+   for msg in messages:
+       print(f"{msg.from_}: {msg.subject}")
+   
+   # Get full message details
+   if messages:
+       full_msg = client.get_message(messages[0].id)
+       print(f"Body: {full_msg.body}")
+       
+       # Mark as read and delete
+       client.mark_as_read(messages[0].id)
+       client.delete_message(messages[0].id)
+   ```
+
+3. **Testing**:
+   ```bash
+   # Test the adapter (requires running service)
+   uv run pytest src/mail_client_adapter/tests/ -v
+   ```
+
 ## Summary of Function
 - `ServiceMessage` standardizes data returned by the Mail Client Service into the same structure as the original local client.
 - `ServiceClientAdapter` translates local client method calls into HTTP requests handled by the auto-generated FastAPI client.
 - All operations return consistent, predictable types — either `ServiceMessage` objects or boolean success values.
 - This adapter completes the "third bridge" in the system architecture, enabling distributed access to the mail client service without breaking the client interface.
+
+## Testing
+```bash
+# Unit tests (no service required)
+uv run pytest src/mail_client_adapter/tests/ -v
+
+# Integration tests (requires running service)
+uv run uvicorn src.mail_client_service.main:app --reload &
+uv run pytest tests/integration/ -k adapter -v
+```

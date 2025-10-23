@@ -1,124 +1,213 @@
-# mail-client-api-service-client
-A client library for accessing Mail Client API Service
+# Mail Client API Service Client
+
+An auto-generated HTTP client library for accessing the Mail Client API Service. This client is generated from the FastAPI service's OpenAPI specification and provides type-safe access to all mail operations.
+
+## Overview
+
+This package contains the auto-generated HTTP client used by the `mail_client_adapter` to communicate with the `mail_client_service`. It provides:
+
+- **Type-safe API calls**: Generated from OpenAPI spec with full type annotations
+- **Sync and Async support**: Both blocking and non-blocking request methods
+- **Automatic serialization**: Pydantic models for request/response handling
+- **Error handling**: Proper HTTP status code and error response handling
 
 ## Usage
-First, create a client:
+
+### Basic Client Creation
 
 ```python
 from mail_client_api_service_client import Client
 
-client = Client(base_url="https://api.example.com")
+# Create client pointing to local development server
+client = Client(base_url="http://localhost:8000")
 ```
 
-If the endpoints you're going to hit require authentication, use `AuthenticatedClient` instead:
+### Making API Calls
 
 ```python
-from mail_client_api_service_client import AuthenticatedClient
+from mail_client_api_service_client.api.default import (
+    get_messages_summary_messages_get,
+    get_message_detail_messages_message_id_get,
+    delete_message_messages_message_id_delete,
+    mark_message_as_read_messages_message_id_mark_as_read_post,
+)
 
-client = AuthenticatedClient(base_url="https://api.example.com", token="SuperSecretToken")
+# Get list of messages
+messages = get_messages_summary_messages_get.sync(client=client, max_results=10)
+
+# Get specific message details
+message_detail = get_message_detail_messages_message_id_get.sync(
+    client=client, 
+    message_id="msg_123"
+)
+
+# Mark message as read
+mark_message_as_read_messages_message_id_mark_as_read_post.sync(
+    client=client,
+    message_id="msg_123"
+)
+
+# Delete message
+delete_message_messages_message_id_delete.sync(
+    client=client,
+    message_id="msg_123"
+)
 ```
 
-Now call your endpoint and use your models:
+### Async Usage
 
 ```python
-from mail_client_api_service_client.models import MyDataModel
-from mail_client_api_service_client.api.my_tag import get_my_data_model
+from mail_client_api_service_client.api.default import get_messages_summary_messages_get
+
+async def get_messages_async():
+    async with client as client:
+        messages = await get_messages_summary_messages_get.asyncio(
+            client=client, 
+            max_results=10
+        )
+        return messages
+```
+
+### Detailed Response Information
+
+```python
 from mail_client_api_service_client.types import Response
 
-with client as client:
-    my_data: MyDataModel = get_my_data_model.sync(client=client)
-    # or if you need more info (e.g. status_code)
-    response: Response[MyDataModel] = get_my_data_model.sync_detailed(client=client)
+# Get detailed response with status code and headers
+response: Response = get_messages_summary_messages_get.sync_detailed(
+    client=client, 
+    max_results=10
+)
+
+if response.status_code == 200:
+    messages = response.parsed
+    print(f"Retrieved {len(messages)} messages")
+else:
+    print(f"Error: {response.status_code}")
 ```
 
-Or do the same thing with an async version:
+## Available Endpoints
+
+The client provides access to all Mail Client Service endpoints:
+
+### GET /messages
+- **Function**: `get_messages_summary_messages_get.sync(client, max_results=10)`
+- **Purpose**: Retrieve list of message summaries
+- **Returns**: List of `MessageSummary` objects
+
+### GET /messages/{message_id}
+- **Function**: `get_message_detail_messages_message_id_get.sync(client, message_id)`
+- **Purpose**: Get full details of a specific message
+- **Returns**: `MessageDetail` object
+
+### POST /messages/{message_id}/mark-as-read
+- **Function**: `mark_message_as_read_messages_message_id_mark_as_read_post.sync(client, message_id)`
+- **Purpose**: Mark a message as read
+- **Returns**: Success response
+
+### DELETE /messages/{message_id}
+- **Function**: `delete_message_messages_message_id_delete.sync(client, message_id)`
+- **Purpose**: Delete a message
+- **Returns**: Success response
+
+## Data Models
+
+The client includes Pydantic models for type-safe data handling:
 
 ```python
-from mail_client_api_service_client.models import MyDataModel
-from mail_client_api_service_client.api.my_tag import get_my_data_model
+from mail_client_api_service_client.models import MessageSummary, MessageDetail
+
+# MessageSummary - for listing operations
+summary = MessageSummary(
+    id="msg_123",
+    from_="sender@example.com",
+    to="recipient@example.com", 
+    date="2024-01-01",
+    subject="Test Subject"
+)
+
+# MessageDetail - for full message content
+detail = MessageDetail(
+    id="msg_123",
+    from_="sender@example.com",
+    to="recipient@example.com",
+    date="2024-01-01", 
+    subject="Test Subject",
+    body="Full message content..."
+)
+```
+
+## Integration with Mail Client Adapter
+
+This client is primarily used by the `mail_client_adapter` package to provide HTTP-based access to mail operations:
+
+```python
+# Example from mail_client_adapter
+from mail_client_api_service_client.client import Client as AutoGeneratedClient
+from mail_client_api_service_client.api.default import get_messages_summary_messages_get
+
+class ServiceClientAdapter:
+    def __init__(self, base_url: str):
+        self._client = AutoGeneratedClient(base_url=base_url)
+    
+    def get_messages(self, max_results: int = 10):
+        resp = get_messages_summary_messages_get.sync(
+            client=self._client, 
+            max_results=max_results
+        )
+        # Process and return messages...
+```
+
+## Error Handling
+
+The client handles HTTP errors gracefully:
+
+```python
 from mail_client_api_service_client.types import Response
 
-async with client as client:
-    my_data: MyDataModel = await get_my_data_model.asyncio(client=client)
-    response: Response[MyDataModel] = await get_my_data_model.asyncio_detailed(client=client)
+try:
+    response = get_message_detail_messages_message_id_get.sync_detailed(
+        client=client,
+        message_id="invalid_id"
+    )
+    
+    if response.status_code == 404:
+        print("Message not found")
+    elif response.status_code == 500:
+        print("Server error")
+    else:
+        message = response.parsed
+        print(f"Retrieved: {message.subject}")
+        
+except Exception as e:
+    print(f"Network error: {e}")
 ```
 
-By default, when you're calling an HTTPS API it will attempt to verify that SSL is working correctly. Using certificate verification is highly recommended most of the time, but sometimes you may need to authenticate to a server (especially an internal server) using a custom certificate bundle.
+## Development Notes
 
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken",
-    verify_ssl="/path/to/certificate_bundle.pem",
-)
+- This client is **auto-generated** from the FastAPI service's OpenAPI specification
+- **Do not manually edit** the generated code - changes will be overwritten
+- To update the client, regenerate it from the updated service specification
+- All endpoints are in `mail_client_api_service_client.api.default` since the service doesn't use API tags
+
+## Testing
+
+```bash
+# Test the client integration (requires running service)
+uv run uvicorn src.mail_client_service.main:app --reload &
+uv run pytest src/mail_client_adapter/tests/ -v
+
+# Test with the mail client adapter
+uv run pytest tests/integration/ -v
 ```
 
-You can also disable certificate validation altogether, but beware that **this is a security risk**.
+## Client Generation
 
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken", 
-    verify_ssl=False
-)
-```
+This client was generated using `openapi-python-client` from the FastAPI service specification. To regenerate:
 
-Things to know:
-1. Every path/method combo becomes a Python module with four functions:
-    1. `sync`: Blocking request that returns parsed data (if successful) or `None`
-    1. `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful.
-    1. `asyncio`: Like `sync` but async instead of blocking
-    1. `asyncio_detailed`: Like `sync_detailed` but async instead of blocking
+1. Start the mail client service
+2. Download the OpenAPI spec from `http://localhost:8000/openapi.json`
+3. Use `openapi-python-client` to generate the updated client
+4. Replace the generated files in this directory
 
-1. All path/query params, and bodies become method arguments.
-1. If your endpoint had any tags on it, the first tag will be used as a module name for the function (my_tag above)
-1. Any endpoint which did not have a tag will be in `mail_client_api_service_client.api.default`
-
-## Advanced customizations
-
-There are more settings on the generated `Client` class which let you control more runtime behavior, check out the docstring on that class for more info. You can also customize the underlying `httpx.Client` or `httpx.AsyncClient` (depending on your use-case):
-
-```python
-from mail_client_api_service_client import Client
-
-def log_request(request):
-    print(f"Request event hook: {request.method} {request.url} - Waiting for response")
-
-def log_response(response):
-    request = response.request
-    print(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
-
-client = Client(
-    base_url="https://api.example.com",
-    httpx_args={"event_hooks": {"request": [log_request], "response": [log_response]}},
-)
-
-# Or get the underlying httpx client to modify directly with client.get_httpx_client() or client.get_async_httpx_client()
-```
-
-You can even set the httpx client directly, but beware that this will override any existing settings (e.g., base_url):
-
-```python
-import httpx
-from mail_client_api_service_client import Client
-
-client = Client(
-    base_url="https://api.example.com",
-)
-# Note that base_url needs to be re-set, as would any shared cookies, headers, etc.
-client.set_httpx_client(httpx.Client(base_url="https://api.example.com", proxies="http://localhost:8030"))
-```
-
-## Building / publishing this package
-This project uses [Poetry](https://python-poetry.org/) to manage dependencies  and packaging.  Here are the basics:
-1. Update the metadata in pyproject.toml (e.g. authors, version)
-1. If you're using a private repository, configure it with Poetry
-    1. `poetry config repositories.<your-repository-name> <url-to-your-repository>`
-    1. `poetry config http-basic.<your-repository-name> <username> <password>`
-1. Publish the client with `poetry publish --build -r <your-repository-name>` or, if for public PyPI, just `poetry publish --build`
-
-If you want to install this client into another project without publishing it (e.g. for development) then:
-1. If that project **is using Poetry**, you can simply do `poetry add <path-to-this-client>` from that project
-1. If that project is not using Poetry:
-    1. Build a wheel with `poetry build -f wheel`
-    1. Install that wheel from the other project `pip install <path-to-wheel>`
+**Note**: This is typically done automatically as part of the build process and should not require manual intervention.
