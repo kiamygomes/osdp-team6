@@ -1,14 +1,17 @@
 """Tests for the ServiceClientAdapter."""
 
+from __future__ import annotations
+
 import pytest
 from unittest.mock import Mock, patch
+from typing import Any
 
 from mail_client_adapter.adapter import ServiceClientAdapter, ServiceMessage
 
 
 class MockMessageSummary:
     """Mock class that behaves like MessageSummary."""
-    def __init__(self, id=None, from_=None, date=None, subject=None):
+    def __init__(self, id: str | None = None, from_: str | None = None, date: str | None = None, subject: str | None = None) -> None:
         self.id = id
         self.from_ = from_
         self.date = date
@@ -17,7 +20,7 @@ class MockMessageSummary:
 
 class MockMessageDetail:
     """Mock class that behaves like MessageDetail."""
-    def __init__(self, id=None, from_=None, to=None, date=None, subject=None, body=None):
+    def __init__(self, id: str | None = None, from_: str | None = None, to: str | None = None, date: str | None = None, subject: str | None = None, body: str | None = None) -> None:
         self.id = id
         self.from_ = from_
         self.to = to
@@ -29,7 +32,7 @@ class MockMessageDetail:
 class TestServiceMessage:
     """Test the ServiceMessage wrapper class."""
 
-    def test_service_message_with_summary(self):
+    def test_service_message_with_summary(self) -> None:
         """Test ServiceMessage with MessageSummary."""
         summary = MockMessageSummary(
             id="test-id",
@@ -38,7 +41,7 @@ class TestServiceMessage:
             subject="Test Subject"
         )
         
-        msg = ServiceMessage(summary)
+        msg = ServiceMessage(summary)  # type: ignore[arg-type]
         
         assert msg.id == "test-id"
         assert msg.from_ == "sender@example.com"
@@ -48,7 +51,7 @@ class TestServiceMessage:
         assert msg.body == ""  # Not available in summary
 
     @patch('mail_client_adapter.adapter.MessageDetail', MockMessageDetail)
-    def test_service_message_with_detail(self):
+    def test_service_message_with_detail(self) -> None:
         """Test ServiceMessage with MessageDetail."""
         detail = MockMessageDetail(
             id="test-id",
@@ -59,7 +62,7 @@ class TestServiceMessage:
             body="Test Body"
         )
         
-        msg = ServiceMessage(detail)
+        msg = ServiceMessage(detail)  # type: ignore[arg-type]
         
         assert msg.id == "test-id"
         assert msg.from_ == "sender@example.com"
@@ -68,7 +71,7 @@ class TestServiceMessage:
         assert msg.subject == "Test Subject"
         assert msg.body == "Test Body"
 
-    def test_service_message_with_none_values(self):
+    def test_service_message_with_none_values(self) -> None:
         """Test ServiceMessage handles None values gracefully."""
         summary = MockMessageSummary(
             id=None,
@@ -77,7 +80,7 @@ class TestServiceMessage:
             subject=None
         )
         
-        msg = ServiceMessage(summary)
+        msg = ServiceMessage(summary)  # type: ignore[arg-type]
         
         assert msg.id == ""
         assert msg.from_ == ""
@@ -88,13 +91,13 @@ class TestServiceMessage:
 class TestServiceClientAdapter:
     """Test the ServiceClientAdapter class."""
 
-    def test_init(self):
+    def test_init(self) -> None:
         """Test adapter initialization."""
         adapter = ServiceClientAdapter("http://localhost:8000")
         assert adapter._client is not None
 
     @patch('mail_client_adapter.adapter.get_messages_summary_messages_get')
-    def test_get_messages_success(self, mock_get_messages):
+    def test_get_messages_success(self, mock_get_messages: Mock) -> None:
         """Test successful message retrieval."""
         # Setup
         mock_summaries = [
@@ -115,7 +118,7 @@ class TestServiceClientAdapter:
         mock_get_messages.sync.assert_called_once_with(client=adapter._client, max_results=2)
 
     @patch('mail_client_adapter.adapter.get_messages_summary_messages_get')
-    def test_get_messages_empty_response(self, mock_get_messages):
+    def test_get_messages_empty_response(self, mock_get_messages: Mock) -> None:
         """Test get_messages with empty response."""
         mock_get_messages.sync.return_value = []
         
@@ -125,7 +128,7 @@ class TestServiceClientAdapter:
         assert len(messages) == 0
 
     @patch('mail_client_adapter.adapter.get_messages_summary_messages_get')
-    def test_get_messages_none_response(self, mock_get_messages):
+    def test_get_messages_none_response(self, mock_get_messages: Mock) -> None:
         """Test get_messages with None response."""
         mock_get_messages.sync.return_value = None
         
@@ -136,7 +139,7 @@ class TestServiceClientAdapter:
 
     @patch('mail_client_adapter.adapter.get_message_detail_messages_message_id_get')
     @patch('mail_client_adapter.adapter.MessageDetail', MockMessageDetail)
-    def test_get_message_success(self, mock_get_message):
+    def test_get_message_success(self, mock_get_message: Mock) -> None:
         """Test successful single message retrieval."""
         mock_detail = MockMessageDetail(
             id="test-id",
@@ -156,7 +159,7 @@ class TestServiceClientAdapter:
         mock_get_message.sync.assert_called_once_with(client=adapter._client, message_id="test-id")
 
     @patch('mail_client_adapter.adapter.get_message_detail_messages_message_id_get')
-    def test_get_message_not_found(self, mock_get_message):
+    def test_get_message_not_found(self, mock_get_message: Mock) -> None:
         """Test get_message when message not found."""
         mock_get_message.sync.return_value = None
         
@@ -166,7 +169,7 @@ class TestServiceClientAdapter:
             adapter.get_message("test-id")
 
     @patch('mail_client_adapter.adapter.delete_message_messages_message_id_delete')
-    def test_delete_message_success(self, mock_delete):
+    def test_delete_message_success(self, mock_delete: Mock) -> None:
         """Test successful message deletion."""
         mock_delete.sync.return_value = {"success": True}
         
@@ -177,7 +180,7 @@ class TestServiceClientAdapter:
         mock_delete.sync.assert_called_once_with(client=adapter._client, message_id="test-id")
 
     @patch('mail_client_adapter.adapter.delete_message_messages_message_id_delete')
-    def test_delete_message_failure(self, mock_delete):
+    def test_delete_message_failure(self, mock_delete: Mock) -> None:
         """Test message deletion failure."""
         mock_delete.sync.side_effect = Exception("API Error")
         
@@ -187,7 +190,7 @@ class TestServiceClientAdapter:
         assert result is False
 
     @patch('mail_client_adapter.adapter.delete_message_messages_message_id_delete')
-    def test_delete_message_none_response(self, mock_delete):
+    def test_delete_message_none_response(self, mock_delete: Mock) -> None:
         """Test delete_message with None response."""
         mock_delete.sync.return_value = None
         
@@ -197,7 +200,7 @@ class TestServiceClientAdapter:
         assert result is False
 
     @patch('mail_client_adapter.adapter.mark_message_as_read_messages_message_id_mark_as_read_post')
-    def test_mark_as_read_success(self, mock_mark_read):
+    def test_mark_as_read_success(self, mock_mark_read: Mock) -> None:
         """Test successful mark as read."""
         mock_mark_read.sync.return_value = {"success": True}
         
@@ -208,7 +211,7 @@ class TestServiceClientAdapter:
         mock_mark_read.sync.assert_called_once_with(client=adapter._client, message_id="test-id")
 
     @patch('mail_client_adapter.adapter.mark_message_as_read_messages_message_id_mark_as_read_post')
-    def test_mark_as_read_failure(self, mock_mark_read):
+    def test_mark_as_read_failure(self, mock_mark_read: Mock) -> None:
         """Test mark as read failure."""
         mock_mark_read.sync.side_effect = Exception("API Error")
         
@@ -218,7 +221,7 @@ class TestServiceClientAdapter:
         assert result is False
 
     @patch('mail_client_adapter.adapter.mark_message_as_read_messages_message_id_mark_as_read_post')
-    def test_mark_as_read_none_response(self, mock_mark_read):
+    def test_mark_as_read_none_response(self, mock_mark_read: Mock) -> None:
         """Test mark_as_read with None response."""
         mock_mark_read.sync.return_value = None
         
