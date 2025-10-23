@@ -7,7 +7,6 @@ from unittest.mock import Mock, patch
 
 import pytest
 import uvicorn
-
 from mail_client_adapter.adapter import ServiceClientAdapter
 
 

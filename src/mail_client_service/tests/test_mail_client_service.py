@@ -6,8 +6,8 @@ from unittest.mock import Mock, patch
 import pytest
 from fastapi import HTTPException
 from fastapi.testclient import TestClient
-
 from mail_client_api import Client, Message
+
 from mail_client_service.constants import (
     HTTP_200_OK,
     HTTP_204_NO_CONTENT,
