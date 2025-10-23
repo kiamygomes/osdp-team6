@@ -55,19 +55,6 @@ exclude = [
 namespace_packages = true
 follow_imports = "silent"
 
-# Allow untyped imports for specific modules
-[[tool.mypy.overrides]]
-module = [
-    "google.*",
-    "googleapiclient.*",
-    "gmail_client_impl.*",
-    "mail_client_api.*",
-    "mail_client_service.*",
-    "mail_client_adapter.*",
-    "src.mail_client_service_client.*",
-    "mail_client_service_client.*",
-]
-ignore_missing_imports = true
 
 [tool.pytest.ini_options]
 pythonpath = [
