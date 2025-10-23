@@ -1,13 +1,18 @@
-# CONTRIBUTING.md
+# Contributing to Mail Client Service
+
 ## Architecture Overview
 ### Components
 
-The repository is a `uv` workspace with these primary parts:
-- `src/mail_client_api/` — abstract contract for a mail client (the interface).
-- `src/gmail_client_impl/` — concrete Gmail implementation of that contract.
-- `main.py` — small demo entrypoint (handy for local auth / smoke runs).
-- `tests/` — integration & end-to-end tests (pytest + markers).
-- `docs/` — MkDocs docs sources.
+The repository consists of several Python packages organized in a modular architecture:
+
+- `src/mail_client_api/` — Abstract contract for a mail client (the interface)
+- `src/gmail_client_impl/` — Concrete Gmail implementation of that contract
+- `src/mail_client_adapter/` — Adapter layer for mail client implementations
+- `src/mail_client_service/` — FastAPI service exposing the mail client functionality
+- `src/mail_client_service_client/` — Generated API client for the service
+- `main.py` — Demo entrypoint for local testing
+- `tests/` — Integration & end-to-end tests (pytest + markers)
+- `docs/` — MkDocs documentation sources
 
 At runtime, code depends on the interface (`mail_client_api.Client`), not the implementation. The Gmail implementation is swappable (e.g., with a mock or a future provider).
 
@@ -76,23 +81,38 @@ What this enables:
 ```
 .
 ├── src/
-│   ├── mail_client_api/        # Abstract Client (ABC) and public types
-│   └── gmail_client_impl/      # GmailClient concrete implementation
+│   ├── mail_client_api/           # Abstract Client (ABC) and public types
+│   ├── gmail_client_impl/         # GmailClient concrete implementation
+│   ├── mail_client_adapter/       # Adapter layer for mail clients
+│   ├── mail_client_service/       # FastAPI service implementation
+│   └── mail_client_service_client/# Generated API client
 ├── tests/
-│   ├── integration/            # interface <-> implementation tests
-│   └── e2e/                    # full-flow tests (may require credentials)
-├── docs/                       # MkDocs sources
-├── .circleci/                  # CircleCI pipeline config
-├── main.py                     # local demo / auth bootstrap
-├── pyproject.toml              # workspace + tools configuration
-├── mkdocs.yml                  # docs site configuration
-└── uv.lock                     # locked dependency set
+│   ├── integration/              # Interface <-> implementation tests
+│   └── e2e/                     # Full-flow tests (may require credentials)
+├── docs/                        # MkDocs sources
+│   ├── api/                     # API documentation
+│   └── *.md                     # General documentation
+├── .circleci/                   # CircleCI pipeline config
+├── main.py                      # Local demo / auth bootstrap
+├── pyproject.toml              # Root workspace configuration
+├── requirements.txt            # Top-level dependencies
+├── mkdocs.yml                  # Documentation site configuration
+└── credentials.json            # Gmail API credentials (gitignored)
 ```
 ### Configuration Files
-- Root `pyproject.toml`
-- Declares the `uv` workspace, shared dependencies, and tool configs (Ruff, Pytest, MyPy, etc.).
-- Component-level `pyproject.toml`
-- Not used in this template. Components are Python packages under `src/`. If you later split packages into independent build units, give each one its own `pyproject.toml` (PEP 621 metadata + local deps).
+
+#### Root Configuration
+- `pyproject.toml`: Declares workspace configuration, shared dependencies, and tool configs (Ruff, Pytest, MyPy)
+- `requirements.txt`: Lists top-level project dependencies
+- `mkdocs.yml`: Documentation site configuration
+
+#### Package Configuration
+Each package under `src/` has its own configuration:
+- Individual `pyproject.toml` files for package-specific metadata and dependencies
+- Package-specific README files describing usage and functionality
+- Type stub files (`py.typed`) for static typing support
+
+The modular structure allows packages to be used independently or as part of the complete system.
 
 ### Package Structure
 
@@ -155,24 +175,60 @@ uv run pytest --cov=src --cov-report=html
 # open htmlcov/index.html
 ```
 
-## Development Tools
-### Workspace Management
+## Development Setup
 
-Install & sync
+### Prerequisites
+- Python 3.11 or higher
+- Gmail API credentials (for Gmail implementation)
+
+### Initial Setup
+
+1. Clone the repository:
 ```bash
-uv sync --all-packages --extra dev
+git clone https://github.com/kiamygomes/osdp-team6.git
+cd osdp-team6
 ```
-Common tasks
-```bash
-# run the demo (also performs first-time OAuth)
-uv run python main.py
 
-# tests (pick the scope you need)
-uv run pytest                            # all tests
-uv run pytest src/                       # fast/unit-like tests under src (if present)
-uv run pytest -m integration             # only integration
-uv run pytest -m e2e                     # only end-to-end
-uv run pytest -m 'not local_credentials' # skip tests that need local files
+2. Install dependencies:
+```bash
+pip install -r requirements.txt
+```
+
+3. Set up Gmail credentials (for Gmail implementation):
+- Place `credentials.json` in the root directory
+- Run main.py to complete OAuth flow
+```bash
+python main.py
+```
+
+### Development Workflow
+
+#### Running Components
+```bash
+# Start the FastAPI service
+cd src/mail_client_service
+uvicorn main:app --reload
+
+# Run the demo client
+python main.py
+
+# Generate API client (if service interface changes)
+cd src/mail_client_service_client
+datamodel-codegen ...
+```
+
+#### Running Tests
+```bash
+# Run all tests
+pytest
+
+# Run specific test categories
+pytest -m integration             # Only integration tests
+pytest -m e2e                     # Only end-to-end tests
+pytest -m 'not local_credentials' # Skip tests requiring credentials
+
+# Run tests with coverage
+pytest --cov=src --cov-report=html
 ```
 
 Root vs. component config
