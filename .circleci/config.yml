@@ -246,6 +246,7 @@ workflows:
       - circleci_test:
           requires:
             - unit_test # Run after unit tests pass
+          context: gmail-client # Add context for credentials
           filters:
             branches:
               ignore:
@@ -304,6 +305,7 @@ workflows:
       - circleci_test:
           requires:
             - unit_test
+          context: gmail-client # Add context for credentials
           filters:
             branches:
               only:
