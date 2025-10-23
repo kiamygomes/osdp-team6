@@ -14,10 +14,10 @@ from mail_client_adapter.adapter import ServiceClientAdapter
 def start_real_service() -> None:
     """Start the FastAPI service with real Gmail credentials for E2E testing."""
     import sys
-    import os
+    from pathlib import Path
 
     # Add src to path to avoid module name conflicts
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
+    sys.path.insert(0, str(Path(__file__).parent / ".." / ".." / "src"))
 
     from mail_client_service.main import app  # type: ignore[import-untyped]
 

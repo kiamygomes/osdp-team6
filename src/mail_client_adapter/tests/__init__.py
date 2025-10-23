@@ -1,1 +1,1 @@
-# Tests for mail client adapter
+"""Tests for mail client adapter."""

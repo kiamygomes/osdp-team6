@@ -1,1 +1,1 @@
-# Mail client adapter package
+"""Mail client adapter package."""

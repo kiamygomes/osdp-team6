@@ -1,21 +1,23 @@
 """Integration tests for mail_client_adapter → running mail_client_service → mocked gmail_client_impl."""
 
-import pytest
 import threading
 import time
-import uvicorn
 from unittest.mock import Mock, patch
+
+import pytest
+import uvicorn
+
 from mail_client_adapter.adapter import ServiceClientAdapter
 
 
 def start_test_server() -> None:
     """Start the FastAPI service in a separate thread for testing."""
     import sys
-    import os
-    
+    from pathlib import Path
+
     # Add src to path to avoid module name conflicts
-    sys.path.insert(0, os.path.join(os.path.dirname(__file__), '..', '..', 'src'))
-    
+    sys.path.insert(0, str(Path(__file__).parent / ".." / ".." / "src"))
+
     from mail_client_service.main import app  # type: ignore[import-untyped]
 
     # Mock the gmail client to avoid needing real credentials
