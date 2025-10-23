@@ -1,0 +1,5 @@
+fastapi[all]
+httpx
+pydantic
+uvicorn
+attrs

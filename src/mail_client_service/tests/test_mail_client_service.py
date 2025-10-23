@@ -8,7 +8,17 @@ from fastapi import HTTPException
 from fastapi.testclient import TestClient
 
 from mail_client_api import Client, Message
-from mail_client_service.main import MessageDetail, MessageSummary, app, get_mail_client
+from mail_client_service.constants import (
+    HTTP_200_OK,
+    HTTP_204_NO_CONTENT,
+    HTTP_401_UNAUTHORIZED,
+    HTTP_404_NOT_FOUND,
+    HTTP_429_TOO_MANY_REQUESTS,
+    HTTP_500_INTERNAL_SERVER_ERROR,
+    HTTP_503_SERVICE_UNAVAILABLE,
+)
+from mail_client_service.main import AuthError, NotFoundError, RateLimitError, app, get_mail_client
+from mail_client_service.models import MessageDetail, MessageSummary
 
 
 # Test Fixtures
@@ -64,7 +74,7 @@ def test_get_mail_client_runtime_error() -> None:
         with pytest.raises(HTTPException) as exc_info:
             get_mail_client()
         # Assertions
-        assert exc_info.value.status_code == 503
+        assert exc_info.value.status_code == HTTP_503_SERVICE_UNAVAILABLE
         assert "Authentication error" in str(exc_info.value.detail)
 
 
@@ -76,11 +86,13 @@ def test_get_messages_summary_success(test_client_with_mock: Mock, mock_message:
 
     response = client.get("/messages")
     # Assertions
-    assert response.status_code == 200
+    assert response.status_code == HTTP_200_OK
     data = response.json()
     assert len(data) == 1
     assert data[0]["id"] == "msg_123"
+    assert data[0]["from"] == "sender@example.com"
     mock_client.get_messages.assert_called_once_with(max_results=10)
+
 
 
 def test_get_messages_summary_with_max_results(test_client_with_mock: Mock) -> None:
@@ -90,7 +102,7 @@ def test_get_messages_summary_with_max_results(test_client_with_mock: Mock) -> N
 
     response = client.get("/messages?max_results=5")
     # Assertions
-    assert response.status_code == 200
+    assert response.status_code == HTTP_200_OK
     mock_client.get_messages.assert_called_once_with(max_results=5)
 
 
@@ -101,8 +113,30 @@ def test_get_messages_summary_client_exception(test_client_with_mock: Mock) -> N
 
     response = client.get("/messages")
     # Assertions
-    assert response.status_code == 500
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
     assert "Failed to fetch messages" in response.json()["detail"]
+
+
+def test_get_messages_summary_rate_limit_error(test_client_with_mock: Mock) -> None:
+    """Test rate limit error handling."""
+    client, mock_client = test_client_with_mock
+    mock_client.get_messages.side_effect = RateLimitError("Rate limit exceeded")
+
+    response = client.get("/messages")
+    # Assertions
+    assert response.status_code == HTTP_429_TOO_MANY_REQUESTS
+    assert "Rate limit exceeded" in response.json()["detail"]
+
+
+def test_get_messages_summary_auth_error(test_client_with_mock: Mock) -> None:
+    """Test authentication error handling."""
+    client, mock_client = test_client_with_mock
+    mock_client.get_messages.side_effect = AuthError("Auth failed")
+
+    response = client.get("/messages")
+    # Assertions
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+    assert "Authentication failed" in response.json()["detail"]
 
 
 def test_get_message_detail_success(test_client_with_mock: Mock, mock_message: Message) -> None:
@@ -112,22 +146,55 @@ def test_get_message_detail_success(test_client_with_mock: Mock, mock_message: M
 
     response = client.get("/messages/msg_123")
     # Assertions
-    assert response.status_code == 200
+    assert response.status_code == HTTP_200_OK
     data = response.json()
     assert data["id"] == "msg_123"
-    assert data["from_"] == "sender@example.com"
+    assert data["from"] == "sender@example.com"
     mock_client.get_message.assert_called_once_with("msg_123")
 
 
 def test_get_message_detail_not_found(test_client_with_mock: Mock) -> None:
     """Test message not found error."""
     client, mock_client = test_client_with_mock
-    mock_client.get_message.side_effect = Exception("Not found")
+    mock_client.get_message.side_effect = NotFoundError("Not found")
 
     response = client.get("/messages/nonexistent")
     # Assertions
-    assert response.status_code == 404
-    assert "not found or inaccessible" in response.json()["detail"]
+    assert response.status_code == HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_get_message_detail_auth_error(test_client_with_mock: Mock) -> None:
+    """Test authentication error when fetching message detail."""
+    client, mock_client = test_client_with_mock
+    mock_client.get_message.side_effect = AuthError("Auth failed")
+
+    response = client.get("/messages/msg_123")
+    # Assertions
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+    assert "Authentication failed" in response.json()["detail"]
+
+
+def test_get_message_detail_rate_limit_error(test_client_with_mock: Mock) -> None:
+    """Test rate limit error when fetching message detail."""
+    client, mock_client = test_client_with_mock
+    mock_client.get_message.side_effect = RateLimitError("Rate limit exceeded")
+
+    response = client.get("/messages/msg_123")
+    # Assertions
+    assert response.status_code == HTTP_429_TOO_MANY_REQUESTS
+    assert "Rate limit exceeded" in response.json()["detail"]
+
+
+def test_get_message_detail_unexpected_error(test_client_with_mock: Mock) -> None:
+    """Test unexpected error when fetching message detail."""
+    client, mock_client = test_client_with_mock
+    mock_client.get_message.side_effect = Exception("Unexpected error")
+
+    response = client.get("/messages/msg_123")
+    # Assertions
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
+    assert "Failed to fetch message" in response.json()["detail"]
 
 
 def test_mark_message_as_read_success(test_client_with_mock: Mock) -> None:
@@ -137,8 +204,8 @@ def test_mark_message_as_read_success(test_client_with_mock: Mock) -> None:
 
     response = client.post("/messages/msg_123/mark-as-read")
     # Assertions
-    assert response.status_code == 200
-    assert "marked as read" in response.json()["message"]
+    assert response.status_code == HTTP_204_NO_CONTENT
+    assert response.content == b""
     mock_client.mark_as_read.assert_called_once_with("msg_123")
 
 
@@ -149,7 +216,51 @@ def test_mark_message_as_read_failure(test_client_with_mock: Mock) -> None:
 
     response = client.post("/messages/msg_123/mark-as-read")
     # Assertions
-    assert response.status_code == 500
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
+    assert "Failed to mark message" in response.json()["detail"]
+
+
+def test_mark_message_as_read_not_found(test_client_with_mock: Mock) -> None:
+    """Test mark as read with not found error."""
+    client, mock_client = test_client_with_mock
+    mock_client.mark_as_read.side_effect = NotFoundError("Message not found")
+
+    response = client.post("/messages/msg_123/mark-as-read")
+    # Assertions
+    assert response.status_code == HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_mark_message_as_read_auth_error(test_client_with_mock: Mock) -> None:
+    """Test mark as read with authentication error."""
+    client, mock_client = test_client_with_mock
+    mock_client.mark_as_read.side_effect = AuthError("Auth failed")
+
+    response = client.post("/messages/msg_123/mark-as-read")
+    # Assertions
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+    assert "Authentication failed" in response.json()["detail"]
+
+
+def test_mark_message_as_read_rate_limit(test_client_with_mock: Mock) -> None:
+    """Test mark as read with rate limit error."""
+    client, mock_client = test_client_with_mock
+    mock_client.mark_as_read.side_effect = RateLimitError("Rate limit exceeded")
+
+    response = client.post("/messages/msg_123/mark-as-read")
+    # Assertions
+    assert response.status_code == HTTP_429_TOO_MANY_REQUESTS
+    assert "Rate limit exceeded" in response.json()["detail"]
+
+
+def test_mark_message_as_read_unexpected_error(test_client_with_mock: Mock) -> None:
+    """Test mark as read with unexpected error."""
+    client, mock_client = test_client_with_mock
+    mock_client.mark_as_read.side_effect = Exception("Unexpected error")
+
+    response = client.post("/messages/msg_123/mark-as-read")
+    # Assertions
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
     assert "Failed to mark message" in response.json()["detail"]
 
 
@@ -160,8 +271,8 @@ def test_delete_message_success(test_client_with_mock: Mock) -> None:
 
     response = client.delete("/messages/msg_123")
     # Assertions
-    assert response.status_code == 200
-    assert "deleted" in response.json()["message"]
+    assert response.status_code == HTTP_204_NO_CONTENT
+    assert response.content == b""
     mock_client.delete_message.assert_called_once_with("msg_123")
 
 
@@ -172,14 +283,64 @@ def test_delete_message_failure(test_client_with_mock: Mock) -> None:
 
     response = client.delete("/messages/msg_123")
     # Assertions
-    assert response.status_code == 500
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
+    assert "Failed to delete message" in response.json()["detail"]
+
+
+def test_delete_message_not_found(test_client_with_mock: Mock) -> None:
+    """Test delete with not found error."""
+    client, mock_client = test_client_with_mock
+    mock_client.delete_message.side_effect = NotFoundError("Message not found")
+
+    response = client.delete("/messages/msg_123")
+    # Assertions
+    assert response.status_code == HTTP_404_NOT_FOUND
+    assert "not found" in response.json()["detail"].lower()
+
+
+def test_delete_message_auth_error(test_client_with_mock: Mock) -> None:
+    """Test delete with authentication error."""
+    client, mock_client = test_client_with_mock
+    mock_client.delete_message.side_effect = AuthError("Auth failed")
+
+    response = client.delete("/messages/msg_123")
+    # Assertions
+    assert response.status_code == HTTP_401_UNAUTHORIZED
+    assert "Authentication failed" in response.json()["detail"]
+
+
+def test_delete_message_rate_limit(test_client_with_mock: Mock) -> None:
+    """Test delete with rate limit error."""
+    client, mock_client = test_client_with_mock
+    mock_client.delete_message.side_effect = RateLimitError("Rate limit exceeded")
+
+    response = client.delete("/messages/msg_123")
+    # Assertions
+    assert response.status_code == HTTP_429_TOO_MANY_REQUESTS
+    assert "Rate limit exceeded" in response.json()["detail"]
+
+
+def test_delete_message_unexpected_error(test_client_with_mock: Mock) -> None:
+    """Test delete with unexpected error."""
+    client, mock_client = test_client_with_mock
+    mock_client.delete_message.side_effect = Exception("Unexpected error")
+
+    response = client.delete("/messages/msg_123")
+    # Assertions
+    assert response.status_code == HTTP_500_INTERNAL_SERVER_ERROR
     assert "Failed to delete message" in response.json()["detail"]
 
 
 # Model tests (no HTTP needed)
 def test_message_summary_model() -> None:
     """Test MessageSummary model."""
-    summary = MessageSummary(id="msg_123", from_="test@example.com")
+    summary = MessageSummary(
+        id="msg_123",
+        **{"from": "test@example.com"},
+        to="recipient@example.com",
+        date="2024-01-01",
+        subject="Test Subject",
+    )
     assert summary.id == "msg_123"
     assert summary.from_ == "test@example.com"
 
@@ -188,7 +349,7 @@ def test_message_detail_model() -> None:
     """Test MessageDetail model."""
     detail = MessageDetail(
         id="msg_123",
-        from_="sender@example.com",
+        **{"from": "sender@example.com"},
         to="recipient@example.com",
         date="2024-01-01",
         subject="Test",
@@ -196,4 +357,5 @@ def test_message_detail_model() -> None:
     )
     # Assertions
     assert detail.id == "msg_123"
+    assert detail.from_ == "sender@example.com"
     assert detail.body == "Body"
