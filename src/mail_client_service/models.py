@@ -1,8 +1,10 @@
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class MessageSummary(BaseModel):
     """Summary information for a message."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str = Field(..., description="Unique message identifier")
     from_: str = Field(..., alias="from", description="Sender email address")
@@ -10,12 +12,11 @@ class MessageSummary(BaseModel):
     date: str = Field(..., description="Message date")
     subject: str = Field(..., description="Message subject")
 
-    class Config:
-        populate_by_name = True
-
 
 class MessageDetail(BaseModel):
     """Full message details including body content."""
+
+    model_config = ConfigDict(populate_by_name=True)
 
     id: str = Field(..., description="Unique message identifier")
     from_: str = Field(..., alias="from", description="Sender email address")
@@ -23,9 +24,6 @@ class MessageDetail(BaseModel):
     date: str = Field(..., description="Message date")
     subject: str = Field(..., description="Message subject")
     body: str = Field(..., description="Message body content")
-
-    class Config:
-        populate_by_name = True
 
 
 class MessageListResponse(BaseModel):

@@ -84,7 +84,7 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["*/tests/*", "*/__main__.py", "src/mail_client_service_client/*", "src/mail_client_adapter/*"]
+omit = ["*/tests/*", "*/__main__.py", "src/mail_client_service_client/*"]
 
 [tool.coverage.report]
 fail_under = 85 # Justification: A high threshold ensures most code is tested.
