@@ -1,6 +1,6 @@
 ---
 name: Bug Report
-about: Create a report to help us improve the email assistant system
+about: Create a report to help us improve the professional Python template system
 title: '[BUG] '
 labels: ['bug', 'needs-triage']
 assignees: ''
@@ -13,12 +13,15 @@ assignees: ''
 **Summary:** A clear and concise description of what the bug is.
 
 **Component(s) Affected:**
-- [ ] `mail_client_api` - Mail client abstraction
-- [ ] `gmail_client_impl` - Gmail client implementation
-- [ ] Testing infrastructure
-- [ ] CI/CD pipeline
-- [ ] Documentation
-- [ ] Authentication system
+- [ ] `mail_client_api` - Abstract base classes and interfaces
+- [ ] `gmail_client_impl` - Gmail API implementation with OAuth2
+- [ ] `mail_client_service` - FastAPI web service with REST endpoints
+- [ ] `mail_client_adapter` - HTTP client adapter for remote access
+- [ ] `mail_client_service_client` - Auto-generated HTTP client
+- [ ] Testing infrastructure (unit, integration, e2e)
+- [ ] CI/CD pipeline (CircleCI, tooling)
+- [ ] Documentation (README, mkdocs, component docs)
+- [ ] Authentication system (OAuth2, credentials)
 
 ## Expected Behavior
 
@@ -176,6 +179,15 @@ If you have ideas about what might be causing this issue or how to fix it:
 - [ ] This requires breaking changes to fix
 
 ---
+
+## Template Completion Checklist
+- [ ] Bug description is clear and specific
+- [ ] Steps to reproduce are detailed and actionable
+- [ ] Environment information is complete
+- [ ] Error messages and logs are included (with sensitive info removed)
+- [ ] Impact assessment is accurate
+- [ ] All relevant sections have been filled out
+- [ ] Irrelevant sections have been marked as not applicable
 
 **Additional Notes:**
 Add any other context about the problem here.

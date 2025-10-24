@@ -1,6 +1,6 @@
 ---
 name: Feature Request
-about: Suggest an idea or enhancement for the email assistant system
+about: Suggest an idea or enhancement for the professional Python template system
 title: '[FEATURE] '
 labels: ['enhancement', 'needs-discussion']
 assignees: ''
@@ -13,14 +13,17 @@ assignees: ''
 **Brief Description:** A clear and concise description of the feature you'd like to see added.
 
 **Component(s) Affected:**
-- [ ] `mail_client_api` - Mail client abstraction (new operations)
-- [ ] `gmail_message_impl` - Gmail message implementation
-- [ ] New component (specify name)
-- [ ] Testing infrastructure
-- [ ] CI/CD pipeline  
-- [ ] Documentation
-- [ ] Authentication system
-- [ ] Project tooling/configuration
+- [ ] `mail_client_api` - Abstract base classes and interfaces (new operations)
+- [ ] `gmail_client_impl` - Gmail API implementation with OAuth2
+- [ ] `mail_client_service` - FastAPI web service with REST endpoints
+- [ ] `mail_client_adapter` - HTTP client adapter for remote access
+- [ ] `mail_client_service_client` - Auto-generated HTTP client
+- [ ] New component (specify name and purpose)
+- [ ] Testing infrastructure (unit, integration, e2e)
+- [ ] CI/CD pipeline (CircleCI, tooling)
+- [ ] Documentation (README, mkdocs, component docs)
+- [ ] Authentication system (OAuth2, credentials)
+- [ ] Project tooling/configuration (uv, ruff, mypy)
 
 ## Problem Statement
 
@@ -279,6 +282,17 @@ Will this feature scale with system growth?
 How might this feature evolve over time?
 
 ---
+
+## Template Completion Checklist
+- [ ] Feature summary is clear and specific
+- [ ] Problem statement explains the need
+- [ ] Proposed solution is detailed with examples
+- [ ] Technical considerations are addressed
+- [ ] Implementation plan is realistic
+- [ ] Testing strategy is comprehensive
+- [ ] Documentation requirements are identified
+- [ ] All relevant sections have been filled out
+- [ ] Irrelevant sections have been marked as not applicable
 
 **Additional Context:**
 Add any other context, screenshots, or examples about the feature request here.
