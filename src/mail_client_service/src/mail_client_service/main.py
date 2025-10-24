@@ -152,6 +152,7 @@ def get_message_detail(message_id: str, client: MailClientDep) -> MessageDetail:
 @router.post("/{message_id}/mark-as-read", status_code=HTTP_204_NO_CONTENT)
 def mark_message_as_read(message_id: str, client: MailClientDep) -> Response:
     """Mark a message as read."""
+
     def _raise_mark_read_failed() -> None:
         """Raise the HTTPException for a mark-as-read failure."""
         raise HTTPException(
@@ -195,6 +196,7 @@ def mark_message_as_read(message_id: str, client: MailClientDep) -> Response:
 @router.delete("/{message_id}", status_code=HTTP_204_NO_CONTENT)
 def delete_message(message_id: str, client: MailClientDep) -> Response:
     """Delete a message."""
+
     def _raise_delete_failed() -> None:
         """Raise the HTTPException for a delete failure."""
         raise HTTPException(

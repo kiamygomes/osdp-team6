@@ -83,7 +83,7 @@ class ServiceClientAdapter(Client):
         resp = get_message_detail_messages_message_id_get.sync(
             client=self._client,
             message_id=message_id,
-            )
+        )
         if resp and isinstance(resp, MessageDetail):
             return ServiceMessage(resp)
         msg = f"Message {message_id} not found"
@@ -91,7 +91,6 @@ class ServiceClientAdapter(Client):
 
     def mark_as_read(self, message_id: str) -> bool:
         """Mark a message as read."""
-
         try:
             mark_message_as_read_messages_message_id_mark_as_read_post.sync(
                 client=self._client,

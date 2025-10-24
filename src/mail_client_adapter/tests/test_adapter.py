@@ -12,7 +12,13 @@ from mail_client_adapter.adapter import ServiceClientAdapter, ServiceMessage
 class MockMessageSummary:
     """Mock class that behaves like MessageSummary."""
 
-    def __init__(self, msg_id: str | None = None, from_: str | None = None, date: str | None = None, subject: str | None = None) -> None:
+    def __init__(
+        self,
+        msg_id: str | None = None,
+        from_: str | None = None,
+        date: str | None = None,
+        subject: str | None = None,
+    ) -> None:
         """Initialize mock message summary."""
         self.id = msg_id
         self.from_ = from_
@@ -106,8 +112,12 @@ class TestServiceClientAdapter:
         # Setup
         expected_count = 2
         mock_summaries = [
-            MockMessageSummary(msg_id="1", from_="test1@example.com", subject="Subject 1", date="2023-01-01"),
-            MockMessageSummary(msg_id="2", from_="test2@example.com", subject="Subject 2", date="2023-01-02"),
+            MockMessageSummary(
+                msg_id="1", from_="test1@example.com", subject="Subject 1", date="2023-01-01"
+            ),
+            MockMessageSummary(
+                msg_id="2", from_="test2@example.com", subject="Subject 2", date="2023-01-02"
+            ),
         ]
         mock_get_messages.sync.return_value = mock_summaries
 
@@ -120,7 +130,9 @@ class TestServiceClientAdapter:
         assert len(messages) == expected_count
         assert messages[0].id == "1"
         assert messages[1].id == "2"
-        mock_get_messages.sync.assert_called_once_with(client=adapter._client, max_results=expected_count)
+        mock_get_messages.sync.assert_called_once_with(
+            client=adapter._client, max_results=expected_count
+        )
 
     @patch("mail_client_adapter.adapter.get_messages_summary_messages_get")
     def test_get_messages_empty_response(self, mock_get_messages: Mock) -> None:
@@ -198,10 +210,10 @@ class TestServiceClientAdapter:
     def test_delete_message_none_response(self, mock_delete: Mock) -> None:
         """Test delete_message with None response (204 No Content success)."""
         mock_delete.sync.return_value = None
-        
+
         adapter = ServiceClientAdapter("http://localhost:8000")
         result = adapter.delete_message("test-id")
-        
+
         # None response means 204 No Content, which is success
         assert result is True
 
@@ -230,10 +242,9 @@ class TestServiceClientAdapter:
     def test_mark_as_read_none_response(self, mock_mark_read: Mock) -> None:
         """Test mark_as_read with None response (204 No Content success)."""
         mock_mark_read.sync.return_value = None
-        
+
         adapter = ServiceClientAdapter("http://localhost:8000")
         result = adapter.mark_as_read("test-id")
-        
+
         # None response means 204 No Content, which is success
         assert result is True
-

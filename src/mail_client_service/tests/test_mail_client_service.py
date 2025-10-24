@@ -94,7 +94,6 @@ def test_get_messages_summary_success(test_client_with_mock: Mock, mock_message:
     mock_client.get_messages.assert_called_once_with(max_results=10)
 
 
-
 def test_get_messages_summary_with_max_results(test_client_with_mock: Mock) -> None:
     """Test message summary with custom max_results."""
     client, mock_client = test_client_with_mock

@@ -4,6 +4,7 @@ This test focuses on the adapter-to-service integration without hitting real Gma
 It verifies that the adapter correctly transforms requests/responses through the HTTP layer.
 """
 
+from collections.abc import Generator
 from unittest.mock import Mock
 
 import pytest
@@ -15,7 +16,7 @@ from mail_client_api import Client, Message
 
 
 @pytest.fixture
-def mock_gmail_client() -> Client:
+def mock_gmail_client() -> Mock:
     """Create a mock Gmail client for testing."""
     mock_client = Mock(spec=Client)
 
@@ -38,7 +39,7 @@ def mock_gmail_client() -> Client:
 
 
 @pytest.fixture
-def adapter_with_service(mock_gmail_client: Client) -> ServiceClientAdapter:
+def adapter_with_service(mock_gmail_client: Mock) -> Generator[tuple[ServiceClientAdapter, Mock], None, None]:
     """Create adapter connected to FastAPI service with mocked client."""
     # Override dependency with mock
     app.dependency_overrides[get_mail_client] = lambda: mock_gmail_client
@@ -56,7 +57,7 @@ def adapter_with_service(mock_gmail_client: Client) -> ServiceClientAdapter:
 
 
 @pytest.mark.integration
-def test_adapter_get_messages_calls_service(adapter_with_service: tuple[ServiceClientAdapter, Client]) -> None:
+def test_adapter_get_messages_calls_service(adapter_with_service: tuple[ServiceClientAdapter, Mock]) -> None:
     """Test adapter.get_messages() calls service endpoint correctly."""
     adapter, mock_client = adapter_with_service
 
@@ -74,7 +75,7 @@ def test_adapter_get_messages_calls_service(adapter_with_service: tuple[ServiceC
 
 
 @pytest.mark.integration
-def test_adapter_get_message_detail_calls_service(adapter_with_service: tuple[ServiceClientAdapter, Client]) -> None:
+def test_adapter_get_message_detail_calls_service(adapter_with_service: tuple[ServiceClientAdapter, Mock]) -> None:
     """Test adapter.get_message() retrieves message details through service."""
     adapter, mock_client = adapter_with_service
 
@@ -90,9 +91,8 @@ def test_adapter_get_message_detail_calls_service(adapter_with_service: tuple[Se
     mock_client.get_message.assert_called_once_with("msg_123")
 
 
-
 @pytest.mark.integration
-def test_adapter_mark_as_read_calls_service(adapter_with_service: tuple[ServiceClientAdapter, Client]) -> None:
+def test_adapter_mark_as_read_calls_service(adapter_with_service: tuple[ServiceClientAdapter, Mock]) -> None:
     """Test adapter.mark_as_read() calls service endpoint."""
     adapter, mock_client = adapter_with_service
 
@@ -105,7 +105,7 @@ def test_adapter_mark_as_read_calls_service(adapter_with_service: tuple[ServiceC
 
 
 @pytest.mark.integration
-def test_adapter_delete_message_calls_service(adapter_with_service: tuple[ServiceClientAdapter, Client]) -> None:
+def test_adapter_delete_message_calls_service(adapter_with_service: tuple[ServiceClientAdapter, Mock]) -> None:
     """Test adapter.delete_message() calls service endpoint."""
     adapter, mock_client = adapter_with_service
 
@@ -118,7 +118,7 @@ def test_adapter_delete_message_calls_service(adapter_with_service: tuple[Servic
 
 
 @pytest.mark.integration
-def test_adapter_handles_service_404_error(adapter_with_service: tuple[ServiceClientAdapter, Client]) -> None:
+def test_adapter_handles_service_404_error(adapter_with_service: tuple[ServiceClientAdapter, Mock]) -> None:
     """Test adapter properly handles 404 from service."""
     adapter, mock_client = adapter_with_service
 
@@ -131,7 +131,7 @@ def test_adapter_handles_service_404_error(adapter_with_service: tuple[ServiceCl
 
 
 @pytest.mark.integration
-def test_adapter_handles_empty_message_list(adapter_with_service: tuple[ServiceClientAdapter, Client]) -> None:
+def test_adapter_handles_empty_message_list(adapter_with_service: tuple[ServiceClientAdapter, Mock]) -> None:
     """Test adapter handles empty message list from service."""
     adapter, mock_client = adapter_with_service
 
@@ -145,7 +145,7 @@ def test_adapter_handles_empty_message_list(adapter_with_service: tuple[ServiceC
 
 
 @pytest.mark.integration
-def test_adapter_handles_service_error_responses(adapter_with_service: tuple[ServiceClientAdapter, Client]) -> None:
+def test_adapter_handles_service_error_responses(adapter_with_service: tuple[ServiceClientAdapter, Mock]) -> None:
     """Test adapter handles various service error responses."""
     adapter, mock_client = adapter_with_service
 
@@ -158,7 +158,7 @@ def test_adapter_handles_service_error_responses(adapter_with_service: tuple[Ser
 
 
 @pytest.mark.integration
-def test_adapter_transforms_message_data_correctly(adapter_with_service: tuple[ServiceClientAdapter, Client]) -> None:
+def test_adapter_transforms_message_data_correctly(adapter_with_service: tuple[ServiceClientAdapter, Mock]) -> None:
     """Test that adapter correctly transforms Message objects through HTTP."""
     adapter, mock_client = adapter_with_service
 

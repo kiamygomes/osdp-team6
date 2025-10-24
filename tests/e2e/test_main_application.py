@@ -192,7 +192,7 @@ if __name__ == "__main__":
                 check=True,
                 timeout=60,  # Shorter timeout for CI
                 cwd=str(main_script.parent),
-                env=os.environ.copy(), # Use current env vars
+                env=os.environ.copy(),  # Use current env vars
             )
 
             # Assert that the script's output contains expected text
