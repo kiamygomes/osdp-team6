@@ -89,28 +89,27 @@ class ServiceClientAdapter(Client):
         msg = f"Message {message_id} not found"
         raise MessageNotFoundError(msg)
 
-    def delete_message(self, message_id: str) -> bool:
-        """Delete a message by ID."""
-        try:
-            resp = (
-                delete_message_messages_message_id_delete.sync(
-                    client=self._client,
-                    message_id=message_id,
-                )
-            )
-        except Exception:  # noqa: BLE001
-            return False
-        else:
-            return resp is not None
-
     def mark_as_read(self, message_id: str) -> bool:
         """Mark a message as read."""
+
         try:
-            resp = mark_message_as_read_messages_message_id_mark_as_read_post.sync(
+            mark_message_as_read_messages_message_id_mark_as_read_post.sync(
                 client=self._client,
                 message_id=message_id,
             )
-        except Exception:  # noqa: BLE001
+            # 204 No Content means success, even if resp is None
+            return True
+        except Exception:
             return False
-        else:
-            return resp is not None
+
+    def delete_message(self, message_id: str) -> bool:
+        """Delete a message by ID."""
+        try:
+            delete_message_messages_message_id_delete.sync(
+                client=self._client,
+                message_id=message_id,
+            )
+            # 204 No Content means success, even if resp is None
+            return True
+        except Exception:
+            return False

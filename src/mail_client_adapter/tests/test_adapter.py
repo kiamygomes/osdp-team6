@@ -196,13 +196,14 @@ class TestServiceClientAdapter:
 
     @patch("mail_client_adapter.adapter.delete_message_messages_message_id_delete")
     def test_delete_message_none_response(self, mock_delete: Mock) -> None:
-        """Test delete_message with None response."""
+        """Test delete_message with None response (204 No Content success)."""
         mock_delete.sync.return_value = None
-
+        
         adapter = ServiceClientAdapter("http://localhost:8000")
         result = adapter.delete_message("test-id")
-
-        assert result is False
+        
+        # None response means 204 No Content, which is success
+        assert result is True
 
     @patch("mail_client_adapter.adapter.mark_message_as_read_messages_message_id_mark_as_read_post")
     def test_mark_as_read_success(self, mock_mark_read: Mock) -> None:
@@ -227,10 +228,12 @@ class TestServiceClientAdapter:
 
     @patch("mail_client_adapter.adapter.mark_message_as_read_messages_message_id_mark_as_read_post")
     def test_mark_as_read_none_response(self, mock_mark_read: Mock) -> None:
-        """Test mark_as_read with None response."""
+        """Test mark_as_read with None response (204 No Content success)."""
         mock_mark_read.sync.return_value = None
-
+        
         adapter = ServiceClientAdapter("http://localhost:8000")
         result = adapter.mark_as_read("test-id")
+        
+        # None response means 204 No Content, which is success
+        assert result is True
 
-        assert result is False
