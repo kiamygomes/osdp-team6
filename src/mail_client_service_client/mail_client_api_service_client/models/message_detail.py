@@ -61,7 +61,7 @@ class MessageDetail:
         d = dict(src_dict)
         id = d.pop("id")
 
-        from_ = d.pop("from_")
+        from_ = d.pop("from_", None) or d.pop("from", None)
 
         to = d.pop("to")
 
