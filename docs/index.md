@@ -11,6 +11,8 @@ The mail client system demonstrates distributed architecture patterns through fo
 - **Mail Client Service**: FastAPI web service exposing mail operations through REST endpoints
 - **Mail Client Adapter**: HTTP client adapter implementing the mail client interface for remote service access
 
+Note: The repository includes an auto-generated HTTP client (`mail_client_service_client`). This generated package is stored under `src/mail_client_service_client/` as a nested package directory (`mail_client_api_service_client/`) and may not follow the `src/` layout used by the other components. See the CONTRIBUTING.md for instructions on installing or regenerating the client.
+
 ## Key Features
 
 - **Component-Based Architecture**: Clean separation of concerns with well-defined interfaces

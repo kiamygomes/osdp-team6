@@ -114,6 +114,26 @@ Each package under `src/` has its own configuration:
 
 The modular structure allows packages to be used independently or as part of the complete system.
 
+Note on the generated client
+---------------------------
+This repository includes an auto-generated HTTP client component: `src/mail_client_service_client`. The generated code lives under the directory `src/mail_client_service_client/mail_client_api_service_client/` and may use a different packaging layout (for example, a Poetry-style `pyproject.toml`) rather than the `src/` layout used by the other workspace packages.
+
+How to use the generated client:
+
+- Install editable (pip/setuptools):
+
+```bash
+pip install -e src/mail_client_service_client
+```
+
+- Or, if the package uses Poetry, run from the package directory:
+
+```bash
+cd src/mail_client_service_client && poetry install
+```
+
+If you prefer the generated client to follow the repository `src/` layout, either regenerate it with options that produce a `src/` layout or refactor the generated package into `src/mail_client_service_client/src/mail_client_service_client/` and add a PEP 621 `pyproject.toml`.
+
 ### Package Structure
 
 Each importable package (e.g., `src/mail_client_api/`, `src/gmail_client_impl/`) includes an `__init__.py` that exports the public surface and avoids side effects.

@@ -157,20 +157,19 @@ Summary information for a message.
 |-------|------|----------|-------------|
 | `id` | str | Yes | Unique message identifier |
 | `from` | str | Yes | Sender email address |
-| `to` | str | Yes | Recipient email address |
+| `to` | str | No | Recipient email address (may be omitted in summaries) |
 | `date` | str | Yes | Message date |
 | `subject` | str | Yes | Message subject |
 
 ```python
 class MessageSummary(BaseModel):
-    id: str = Field(..., description="Unique message identifier")
-    from_: str = Field(..., alias="from", description="Sender email address")
-    to: str = Field(..., description="Recipient email address")
-    date: str = Field(..., description="Message date")
-    subject: str = Field(..., description="Message subject")
+  model_config = ConfigDict(populate_by_name=True)
 
-    class Config:
-        populate_by_name = True
+  id: str = Field(..., description="Unique message identifier")
+  from_: str = Field(..., alias="from", description="Sender email address")
+  to: str | None = Field(None, description="Recipient email address")
+  date: str = Field(..., description="Message date")
+  subject: str = Field(..., description="Message subject")
 ```
 
 **Note:** The `from` field is aliased from `from_` to avoid Python keyword conflicts. The API accepts and returns `"from"` in JSON.
