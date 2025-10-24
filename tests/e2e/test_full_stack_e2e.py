@@ -182,7 +182,7 @@ class TestFullStackRealGmail:
         result = adapter.mark_as_read(message_id)
         assert result is True, "Mark as read should succeed"
 
-    @pytest.mark.skipif(not has_gmail_credentials(), reason="Requires working Gmail service")
+    @pytest.mark.skipif(not should_run_e2e(), reason="Requires working Gmail service")
     def test_mark_as_read_nonexistent_message(self, service_url: str) -> None:
         """Test marking a non-existent message as read."""
         adapter = ServiceClientAdapter(service_url)
@@ -193,7 +193,7 @@ class TestFullStackRealGmail:
         # The adapter should return False for failures
         assert result is False, "Should return False for non-existent message"
 
-    @pytest.mark.skipif(not has_gmail_credentials(), reason="Requires working Gmail service")
+    @pytest.mark.skipif(not should_run_e2e(), reason="Requires working Gmail service")
     def test_get_nonexistent_message(self, service_url: str) -> None:
         """Test getting a non-existent message."""
         from mail_client_adapter.adapter import MessageNotFoundError
