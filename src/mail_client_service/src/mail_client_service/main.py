@@ -161,9 +161,13 @@ def mark_message_as_read(message_id: str, client: MailClientDep) -> Response:
         )
 
     try:
+        # Check for message existence first. If not found, NotFoundError is raised.
+        client.get_message(message_id)
+
         if not client.mark_as_read(message_id):
             logger.error("Failed to mark message as read: %s", message_id)
             _raise_mark_read_failed()
+
         return Response(status_code=HTTP_204_NO_CONTENT)
     except NotFoundError as e:
         logger.exception("Message not found: %s", message_id)
@@ -205,6 +209,9 @@ def delete_message(message_id: str, client: MailClientDep) -> Response:
         )
 
     try:
+        # Check for message existence first. If not found, NotFoundError is raised.
+        client.get_message(message_id)
+
         if not client.delete_message(message_id):
             logger.error("Failed to delete message: %s", message_id)
             _raise_delete_failed()
