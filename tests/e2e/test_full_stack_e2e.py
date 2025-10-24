@@ -5,17 +5,21 @@ This module contains two types of E2E tests:
 2. Tests for local development that assume service is manually started
 """
 
+import logging
 import os
 import socket
 import threading
 import time
 from contextlib import closing
+from http import HTTPStatus
 
 import pytest
 import uvicorn
 from mail_client_adapter.adapter import ServiceClientAdapter
 
 from mail_client_api import Message
+
+logger = logging.getLogger(__name__)
 
 
 def find_free_port() -> int:
@@ -49,7 +53,7 @@ def wait_for_service(base_url: str, timeout: int = 10) -> bool:
     while time.time() - start_time < timeout:
         try:
             response = requests.get(f"{base_url}/docs", timeout=1)
-            if response.status_code == 200:
+            if response.status_code == HTTPStatus.OK:
                 return True
         except requests.exceptions.RequestException:
             pass
@@ -64,7 +68,7 @@ def has_gmail_credentials() -> bool:
             os.getenv("GMAIL_CLIENT_ID"),
             os.getenv("GMAIL_CLIENT_SECRET"),
             os.getenv("GMAIL_REFRESH_TOKEN"),
-        ]
+        ],
     )
 
 
@@ -130,7 +134,8 @@ class TestFullStackRealGmail:
         assert first_message.date, "Message should have a date"
 
         # Verify we respect max_results
-        assert len(messages) <= 5
+        max_results = 5
+        assert len(messages) <= max_results
 
     def test_get_message_detail(self, service_url: str) -> None:
         """Test getting a single message detail from real Gmail."""
@@ -238,7 +243,8 @@ class TestFullStackRealGmail:
             results = [f.result() for f in concurrent.futures.as_completed(futures)]
 
         # All requests should succeed
-        assert len(results) == 3
+        num_workers = 3
+        assert len(results) == num_workers
         for result in results:
             assert isinstance(result, list)
 
@@ -254,7 +260,7 @@ def test_service_health_check(service_url: str) -> None:
 
     # Check that docs endpoint is accessible
     response = requests.get(f"{service_url}/docs", timeout=5)
-    assert response.status_code == 200
+    assert response.status_code == HTTPStatus.OK
 
 
 def check_local_service() -> bool:
@@ -263,7 +269,7 @@ def check_local_service() -> bool:
 
     try:
         response = requests.get("http://localhost:8000/docs", timeout=2)
-        return response.status_code == 200
+        return response.status_code == HTTPStatus.OK
     except Exception:
         return False
 
@@ -297,11 +303,11 @@ def test_local_service_get_messages() -> None:
         if messages:
             # Validate we got real Gmail messages
             assert messages[0].id, "Message should have an ID"
-            print(f"\n Successfully retrieved {len(messages)} messages from local service")
+            logger.info("Successfully retrieved %d messages from local service", len(messages))
             if messages[0].from_:
-                print(f"  First message from: {messages[0].from_}")
+                logger.info("First message from: %s", messages[0].from_)
         else:
-            print("\n Service is running but inbox is empty")
+            logger.info("Service is running but inbox is empty")
 
     except Exception as e:
         pytest.fail(f"Test failed with error: {e}")
@@ -330,7 +336,7 @@ def test_local_service_get_message_detail() -> None:
         assert message.id == message_id
         assert message.from_
         assert message.body is not None
-        print(f"\n Successfully retrieved message detail for {message_id}")
+        logger.info("Successfully retrieved message detail for %s", message_id)
 
     except Exception as e:
         pytest.fail(f"Test failed with error: {e}")
@@ -363,7 +369,7 @@ def test_local_service_mark_as_read() -> None:
             )
 
         assert result is True
-        print(f"\n Successfully marked message {message_id} as read")
+        logger.info("Successfully marked message %s as read", message_id)
 
     except Exception as e:
         pytest.fail(f"Test failed with error: {e}")
@@ -403,9 +409,9 @@ def test_local_service_full_workflow() -> None:
         result = adapter.mark_as_read(message_id)
         if not result:
             # Don't fail the test, just note it
-            print("\n Complete workflow successful (except mark_as_read)!")
+            logger.warning("mark_as_read returned False (might already be read or API issue)")
         else:
-            print("\n Complete workflow successful!")
+            logger.info("Complete workflow successful!")
 
     except Exception as e:
         pytest.fail(f"Test failed with error: {e}")

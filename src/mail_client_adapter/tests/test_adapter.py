@@ -113,10 +113,16 @@ class TestServiceClientAdapter:
         expected_count = 2
         mock_summaries = [
             MockMessageSummary(
-                msg_id="1", from_="test1@example.com", subject="Subject 1", date="2023-01-01"
+                msg_id="1",
+                from_="test1@example.com",
+                subject="Subject 1",
+                date="2023-01-01",
             ),
             MockMessageSummary(
-                msg_id="2", from_="test2@example.com", subject="Subject 2", date="2023-01-02"
+                msg_id="2",
+                from_="test2@example.com",
+                subject="Subject 2",
+                date="2023-01-02",
             ),
         ]
         mock_get_messages.sync.return_value = mock_summaries
@@ -131,7 +137,8 @@ class TestServiceClientAdapter:
         assert messages[0].id == "1"
         assert messages[1].id == "2"
         mock_get_messages.sync.assert_called_once_with(
-            client=adapter._client, max_results=expected_count
+            client=adapter._client,
+            max_results=expected_count,
         )
 
     @patch("mail_client_adapter.adapter.get_messages_summary_messages_get")
