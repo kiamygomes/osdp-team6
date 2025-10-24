@@ -1,33 +1,33 @@
-# Design Document: Mail Client System Architecture
+# Design Document: Professional Python Template Architecture
 
 ## Introduction
 
-This repository serves as a professional-grade template for a modern Python project. It demonstrates a robust, component-based architecture by building the core components for an AI-powered email assistant that interacts with the Gmail API.
+This professional-grade Python template demonstrates component-based architecture for an AI-powered email assistant. The system showcases modern development practices through a distributed mail client with clean abstractions, dependency injection, and comprehensive tooling.
 
 ## Application Goal
 
-The project emphasizes a strict separation of concerns, dependency injection, and a comprehensive, automated toolchain to enforce code quality and best practices. The system is built on the principle of "programming integrated over time" with component-based design where each component has a single responsibility.
+The template emphasizes strict separation of concerns, interface-implementation patterns, and automated quality assurance to create maintainable, scalable software architecture. The system demonstrates distributed architecture patterns through four interconnected components that can operate both locally and remotely.
 
 ## System Components
 
 The mail client system consists of four main components that work together to provide flexible, distributed mail functionality:
 
 ### 1. Mail Client API (`mail_client_api`)
-The foundational abstract base class that defines the contract for all mail client implementations:
+**Abstract base classes and interfaces for mail client operations**
 - Defines the `Client` ABC with abstract methods for mail operations
 - Provides the `Message` interface for consistent data structures
 - Includes factory functions for dependency injection
 - Ensures interface stability across different implementations
 
 ### 2. Gmail Client Implementation (`gmail_client_impl`)
-A concrete implementation of the `Client` interface that integrates with Google's Gmail API:
+**Gmail API implementation of the mail client interface with OAuth2 authentication**
 - Implements all abstract methods from the `Client` interface
 - Handles OAuth2 authentication and token management
 - Translates Gmail API responses to standard `Message` objects
-- Provides direct access to Gmail functionality
+- Provides direct access to Gmail functionality with credential management
 
 ### 3. Mail Client Service (`mail_client_service`)
-A FastAPI web service that wraps the Gmail client functionality and exposes it through HTTP endpoints:
+**FastAPI web service exposing mail operations through REST endpoints**
 - Uses dependency injection to get a mail client instance
 - Provides REST endpoints for mail operations (`GET`, `POST`, `DELETE`)
 - Handles error mapping to appropriate HTTP status codes
@@ -35,7 +35,7 @@ A FastAPI web service that wraps the Gmail client functionality and exposes it t
 - Includes comprehensive error handling and logging
 
 ### 4. Mail Client Adapter (`mail_client_adapter`) 
-An HTTP client that implements the `Client` interface by making calls to remote mail services:
+**HTTP client adapter implementing the mail client interface for remote service access**
 - Implements the same `Client` interface as the Gmail client
 - Uses an auto-generated HTTP client to communicate with services
 - Translates HTTP responses back to domain `Message` objects

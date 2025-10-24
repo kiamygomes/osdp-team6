@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mail-client-adapter"
 version = "0.1.0"
-description = "Adapter for mail client service"
+description = "HTTP client adapter implementing the mail client interface for remote service access"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

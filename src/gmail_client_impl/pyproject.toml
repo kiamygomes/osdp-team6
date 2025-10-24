@@ -1,7 +1,7 @@
 [project]
 name = "gmail-client-impl"
 version = "0.1.0"
-description = "Add your description here"
+description = "Gmail API implementation of the mail client interface with OAuth2 authentication"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

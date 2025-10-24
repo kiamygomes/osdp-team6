@@ -1,7 +1,7 @@
 # Mail Client Service
 
 ## Overview
-The `mail_client_service` package provides a FastAPI web service that exposes mail operations through REST endpoints. It acts as an HTTP wrapper around the Mail Client API, allowing remote access to mail functionality.
+FastAPI web service exposing mail operations through REST endpoints. This package provides a production-ready HTTP API that wraps the mail client functionality, enabling remote access to mail operations with proper error handling, authentication, and documentation.
 
 ## Architecture
 

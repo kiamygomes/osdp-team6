@@ -5,12 +5,12 @@
 
 The repository consists of several Python packages organized in a modular architecture:
 
-- `src/mail_client_api/` — Abstract contract for a mail client (the interface)
-- `src/gmail_client_impl/` — Concrete Gmail implementation of that contract
-- `src/mail_client_adapter/` — Adapter layer for mail client implementations
-- `src/mail_client_service/` — FastAPI service exposing the mail client functionality
-- `src/mail_client_service_client/` — Generated API client for the service
-- `main.py` — Demo entrypoint for local testing
+- `src/mail_client_api/` — Abstract base classes and interfaces for mail client operations
+- `src/gmail_client_impl/` — Gmail API implementation of the mail client interface with OAuth2 authentication
+- `src/mail_client_adapter/` — HTTP client adapter implementing the mail client interface for remote service access
+- `src/mail_client_service/` — FastAPI web service exposing mail operations through REST endpoints
+- `src/mail_client_service_client/` — Auto-generated HTTP client for service communication
+- `main.py` — Demo entrypoint for local testing and authentication
 - `tests/` — Integration & end-to-end tests (pytest + markers)
 - `docs/` — MkDocs documentation sources
 
@@ -81,18 +81,18 @@ What this enables:
 ```
 .
 ├── src/
-│   ├── mail_client_api/           # Abstract Client (ABC) and public types
-│   ├── gmail_client_impl/         # GmailClient concrete implementation
-│   ├── mail_client_adapter/       # Adapter layer for mail clients
-│   ├── mail_client_service/       # FastAPI service implementation
-│   └── mail_client_service_client/# Generated API client
+│   ├── mail_client_api/           # Abstract base classes and interfaces for mail client operations
+│   ├── gmail_client_impl/         # Gmail API implementation with OAuth2 authentication
+│   ├── mail_client_adapter/       # HTTP client adapter for remote service access
+│   ├── mail_client_service/       # FastAPI web service exposing REST endpoints
+│   └── mail_client_service_client/# Auto-generated HTTP client for service communication
 ├── tests/
-│   ├── integration/              # Interface <-> implementation tests
-│   └── e2e/                     # Full-flow tests (may require credentials)
-├── docs/                        # MkDocs sources
-│   ├── api/                     # API documentation
+│   ├── integration/              # Component interaction tests
+│   └── e2e/                     # Full application workflow tests
+├── docs/                        # MkDocs documentation sources
+│   ├── api/                     # API reference documentation
 │   └── *.md                     # General documentation
-├── .circleci/                   # CircleCI pipeline config
+├── .circleci/                   # CircleCI pipeline configuration
 ├── main.py                      # Local demo / auth bootstrap
 ├── pyproject.toml              # Root workspace configuration
 ├── requirements.txt            # Top-level dependencies

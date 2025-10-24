@@ -1,5 +1,5 @@
-site_name: Mail Client Project
-site_description: "A professional-grade template for a modern Python project."
+site_name: Professional Python Template
+site_description: "Professional-grade Python template demonstrating component-based architecture for distributed mail client systems."
 
 theme:
   name: material

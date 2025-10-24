@@ -1,7 +1,7 @@
 [project]
 name = "ta-assignment"
 version = "0.1.0"
-description = "Template repository for a mail client"
+description = "Professional-grade Python template demonstrating component-based architecture for an AI-powered email assistant"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

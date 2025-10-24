@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 [project]
 name = "mail-client-service"
 version = "0.1.0"
-description = "Mail client service package"
+description = "FastAPI web service exposing mail operations through REST endpoints"
 readme = "README.md"
 requires-python = ">=3.11"
 dependencies = [

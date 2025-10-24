@@ -1,5 +1,7 @@
-# Overview
-The Mail Client Adapter bridges local client code and the remote Mail Client Service.
+# Mail Client Adapter
+
+## Overview
+HTTP client adapter implementing the mail client interface for remote service access. This package bridges local client code and the remote Mail Client Service.
 Instead of interacting with Gmail directly, the adapter uses an auto-generated HTTP client (from the service’s OpenAPI spec) to send and receive mail data via REST calls.
 
 This ensures:

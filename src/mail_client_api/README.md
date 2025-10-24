@@ -1,12 +1,13 @@
 # Mail Client API
 
 ## Overview
-`mail_client_api` defines the `Client` abstract base class that every mail client must implement. The package contains the abstraction, a factory hook, and no concrete logic.
+Abstract base classes and interfaces for mail client operations. This package defines the core contracts that all mail client implementations must follow, ensuring consistent behavior across different implementations.
 
 ## Purpose
-- Document the operations available to consumers.
-- Provide a single factory (`get_client`) that implementations can override.
-- Keep message-type dependencies explicit through the `mail_client_api.message` module.
+- Define abstract base classes for mail client operations
+- Provide stable interfaces for message handling and client functionality
+- Enable dependency injection through factory functions
+- Ensure type safety and interface compliance across implementations
 
 ## Architecture
 
