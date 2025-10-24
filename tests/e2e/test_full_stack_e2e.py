@@ -72,14 +72,22 @@ def has_gmail_credentials() -> bool:
     )
 
 
+def should_run_e2e() -> bool:
+    """Check if environment is configured for E2E tests."""
+    # 1. Check for the existence of credentials
+    has_creds = all([os.getenv("GMAIL_CLIENT_ID"), os.getenv("GMAIL_CLIENT_SECRET"), os.getenv("GMAIL_REFRESH_TOKEN")])
+    # 2. Check for an explicit E2E flag, which you would set to 'true'
+    #    only in the CI step that has valid credentials.
+    is_e2e_enabled = os.getenv("RUN_E2E_TESTS") == "true"
+
+    return has_creds and is_e2e_enabled
+
+
 @pytest.fixture(scope="module")
 def service_url() -> str:
-    """Fixture that starts the service and returns its URL.
-
-    Only used for automated tests where we programmatically start the service.
-    """
-    if not has_gmail_credentials():
-        pytest.skip("Gmail credentials not available")
+    """Fixture that starts the service and returns its URL."""
+    if not should_run_e2e():  # Use the new combined check
+        pytest.skip("E2E tests disabled or credentials not configured.")
 
     port = find_free_port()
     base_url = f"http://127.0.0.1:{port}"
@@ -100,7 +108,7 @@ def service_url() -> str:
 
 @pytest.mark.e2e
 @pytest.mark.skipif(
-    not has_gmail_credentials(),
+    not should_run_e2e(),
     reason="Gmail credentials not available for automated E2E test",
 )
 class TestFullStackRealGmail:
