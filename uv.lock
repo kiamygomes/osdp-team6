@@ -6,6 +6,12 @@ resolution-markers = [
     "python_full_version < '3.13'",
 ]
 
+[manifest]
+members = [
+    "osdp-jira-service",
+    "ticket-api",
+]
+
 [[package]]
 name = "annotated-doc"
 version = "0.0.3"
@@ -1029,6 +1035,17 @@ sdist = { url = "https://files.pythonhosted.org/packages/a7/a5/d6f429d43394057b6
 wheels = [
     { url = "https://files.pythonhosted.org/packages/be/72/2db2f49247d0a18b4f1bb9a5a39a0162869acf235f3a96418363947b3d46/starlette-0.48.0-py3-none-any.whl", hash = "sha256:0764ca97b097582558ecb498132ed0c7d942f233f365b86ba37770e026510659", size = 73736, upload-time = "2025-09-13T08:41:03.869Z" },
 ]
+
+[[package]]
+name = "ticket-api"
+version = "0.1.0"
+source = { editable = "src/ticket_api" }
+dependencies = [
+    { name = "pydantic" },
+]
+
+[package.metadata]
+requires-dist = [{ name = "pydantic" }]
 
 [[package]]
 name = "tomli"
