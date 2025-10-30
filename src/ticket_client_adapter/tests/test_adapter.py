@@ -12,6 +12,7 @@ from ticket_client_adapter import RemoteTicketService
 BASE_URL = "http://test-server:8000"
 TEST_USER = "test-user"
 TEST_PROJECT = "TEST"
+EXPECTED_COMMENT_COUNT = 2
 
 
 @pytest.fixture
@@ -263,7 +264,7 @@ async def test_get_ticket_comments(mock_ticket_id: UUID) -> None:
     ) as service:
         comments = await service.get_ticket_comments(mock_ticket_id)
 
-        assert len(comments) == 2
+        assert len(comments) == EXPECTED_COMMENT_COUNT
         assert comments[0].author == "user1@example.com"
         assert comments[1].author == "user2@example.com"
 

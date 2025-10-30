@@ -74,6 +74,14 @@ class RemoteTicketService(TicketServiceAPI):
         user_id: str,
         project_key: str,
     ) -> None:
+        """Initialize the remote ticket service adapter.
+
+        Args:
+            base_url: Service base URL
+            user_id: User identifier
+            project_key: Jira project key
+
+        """
         # Use the auto-generated client internally
         self._client = Client(base_url=base_url)
         self._user_id = user_id
@@ -88,20 +96,6 @@ class RemoteTicketService(TicketServiceAPI):
         # Clean up the underlying HTTP client
         http_client = self._client.get_async_httpx_client()
         await http_client.aclose()
-
-    def _check_response(self, response: object, expected_status: int = 200) -> None:
-        """Check response status and raise appropriate errors."""
-        if not hasattr(response, "status_code"):
-            return
-
-        status = response.status_code  # type: ignore
-
-        if status >= 400:  # noqa: PLR2004
-            raise httpx.HTTPStatusError(
-                f"HTTP {status}",
-                request=None,  # type: ignore
-                response=None,  # type: ignore
-            )
 
     def _to_generated_priority(self, priority: TicketPriority) -> GeneratedPriority:
         """Convert domain priority to generated client priority."""
@@ -139,15 +133,13 @@ class RemoteTicketService(TicketServiceAPI):
 
         # Check for errors
         if response.status_code != HTTPStatus.CREATED:
-            raise httpx.HTTPStatusError(
-                f"Failed to create ticket: HTTP {response.status_code}",
-                request=None,  # type: ignore
-                response=None,  # type: ignore
-            )
+            msg = f"Failed to create ticket: HTTP {response.status_code}"
+            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
 
         # Convert generated model back to domain model
         if not isinstance(response.parsed, TicketResponse):
-            raise RuntimeError(f"Unexpected response type: {type(response.parsed)}")
+            msg = f"Unexpected response type: {type(response.parsed)}"
+            raise TypeError(msg)
 
         return self._to_domain_ticket(response.parsed)
 
@@ -165,14 +157,12 @@ class RemoteTicketService(TicketServiceAPI):
             return None
 
         if response.status_code != HTTPStatus.OK:
-            raise httpx.HTTPStatusError(
-                f"Failed to get ticket: HTTP {response.status_code}",
-                request=None,  # type: ignore
-                response=None,  # type: ignore
-            )
+            msg = f"Failed to get ticket: HTTP {response.status_code}"
+            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
 
         if not isinstance(response.parsed, TicketResponse):
-            raise RuntimeError(f"Unexpected response type: {type(response.parsed)}")
+            msg = f"Unexpected response type: {type(response.parsed)}"
+            raise TypeError(msg)
 
         return self._to_domain_ticket(response.parsed)
 
@@ -197,18 +187,16 @@ class RemoteTicketService(TicketServiceAPI):
         )
 
         if response.status_code != HTTPStatus.OK:
-            raise httpx.HTTPStatusError(
-                f"Failed to list tickets: HTTP {response.status_code}",
-                request=None,  # type: ignore
-                response=None,  # type: ignore
-            )
+            msg = f"Failed to list tickets: HTTP {response.status_code}"
+            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
 
         if not isinstance(response.parsed, TicketListResponse):
-            raise RuntimeError(f"Unexpected response type: {type(response.parsed)}")
+            msg = f"Unexpected response type: {type(response.parsed)}"
+            raise TypeError(msg)
 
         return [self._to_domain_ticket(t) for t in response.parsed.tickets]
 
-    async def update_ticket(
+    async def update_ticket(  # noqa: PLR0913
         self,
         ticket_id: UUID,
         title: str | None = None,
@@ -238,14 +226,12 @@ class RemoteTicketService(TicketServiceAPI):
             return None
 
         if response.status_code != HTTPStatus.OK:
-            raise httpx.HTTPStatusError(
-                f"Failed to update ticket: HTTP {response.status_code}",
-                request=None,  # type: ignore
-                response=None,  # type: ignore
-            )
+            msg = f"Failed to update ticket: HTTP {response.status_code}"
+            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
 
         if not isinstance(response.parsed, TicketResponse):
-            raise RuntimeError(f"Unexpected response type: {type(response.parsed)}")
+            msg = f"Unexpected response type: {type(response.parsed)}"
+            raise TypeError(msg)
 
         return self._to_domain_ticket(response.parsed)
 
@@ -262,11 +248,8 @@ class RemoteTicketService(TicketServiceAPI):
             return False
 
         if response.status_code != HTTPStatus.NO_CONTENT:
-            raise httpx.HTTPStatusError(
-                f"Failed to delete ticket: HTTP {response.status_code}",
-                request=None,  # type: ignore
-                response=None,  # type: ignore
-            )
+            msg = f"Failed to delete ticket: HTTP {response.status_code}"
+            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
 
         return True
 
@@ -294,14 +277,12 @@ class RemoteTicketService(TicketServiceAPI):
             return None
 
         if response.status_code != HTTPStatus.CREATED:
-            raise httpx.HTTPStatusError(
-                f"Failed to add comment: HTTP {response.status_code}",
-                request=None,  # type: ignore
-                response=None,  # type: ignore
-            )
+            msg = f"Failed to add comment: HTTP {response.status_code}"
+            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
 
         if not isinstance(response.parsed, CommentResponse):
-            raise RuntimeError(f"Unexpected response type: {type(response.parsed)}")
+            msg = f"Unexpected response type: {type(response.parsed)}"
+            raise TypeError(msg)
 
         return self._to_domain_comment(response.parsed)
 
@@ -315,15 +296,13 @@ class RemoteTicketService(TicketServiceAPI):
         )
 
         if response.status_code != HTTPStatus.OK:
-            raise httpx.HTTPStatusError(
-                f"Failed to get comments: HTTP {response.status_code}",
-                request=None,  # type: ignore
-                response=None,  # type: ignore
-            )
+            msg = f"Failed to get comments: HTTP {response.status_code}"
+            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
 
         # Response is a list of CommentResponse
         if not isinstance(response.parsed, list):
-            raise RuntimeError(f"Unexpected response type: {type(response.parsed)}")
+            msg = f"Unexpected response type: {type(response.parsed)}"
+            raise TypeError(msg)
 
         return [self._to_domain_comment(c) for c in response.parsed]
 

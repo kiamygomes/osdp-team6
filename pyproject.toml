@@ -104,3 +104,8 @@ exclude_lines = [
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
 ]
+
+[dependency-groups]
+dev = [
+    "types-python-dateutil>=2.9.0.20251008",
+]

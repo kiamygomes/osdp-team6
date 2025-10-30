@@ -30,6 +30,7 @@ class Token(Base):
 
 class TicketMap(Base):
     """Stable mapping between domain Ticket.id (UUID) and Jira issue key.
+
     We also scope by user_id to support multi-tenant scenarios cleanly.
     """
 
