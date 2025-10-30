@@ -12,6 +12,7 @@ from .storage import ensure_mapping_for_keys, get_key_for_uuid, map_uuid_to_key
 
 # ---- mapping helpers ----
 
+
 def _priority_to_jira(p: TicketPriority) -> str:
     return {
         TicketPriority.LOW: "Low",
@@ -19,6 +20,7 @@ def _priority_to_jira(p: TicketPriority) -> str:
         TicketPriority.HIGH: "High",
         TicketPriority.CRITICAL: "Highest",
     }[p]
+
 
 def _status_name_to_domain(name: str | None) -> TicketStatus:
     if not name:
@@ -34,6 +36,7 @@ def _status_name_to_domain(name: str | None) -> TicketStatus:
         return TicketStatus.CLOSED
     return TicketStatus.OPEN
 
+
 def _jira_to_ticket(data: dict[str, Any], user_id: str) -> Ticket:
     fields = data.get("fields", {})
     key = data.get("key", "")
@@ -41,7 +44,12 @@ def _jira_to_ticket(data: dict[str, Any], user_id: str) -> Ticket:
     priority_name = (fields.get("priority") or {}).get("name", "Medium")
 
     # domain priority best-effort reverse map
-    pr_map = {"low": TicketPriority.LOW, "medium": TicketPriority.MEDIUM, "high": TicketPriority.HIGH, "highest": TicketPriority.CRITICAL}  # noqa: E501
+    pr_map = {
+        "low": TicketPriority.LOW,
+        "medium": TicketPriority.MEDIUM,
+        "high": TicketPriority.HIGH,
+        "highest": TicketPriority.CRITICAL,
+    }  # noqa: E501
     domain_priority = pr_map.get(str(priority_name).lower(), TicketPriority.MEDIUM)
 
     # stable UUID for this user+key; also store mapping (impl never leaks Jira key)
@@ -51,12 +59,15 @@ def _jira_to_ticket(data: dict[str, Any], user_id: str) -> Ticket:
     return Ticket(
         id=ticket_uuid,
         title=fields.get("summary", ""),
-        description=(fields.get("description") or "") if isinstance(fields.get("description"), str) else str(fields.get("description") or ""),  # noqa: E501
+        description=(fields.get("description") or "")
+        if isinstance(fields.get("description"), str)
+        else str(fields.get("description") or ""),  # noqa: E501
         status=_status_name_to_domain(status_name),
         priority=domain_priority,
         assignee=(fields.get("assignee") or {}).get("displayName"),
         reporter=(fields.get("reporter") or {}).get("displayName") or "",
     )
+
 
 def _jira_comment_to_domain(c: dict[str, Any], ticket_uuid: UUID) -> Comment:
     text = ""
@@ -69,13 +80,15 @@ def _jira_comment_to_domain(c: dict[str, Any], ticket_uuid: UUID) -> Comment:
                         text += node.get("text", "")
                 text += "\n"
     return Comment(
-        id=uuid5(NAMESPACE_URL, f"comment:{c.get('id','')}"),
+        id=uuid5(NAMESPACE_URL, f"comment:{c.get('id', '')}"),
         ticket_id=ticket_uuid,
         author=(c.get("author") or {}).get("displayName") or "unknown",
         content=(text.strip() or "<empty>"),
     )
 
+
 # ---- concrete implementation ----
+
 
 class TicketImpl(TicketServiceAPI):
     """Jira-backed implementation of the TicketServiceAPI. All methods are async and map domain UUIDs to Jira issue keys internally."""  # noqa: E501

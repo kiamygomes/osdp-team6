@@ -33,11 +33,10 @@ dev = [
 
 [tool.uv.workspace]
 members = [
-  "src/jira_api",
-  "src/jira_impl",
   "src/ticket_api",
   "src/ticket_impl",
   "src/ticket_service",
+  "src/ticket_client_generated"
 ]
 [tool.uv.sources]
 ticket-api = { workspace = true }   # <-- map the project name to the workspace

@@ -14,6 +14,7 @@ from ticket_api import TicketPriority, TicketStatus
 # REQUEST MODELS - Used for incoming data validation
 # ============================================================================
 
+
 class TicketCreateRequest(BaseModel):
     """Schema for creating a new ticket."""
 
@@ -95,6 +96,7 @@ class CommentCreateRequest(BaseModel):
 # ============================================================================
 # RESPONSE MODELS - Used for outgoing data serialization
 # ============================================================================
+
 
 class CommentResponse(BaseModel):
     """Schema for a comment in API responses."""

@@ -250,7 +250,13 @@ class TestTicketServiceAPI:
                 priority: TicketPriority = TicketPriority.MEDIUM,
                 assignee: str | None = None,
             ) -> Ticket:
-                return Ticket(title=title, description=description, reporter=reporter, priority=priority, assignee=assignee)
+                return Ticket(
+                    title=title,
+                    description=description,
+                    reporter=reporter,
+                    priority=priority,
+                    assignee=assignee,
+                )
 
             async def get_ticket(self, ticket_id: UUID) -> Ticket | None:
                 return None
@@ -279,7 +285,9 @@ class TestTicketServiceAPI:
             async def delete_ticket(self, ticket_id: UUID) -> bool:
                 return False
 
-            async def add_comment(self, ticket_id: UUID, author: str, content: str) -> Comment | None:
+            async def add_comment(
+                self, ticket_id: UUID, author: str, content: str
+            ) -> Comment | None:
                 return None
 
             async def get_ticket_comments(self, ticket_id: UUID) -> list[Comment]:

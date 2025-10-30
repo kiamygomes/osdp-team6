@@ -1,4 +1,5 @@
 """End-to-end happy-path for TicketImpl using respx mocks."""
+
 from uuid import UUID
 
 import httpx
@@ -48,18 +49,23 @@ async def test_create_get_list_update_comment_delete(seed_token) -> None:  # noq
 
     # SINGLE GET route with THREE sequential responses (create -> get -> after update)
     route_issue = respx.get(f"{BASE}/issue/OSDP-101")
-    route_issue.mock(side_effect=[
-        httpx.Response(200, json=issue_payload()),  # 1) after create_ticket()
-        httpx.Response(200, json=issue_payload()),  # 2) get_ticket() in the test
-        httpx.Response(200, json=issue_payload(summary="Renamed", status="In Progress", priority="High")),  # 3) after update
-    ])
+    route_issue.mock(
+        side_effect=[
+            httpx.Response(200, json=issue_payload()),  # 1) after create_ticket()
+            httpx.Response(200, json=issue_payload()),  # 2) get_ticket() in the test
+            httpx.Response(200, json=issue_payload(summary="Renamed", status="In Progress", priority="High")),  # 3) after update
+        ]
+    )
 
     # update & transitions
     respx.put(f"{BASE}/issue/OSDP-101").mock(return_value=httpx.Response(200, json={}))
     respx.get(f"{BASE}/issue/OSDP-101/transitions").mock(
-        return_value=httpx.Response(200, json={
-            "transitions": [{"id": "3", "name": "In Progress"}, {"id": "31", "name": "Done"}],
-        }),
+        return_value=httpx.Response(
+            200,
+            json={
+                "transitions": [{"id": "3", "name": "In Progress"}, {"id": "31", "name": "Done"}],
+            },
+        ),
     )
     respx.post(f"{BASE}/issue/OSDP-101/transitions").mock(return_value=httpx.Response(204))
 
@@ -70,22 +76,36 @@ async def test_create_get_list_update_comment_delete(seed_token) -> None:  # noq
 
     # comments
     respx.post(f"{BASE}/issue/OSDP-101/comment").mock(
-        return_value=httpx.Response(201, json={
-            "id": "c-1",
-            "body": {"type": "doc", "version": 1,
-                     "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Ship it."}]}]},
-            "author": {"displayName": "Terra"},
-        }),
+        return_value=httpx.Response(
+            201,
+            json={
+                "id": "c-1",
+                "body": {
+                    "type": "doc",
+                    "version": 1,
+                    "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Ship it."}]}],
+                },
+                "author": {"displayName": "Terra"},
+            },
+        ),
     )
     respx.get(f"{BASE}/issue/OSDP-101/comment").mock(
-        return_value=httpx.Response(200, json={
-            "comments": [{
-                "id": "c-1",
-                "body": {"type": "doc", "version": 1,
-                         "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Ship it."}]}]},
-                "author": {"displayName": "Terra"},
-            }],
-        }),
+        return_value=httpx.Response(
+            200,
+            json={
+                "comments": [
+                    {
+                        "id": "c-1",
+                        "body": {
+                            "type": "doc",
+                            "version": 1,
+                            "content": [{"type": "paragraph", "content": [{"type": "text", "text": "Ship it."}]}],
+                        },
+                        "author": {"displayName": "Terra"},
+                    }
+                ],
+            },
+        ),
     )
 
     # delete

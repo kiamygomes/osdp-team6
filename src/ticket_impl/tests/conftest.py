@@ -1,4 +1,5 @@
 """Pytest fixtures & test-time environment."""  # noqa: INP001
+
 import os
 
 # Set test env *before* importing anything that pulls ticket_impl.config
@@ -16,4 +17,5 @@ import pytest
 def seed_token() -> None:
     """Insert a valid token row for user u1."""
     from ticket_impl.storage import upsert_tokens  # noqa: PLC0415
+
     upsert_tokens("u1", "ACCESS_TOKEN", "REFRESH_TOKEN", 3600)

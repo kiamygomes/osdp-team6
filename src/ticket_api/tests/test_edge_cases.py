@@ -91,8 +91,12 @@ class TestEdgeCases:
 
     def test_ticket_priority_levels(self) -> None:
         """Test all priority levels."""
-        priorities = [TicketPriority.LOW, TicketPriority.MEDIUM,
-                     TicketPriority.HIGH, TicketPriority.CRITICAL]
+        priorities = [
+            TicketPriority.LOW,
+            TicketPriority.MEDIUM,
+            TicketPriority.HIGH,
+            TicketPriority.CRITICAL,
+        ]
 
         for priority in priorities:
             ticket = Ticket(
