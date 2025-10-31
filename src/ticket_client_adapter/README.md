@@ -125,16 +125,51 @@ async with RemoteTicketService(
 
 ## Testing
 
-The adapter is fully tested with respx mocking:
+The adapter includes comprehensive tests using `respx` to mock HTTP responses:
+
+### Test Structure
+
+**test_adapter.py** - Core adapter functionality
+- CRUD operations with mocked HTTP responses
+- Comment management and retrieval
+- Context manager behavior
+- Success and error scenarios
+
+**test_adapter_errors.py** - Error handling scenarios
+- HTTP error status codes (404, 401, 500)
+- Network failures and timeouts
+- Invalid response handling
+- Exception propagation
+
+### Test Categories
+
+- **CRUD Operations**: Create, read, update, delete tickets
+- **Comment Management**: Add and retrieve comments
+- **Error Handling**: HTTP errors and network failures
+- **Context Management**: Async context manager behavior
+- **Model Conversion**: Domain to HTTP model transformation
+
+### Running Tests
+
 ```bash
+# All adapter tests
 uv run pytest src/ticket_client_adapter/tests/ -v
+
+# Specific test files
+uv run pytest src/ticket_client_adapter/tests/test_adapter.py -v
+uv run pytest src/ticket_client_adapter/tests/test_adapter_errors.py -v
+
+# Coverage reporting
+uv run pytest src/ticket_client_adapter/tests/ --cov=ticket_client_adapter --cov-report=term-missing
 ```
 
-All 10 tests pass, covering:
-- CRUD operations
-- Comment management
-- Error handling (404s)
-- Context manager behavior
+### Mock Strategy
+
+Tests use `respx` to mock HTTP responses from the ticket service:
+- Successful API responses with realistic data
+- Error responses with proper status codes
+- Network timeout and connection errors
+- Invalid JSON and malformed responses
 
 ## Implementation Note
 

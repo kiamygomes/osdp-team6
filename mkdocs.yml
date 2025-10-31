@@ -1,5 +1,5 @@
-site_name: Mail Client Project
-site_description: "A professional-grade template for a modern Python project."
+site_name: OSDP Jira Service
+site_description: "Component-based ticketing microservice with OAuth 2.0 integration for Jira and other ticketing systems."
 
 theme:
   name: material
@@ -20,12 +20,15 @@ theme:
 
 nav:
   - 'Overview': 'index.md'
-  - 'Architecture': 'component.md'
+  - 'Architecture': 'architecture.md'
+  - 'Testing': 'testing.md'
+  - 'CI/CD Setup': 'circleci-setup.md'
   - 'API Reference':
-    - 'Message Protocol': 'api/message.md'
-    - 'Mail Client API': 'api/mail_client_api.md'
-    - 'Gmail Client Implementation': 'api/gmail_client_impl.md'
-    - 'Gmail Message Implementation': 'api/gmail_message_impl.md'
+    - 'Ticket API': 'api/ticket_api.md'
+    - 'Ticket Implementation': 'api/ticket_impl.md'
+    - 'Ticket Service': 'api/ticket_service.md'
+    - 'Ticket Client Generated': 'api/ticket_client_generated.md'
+    - 'Ticket Client Adapter': 'api/ticket_client_adapter.md'
 
 markdown_extensions:
   - pymdownx.highlight:
@@ -36,13 +39,13 @@ plugins:
   - mkdocstrings:
       handlers:
         python:
+          paths:
+            - src/ticket_api/src
+            - src/ticket_impl/src
+            - src/ticket_service/src
+            - src/ticket_client_generated
+            - src/ticket_client_adapter/src
           options:
-            # This helps mkdocstrings find packages in the src directory
-            search_paths: 
-              - src/message/src
-              - src/mail_client_api/src
-              - src/gmail_client_impl/src
-              - src/gmail_message_impl/src
             show_source: false
             docstring_section_style: spacy
             members_order: source

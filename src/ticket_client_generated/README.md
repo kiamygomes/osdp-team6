@@ -1,124 +1,149 @@
-# ticket-service-client
-A client library for accessing Ticket Service
+# Ticket Service Client
+
+Auto-generated HTTP client for the Ticket Service API, providing type-safe access to all service endpoints.
+
+## Overview
+
+This package contains auto-generated client code created from the Ticket Service OpenAPI specification. It provides:
+
+- Type-safe HTTP client methods for all endpoints
+- Generated Pydantic models for requests and responses
+- Async and sync operation support
+- Comprehensive error handling
+- Full OpenAPI 3.0 compatibility
 
 ## Usage
-First, create a client:
+
+### Basic Client Setup
 
 ```python
 from ticket_service_client import Client
 
-client = Client(base_url="https://api.example.com")
+client = Client(base_url="http://localhost:8000")
 ```
 
-If the endpoints you're going to hit require authentication, use `AuthenticatedClient` instead:
+### Making API Calls
 
 ```python
-from ticket_service_client import AuthenticatedClient
+from ticket_service_client.api.tickets import create_ticket_api_v1_tickets_post
+from ticket_service_client.models import TicketCreateRequest, TicketPriority
 
-client = AuthenticatedClient(base_url="https://api.example.com", token="SuperSecretToken")
-```
-
-Now call your endpoint and use your models:
-
-```python
-from ticket_service_client.models import MyDataModel
-from ticket_service_client.api.my_tag import get_my_data_model
-from ticket_service_client.types import Response
-
-with client as client:
-    my_data: MyDataModel = get_my_data_model.sync(client=client)
-    # or if you need more info (e.g. status_code)
-    response: Response[MyDataModel] = get_my_data_model.sync_detailed(client=client)
-```
-
-Or do the same thing with an async version:
-
-```python
-from ticket_service_client.models import MyDataModel
-from ticket_service_client.api.my_tag import get_my_data_model
-from ticket_service_client.types import Response
-
-async with client as client:
-    my_data: MyDataModel = await get_my_data_model.asyncio(client=client)
-    response: Response[MyDataModel] = await get_my_data_model.asyncio_detailed(client=client)
-```
-
-By default, when you're calling an HTTPS API it will attempt to verify that SSL is working correctly. Using certificate verification is highly recommended most of the time, but sometimes you may need to authenticate to a server (especially an internal server) using a custom certificate bundle.
-
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken",
-    verify_ssl="/path/to/certificate_bundle.pem",
+# Create request model
+request = TicketCreateRequest(
+    title="Bug Report",
+    description="System issue description",
+    reporter="user@example.com",
+    priority=TicketPriority.HIGH
 )
-```
 
-You can also disable certificate validation altogether, but beware that **this is a security risk**.
-
-```python
-client = AuthenticatedClient(
-    base_url="https://internal_api.example.com", 
-    token="SuperSecretToken", 
-    verify_ssl=False
+# Make async API call
+response = await create_ticket_api_v1_tickets_post.asyncio_detailed(
+    client=client,
+    body=request,
+    x_user_id="user-id",
+    x_project_key="PROJ"
 )
+
+# Handle response
+if response.status_code == 201:
+    ticket = response.parsed
+    print(f"Created ticket: {ticket.id}")
 ```
 
-Things to know:
-1. Every path/method combo becomes a Python module with four functions:
-    1. `sync`: Blocking request that returns parsed data (if successful) or `None`
-    1. `sync_detailed`: Blocking request that always returns a `Request`, optionally with `parsed` set if the request was successful.
-    1. `asyncio`: Like `sync` but async instead of blocking
-    1. `asyncio_detailed`: Like `sync_detailed` but async instead of blocking
+### API Organization
 
-1. All path/query params, and bodies become method arguments.
-1. If your endpoint had any tags on it, the first tag will be used as a module name for the function (my_tag above)
-1. Any endpoint which did not have a tag will be in `ticket_service_client.api.default`
+The generated client organizes endpoints into modules:
 
-## Advanced customizations
+- `ticket_service_client.api.tickets` - Ticket CRUD operations
+- `ticket_service_client.api.comments` - Comment operations
+- `ticket_service_client.models` - Request/response models
 
-There are more settings on the generated `Client` class which let you control more runtime behavior, check out the docstring on that class for more info. You can also customize the underlying `httpx.Client` or `httpx.AsyncClient` (depending on your use-case):
+### Response Handling
+
+Each endpoint provides multiple response access patterns:
 
 ```python
+# Get parsed response data only
+ticket = await create_ticket_api_v1_tickets_post.asyncio(
+    client=client, body=request, x_user_id="user-id", x_project_key="PROJ"
+)
+
+# Get detailed response with status code and headers
+response = await create_ticket_api_v1_tickets_post.asyncio_detailed(
+    client=client, body=request, x_user_id="user-id", x_project_key="PROJ"
+)
+print(f"Status: {response.status_code}")
+print(f"Data: {response.parsed}")
+```
+
+## Testing
+
+The generated client includes basic functionality tests:
+
+### Test Structure
+
+**test_generated_client.py** - Generated client functionality
+- Client initialization and configuration
+- Basic endpoint accessibility
+- Model import and usage
+- Error handling scenarios
+
+### Running Tests
+
+```bash
+# All generated client tests
+uv run pytest src/ticket_client_generated/tests/ -v
+
+# Coverage reporting
+uv run pytest src/ticket_client_generated/tests/ --cov=ticket_service_client --cov-report=term-missing
+```
+
+## Generation
+
+This client is generated using `openapi-python-client`:
+
+```bash
+# Generate from running service
+openapi-python-client generate \
+    --url http://localhost:8000/api/v1/openapi.json \
+    --output-path src/ticket_client_generated
+
+# Generate from OpenAPI file
+openapi-python-client generate \
+    --path openapi.json \
+    --output-path src/ticket_client_generated
+```
+
+## Integration
+
+### With Ticket Client Adapter
+
+The `ticket_client_adapter` package wraps this generated client to provide a clean domain interface:
+
+```python
+# Direct generated client usage (HTTP-focused)
 from ticket_service_client import Client
+response = await create_ticket_api_v1_tickets_post.asyncio_detailed(...)
 
-def log_request(request):
-    print(f"Request event hook: {request.method} {request.url} - Waiting for response")
-
-def log_response(response):
-    request = response.request
-    print(f"Response event hook: {request.method} {request.url} - Status {response.status_code}")
-
-client = Client(
-    base_url="https://api.example.com",
-    httpx_args={"event_hooks": {"request": [log_request], "response": [log_response]}},
-)
-
-# Or get the underlying httpx client to modify directly with client.get_httpx_client() or client.get_async_httpx_client()
+# Adapter usage (domain-focused)
+from ticket_client_adapter import RemoteTicketService
+ticket = await service.create_ticket(...)
 ```
 
-You can even set the httpx client directly, but beware that this will override any existing settings (e.g., base_url):
+### Custom Configuration
 
 ```python
 import httpx
 from ticket_service_client import Client
 
-client = Client(
-    base_url="https://api.example.com",
+# Custom HTTP client configuration
+custom_client = httpx.AsyncClient(
+    timeout=30.0,
+    limits=httpx.Limits(max_connections=100)
 )
-# Note that base_url needs to be re-set, as would any shared cookies, headers, etc.
-client.set_httpx_client(httpx.Client(base_url="https://api.example.com", proxies="http://localhost:8030"))
+
+client = Client(
+    base_url="http://localhost:8000",
+    httpx_client=custom_client
+)
 ```
-
-## Building / publishing this package
-This project uses [Poetry](https://python-poetry.org/) to manage dependencies  and packaging.  Here are the basics:
-1. Update the metadata in pyproject.toml (e.g. authors, version)
-1. If you're using a private repository, configure it with Poetry
-    1. `poetry config repositories.<your-repository-name> <url-to-your-repository>`
-    1. `poetry config http-basic.<your-repository-name> <username> <password>`
-1. Publish the client with `poetry publish --build -r <your-repository-name>` or, if for public PyPI, just `poetry publish --build`
-
-If you want to install this client into another project without publishing it (e.g. for development) then:
-1. If that project **is using Poetry**, you can simply do `poetry add <path-to-this-client>` from that project
-1. If that project is not using Poetry:
-    1. Build a wheel with `poetry build -f wheel`
-    1. Install that wheel from the other project `pip install <path-to-wheel>`
