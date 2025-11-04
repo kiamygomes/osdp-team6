@@ -11,7 +11,7 @@ services:
       - key: ENVIRONMENT
         value: production
       - key: JIRA_REDIRECT_URI
-        value: https://osdp-jira-service.onrender.com/api/v1/auth/callback
+        value: https://osdp-team6.onrender.com/api/v1/auth/callback
       - key: JIRA_CLIENT_ID
         sync: false  # Set manually in Render dashboard
       - key: JIRA_CLIENT_SECRET
