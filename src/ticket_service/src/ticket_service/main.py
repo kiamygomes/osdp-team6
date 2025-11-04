@@ -14,7 +14,7 @@ from uuid import UUID, uuid4
 
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
+from fastapi.responses import RedirectResponse, Response
 from ticket_api import TicketServiceAPI, TicketStatus
 from ticket_impl import TicketImpl
 
@@ -248,8 +248,35 @@ async def logout(
 
 
 # ============================================================================
-# HEALTH CHECK ENDPOINT
+# ROOT AND HEALTH CHECK ENDPOINTS
 # ============================================================================
+
+
+@app.get(
+    "/",
+    tags=["info"],
+    summary="Service information",
+)
+async def root() -> dict[str, str]:
+    """Root endpoint providing basic service information and navigation."""
+    return {
+        "service": "OSDP Jira Service",
+        "version": "0.1.0",
+        "description": "REST API for ticket management backed by Jira",
+        "docs": "/docs",
+        "health": "/health",
+        "openapi": "/api/v1/openapi.json",
+        "oauth_login": "/api/v1/auth/login",
+    }
+
+
+@app.get(
+    "/favicon.ico",
+    include_in_schema=False,
+)
+async def favicon() -> Response:
+    """Return empty favicon to prevent 404 errors."""
+    return Response(status_code=204)
 
 
 @app.get(
