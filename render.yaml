@@ -5,16 +5,18 @@ services:
     env: python
     plan: free
     buildCommand: "pip install -r requirements.txt && pip install -e src/ticket_api && pip install -e src/ticket_impl && pip install -e src/ticket_service && pip install -e src/ticket_client_generated && pip install -e src/ticket_client_adapter"
-    startCommand: "uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
+    startCommand: "cd src/ticket_service && uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
         value: production
-      - key: JIRA_REDIRECT_URI
+      - key: OAUTH_REDIRECT_URI
         value: https://osdp-team6.onrender.com/api/v1/auth/callback
-      - key: JIRA_CLIENT_ID
+      - key: OAUTH_CLIENT_ID
         sync: false  # Set manually in Render dashboard
-      - key: JIRA_CLIENT_SECRET
+      - key: OAUTH_CLIENT_SECRET
+        sync: false  # Set manually in Render dashboard
+      - key: JIRA_CLOUD_ID
         sync: false  # Set manually in Render dashboard
       - key: DB_URL
         fromDatabase:
