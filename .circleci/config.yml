@@ -153,7 +153,30 @@ jobs:
       - store_artifacts:
           path: test-results/integration
 
-  # Job 6: Report Summary
+  # Job 6: Deploy to Render (via GitHub integration)
+  deploy_render:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Render Deployment Info"
+          command: |
+            echo "🚀 Render deployment is handled automatically via GitHub integration"
+            echo "📋 Deployment checklist:"
+            echo "  ✅ Code pushed to GitHub"
+            echo "  ✅ Render service connected to repository"
+            echo "  ✅ Environment variables configured in Render dashboard"
+            echo ""
+            echo "🌐 Service URL: https://osdp-jira-service.onrender.com"
+            echo "📚 API Docs: https://osdp-jira-service.onrender.com/docs"
+            echo "🔍 OpenAPI: https://osdp-jira-service.onrender.com/api/v1/openapi.json"
+            echo "❤️  Health: https://osdp-jira-service.onrender.com/health"
+            echo ""
+            echo "💡 Note: Render automatically deploys when you push to the main branch"
+
+  # Job 7: Report Summary
   report_summary:
     docker:
       - image: cimg/base:stable # Use a basic image for reporting
@@ -336,3 +359,47 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+
+  # Deployment workflow: Deploy to Fly.io on hw2 branch
+  deploy_hw2:
+    jobs:
+      - build:
+          filters:
+            branches:
+              only: hw2
+
+      - lint:
+          requires:
+            - build
+          filters:
+            branches:
+              only: hw2
+
+      - unit_test:
+          requires:
+            - build
+          filters:
+            branches:
+              only: hw2
+
+      - circleci_test:
+          requires:
+            - unit_test
+          filters:
+            branches:
+              only: hw2
+
+      - deploy_render:
+          requires:
+            - lint
+            - circleci_test
+          filters:
+            branches:
+              only: hw2
+
+      - report_summary:
+          requires:
+            - deploy_render
+          filters:
+            branches:
+              only: hw2

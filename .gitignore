@@ -30,7 +30,11 @@ site/
 # Secrets
 token.json
 .env
+.env.production
 credentials.json
+
+# Deployment
+render.yaml.bak
 
 .coverage*
 TESTING_STATUS.md

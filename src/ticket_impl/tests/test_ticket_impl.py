@@ -14,7 +14,7 @@ EXPECTED_GET_CALLS = 3  # replace magic number '3'
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_create_get_list_update_comment_delete(seed_token: None) -> None:
     """End-to-end happy-path for TicketImpl using respx mocks."""
     # user lookup

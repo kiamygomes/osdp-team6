@@ -85,6 +85,8 @@ module = [
     "googleapiclient.*",
     "ticket_service_client",
     "ticket_service_client.*",
+    "respx",
+    "respx.*",
 ]
 ignore_missing_imports = true
 

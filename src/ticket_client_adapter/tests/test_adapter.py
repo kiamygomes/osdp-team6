@@ -39,7 +39,7 @@ def mock_ticket_data(mock_ticket_id: UUID) -> dict[str, object]:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_create_ticket(mock_ticket_data: dict[str, object]) -> None:
     """Test creating a ticket via the adapter."""
     # Mock the HTTP POST request
@@ -72,7 +72,7 @@ async def test_create_ticket(mock_ticket_data: dict[str, object]) -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_get_ticket(mock_ticket_id: UUID, mock_ticket_data: dict[str, object]) -> None:
     """Test retrieving a ticket by ID."""
     respx.get(f"{BASE_URL}/api/v1/tickets/{mock_ticket_id}").mock(
@@ -92,7 +92,7 @@ async def test_get_ticket(mock_ticket_id: UUID, mock_ticket_data: dict[str, obje
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_get_ticket_not_found(mock_ticket_id: UUID) -> None:
     """Test retrieving a non-existent ticket returns None."""
     respx.get(f"{BASE_URL}/api/v1/tickets/{mock_ticket_id}").mock(
@@ -110,7 +110,7 @@ async def test_get_ticket_not_found(mock_ticket_id: UUID) -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_list_tickets(mock_ticket_data: dict[str, object]) -> None:
     """Test listing tickets with filters."""
     list_response = {
@@ -139,7 +139,7 @@ async def test_list_tickets(mock_ticket_data: dict[str, object]) -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_update_ticket(mock_ticket_id: UUID, mock_ticket_data: dict[str, object]) -> None:
     """Test updating a ticket."""
     updated_data = {**mock_ticket_data, "title": "Updated Title", "status": "in_progress"}
@@ -165,7 +165,7 @@ async def test_update_ticket(mock_ticket_id: UUID, mock_ticket_data: dict[str, o
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_delete_ticket(mock_ticket_id: UUID) -> None:
     """Test deleting a ticket."""
     respx.delete(f"{BASE_URL}/api/v1/tickets/{mock_ticket_id}").mock(
@@ -183,7 +183,7 @@ async def test_delete_ticket(mock_ticket_id: UUID) -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_delete_ticket_not_found(mock_ticket_id: UUID) -> None:
     """Test deleting a non-existent ticket returns False."""
     respx.delete(f"{BASE_URL}/api/v1/tickets/{mock_ticket_id}").mock(
@@ -201,7 +201,7 @@ async def test_delete_ticket_not_found(mock_ticket_id: UUID) -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_add_comment(mock_ticket_id: UUID) -> None:
     """Test adding a comment to a ticket."""
     comment_data = {
@@ -233,7 +233,7 @@ async def test_add_comment(mock_ticket_id: UUID) -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_get_ticket_comments(mock_ticket_id: UUID) -> None:
     """Test retrieving all comments for a ticket."""
     comments_data = [

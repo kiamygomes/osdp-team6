@@ -15,7 +15,7 @@ TEST_PROJECT = "TEST"
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_create_ticket_http_error() -> None:
     """Test creating a ticket with HTTP error response."""
     respx.post(f"{BASE_URL}/api/v1/tickets").mock(
@@ -32,7 +32,7 @@ async def test_create_ticket_http_error() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_get_ticket_http_error() -> None:
     """Test getting a ticket with HTTP error response."""
     ticket_id = uuid4()
@@ -46,7 +46,7 @@ async def test_get_ticket_http_error() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_list_tickets_http_error() -> None:
     """Test listing tickets with HTTP error response."""
     respx.get(f"{BASE_URL}/api/v1/tickets").mock(
@@ -59,7 +59,7 @@ async def test_list_tickets_http_error() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_update_ticket_http_error() -> None:
     """Test updating a ticket with HTTP error response."""
     ticket_id = uuid4()
@@ -73,7 +73,7 @@ async def test_update_ticket_http_error() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_delete_ticket_http_error() -> None:
     """Test deleting a ticket with HTTP error response."""
     ticket_id = uuid4()
@@ -87,7 +87,7 @@ async def test_delete_ticket_http_error() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_add_comment_http_error() -> None:
     """Test adding a comment with HTTP error response."""
     ticket_id = uuid4()
@@ -101,7 +101,7 @@ async def test_add_comment_http_error() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_get_comments_http_error() -> None:
     """Test getting comments with HTTP error response."""
     ticket_id = uuid4()
@@ -115,7 +115,7 @@ async def test_get_comments_http_error() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_create_ticket_bad_request() -> None:
     """Test creating a ticket with 400 Bad Request."""
     respx.post(f"{BASE_URL}/api/v1/tickets").mock(
@@ -132,7 +132,7 @@ async def test_create_ticket_bad_request() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_update_ticket_bad_request() -> None:
     """Test updating a ticket with 400 Bad Request."""
     ticket_id = uuid4()
@@ -146,7 +146,7 @@ async def test_update_ticket_bad_request() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_delete_ticket_forbidden() -> None:
     """Test deleting a ticket with 403 Forbidden."""
     ticket_id = uuid4()
@@ -160,7 +160,7 @@ async def test_delete_ticket_forbidden() -> None:
 
 
 @pytest.mark.asyncio
-@respx.mock
+@respx.mock  # type: ignore[misc]
 async def test_add_comment_bad_request() -> None:
     """Test adding a comment with 400 Bad Request."""
     ticket_id = uuid4()

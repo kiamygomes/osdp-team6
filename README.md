@@ -266,6 +266,55 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 - Run the ticket API tests (`uv run pytest src/ticket_api/tests/`) to validate the core contract
 - The CircleCI pipeline provides automated validation on every push
 
+## Deployment
+
+### Production Deployment on Render
+
+The service is deployed to **Render** (free tier) and accessible at: `https://osdp-jira-service.onrender.com`
+
+#### Key Endpoints:
+- **API Documentation**: `https://osdp-jira-service.onrender.com/docs`
+- **OpenAPI Spec**: `https://osdp-jira-service.onrender.com/api/v1/openapi.json`
+- **Health Check**: `https://osdp-jira-service.onrender.com/health`
+
+#### Environment Variables (Managed via Render Dashboard):
+```bash
+# OAuth 2.0 Configuration
+JIRA_CLIENT_ID=your_jira_oauth_client_id
+JIRA_CLIENT_SECRET=your_jira_oauth_client_secret
+JIRA_REDIRECT_URI=https://osdp-jira-service.onrender.com/api/v1/auth/callback
+
+# Database Configuration (Auto-configured by Render)
+DB_URL=postgresql://user:pass@host:port/dbname
+
+# Application Configuration
+ENVIRONMENT=production
+API_KEY=auto_generated_secure_key
+```
+
+#### CI/CD Pipeline:
+- **Platform**: Render with automatic GitHub integration
+- **Trigger**: Automatic deployment on every push to main branch
+- **Pipeline**: GitHub → Render → Build → Deploy
+- **Health Monitoring**: `/health` endpoint returns HTTP 200 OK
+- **Secrets Management**: Render dashboard environment variables (never committed to source control)
+- **Database**: Free PostgreSQL database included
+
+#### Deployment Steps:
+1. **Setup Render Account**: Create free account at [render.com](https://render.com)
+2. **Connect GitHub**: Link your GitHub account to Render
+3. **Push Code**: Push your code to GitHub repository
+4. **Create Service**: Use Render Blueprint (`render.yaml`) for one-click setup
+5. **Set Environment Variables**: Configure Jira OAuth credentials in Render dashboard
+6. **Deploy**: Automatic deployment on every git push
+
+#### Render Configuration:
+- **Blueprint**: `render.yaml` defines infrastructure as code
+- **Auto-deploy**: Triggered by GitHub pushes
+- **Free Tier**: 750 hours/month (always-on service)
+- **Database**: Free PostgreSQL with 1GB storage
+- **SSL**: Automatic HTTPS certificates
+
 ## Component Overview
 
 ### ticket_api - Foundation Layer
