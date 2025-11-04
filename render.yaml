@@ -4,7 +4,7 @@ services:
     name: osdp-jira-service
     env: python
     plan: free
-    buildCommand: "pip install -r requirements.txt && pip install -e src/ticket_api && pip install -e src/ticket_impl && pip install -e src/ticket_service && pip install -e src/ticket_client_adapter"
+    buildCommand: "pip install -r requirements.txt && pip install -e src/ticket_api && pip install -e src/ticket_impl && pip install -e src/ticket_service && pip install -e src/ticket_client_generated && pip install -e src/ticket_client_adapter"
     startCommand: "uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
     envVars:
