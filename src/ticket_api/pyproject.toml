@@ -8,9 +8,6 @@ version = "0.1.0"
 description = "Abstract interface and data models for ticketing microservice"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "pydantic",
-]
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ticket_api"]
@@ -25,3 +22,6 @@ extend = "../../pyproject.toml"
 
 [tool.ruff.lint]
 ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"__init__.py" = ["F401"]  # Allow unused imports in __init__.py for re-exports
