@@ -9,7 +9,6 @@ os.environ.setdefault("OAUTH_CLIENT_SECRET", "test-client-secret")
 os.environ.setdefault("OAUTH_REDIRECT_URI", "http://localhost/callback")
 os.environ.setdefault("DB_URL", "sqlite:///./test_tokens.db")
 
-# (keep the rest of your conftest; e.g., seed_token fixture)
 import pytest
 
 

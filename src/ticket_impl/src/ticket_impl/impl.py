@@ -5,7 +5,11 @@ from __future__ import annotations
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from ticket_api import Comment, Ticket, TicketPriority, TicketServiceAPI, TicketStatus
+from ticket_api.exceptions import ServiceError, TicketNotFoundError
+
+# Import from ticket_api submodules (dataclasses-based models + ABC + exceptions)
+from ticket_api.interface import TicketServiceAPI
+from ticket_api.models import Comment, Ticket, TicketPriority, TicketStatus
 
 from . import jira_client as jc
 from .storage import ensure_mapping_for_keys, get_key_for_uuid, map_uuid_to_key
@@ -108,37 +112,38 @@ class TicketImpl(TicketServiceAPI):
         assignee: str | None = None,
     ) -> Ticket:
         """Create a ticket and return its hydrated domain model."""
-        reporter_id = await jc.find_user_account_id(self.user_id, reporter) if reporter else None
-        assignee_id = await jc.find_user_account_id(self.user_id, assignee) if assignee else None
+        try:
+            reporter_id = await jc.find_user_account_id(self.user_id, reporter) if reporter else None
+            assignee_id = await jc.find_user_account_id(self.user_id, assignee) if assignee else None
 
-        created = await jc.create_issue(
-            user_id=self.user_id,
-            project_key=self.project_key,
-            summary=title,
-            description=description,
-            assignee_account_id=assignee_id,
-            reporter_account_id=reporter_id,
-        )
+            created = await jc.create_issue(
+                user_id=self.user_id,
+                project_key=self.project_key,
+                summary=title,
+                description=description,
+                assignee_account_id=assignee_id,
+                reporter_account_id=reporter_id,
+            )
 
-        key = created["key"]
-        # update priority if needed
-        if priority != TicketPriority.MEDIUM:
-            await jc.update_issue_fields(self.user_id, key, {"priority": {"name": _priority_to_jira(priority)}})
+            key = created["key"]
+            # update priority if needed
+            if priority != TicketPriority.MEDIUM:
+                await jc.update_issue_fields(self.user_id, key, {"priority": {"name": _priority_to_jira(priority)}})
 
-        data = await jc.get_issue(self.user_id, key)
-        return _jira_to_ticket(data, self.user_id)
+            data = await jc.get_issue(self.user_id, key)
+            return _jira_to_ticket(data, self.user_id)
+        except Exception as e:
+            msg = f"Failed to create ticket: {e}"
+            raise ServiceError(msg) from e
 
     # READ ONE
-    async def get_ticket(self, ticket_id: UUID) -> Ticket | None:
-        """Get a single ticket by domain UUID; None if not found."""
-        key = get_key_for_uuid(self.user_id, ticket_id)
-        if not key:
-            # attempt fallback by trying to treat UUID text as key for dev convenience
-            key = str(ticket_id)
+    async def get_ticket(self, ticket_id: UUID) -> Ticket:
+        """Get a single ticket by domain UUID; raise if not found."""
+        key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
             data = await jc.get_issue(self.user_id, key)
-        except Exception:  # noqa: BLE001
-            return None
+        except Exception as e:
+            raise TicketNotFoundError(ticket_id) from e
         return _jira_to_ticket(data, self.user_id)
 
     # LIST (with basic filters → JQL)
@@ -170,11 +175,14 @@ class TicketImpl(TicketServiceAPI):
             clauses.append(f'reporter = "{reporter}"')
 
         jql = " AND ".join(clauses) + " ORDER BY updated DESC"
-        raw = await jc.search_issues(self.user_id, jql=jql, max_results=min(50, limit), start_at=offset)
+        try:
+            raw = await jc.search_issues(self.user_id, jql=jql, max_results=min(50, limit), start_at=offset)
+        except Exception as e:
+            msg = f"Failed to list tickets: {e}"
+            raise ServiceError(msg) from e
 
         issues = raw.get("issues", [])
         out: list[Ticket] = []
-        """Update fields and/or workflow state; return the refreshed ticket."""
         pairs: list[tuple[UUID, str]] = []
         for it in issues:
             t = _jira_to_ticket(it, self.user_id)
@@ -183,68 +191,99 @@ class TicketImpl(TicketServiceAPI):
         ensure_mapping_for_keys(self.user_id, pairs)
         return out
 
-    # UPDATE
-    async def update_ticket(  # noqa: PLR0913
-        self,
-        ticket_id: UUID,
-        title: str | None = None,
-        description: str | None = None,
-        status: TicketStatus | None = None,
-        priority: TicketPriority | None = None,
-        assignee: str | None = None,
-    ) -> Ticket | None:
-        """Update fields and/or workflow state; return the refreshed ticket."""
+    # --- granular update methods required by the ABC ---
+
+    async def transition_status(self, ticket_id: UUID, new_status: TicketStatus) -> Ticket:  # noqa: D102
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
-
-        fields: dict[str, Any] = {}
-        if title is not None:
-            fields["summary"] = title
-        if description is not None:
-            fields["description"] = description
-        if priority is not None:
-            fields["priority"] = {"name": _priority_to_jira(priority)}
-        if assignee is not None:
-            acct = await jc.find_user_account_id(self.user_id, assignee)
-            if acct:
-                fields["assignee"] = {"id": acct}
-
-        if fields:
-            await jc.update_issue_fields(self.user_id, key, fields)
-
-        if status is not None:
+        try:
             transitions = await jc.list_transitions(self.user_id, key)
             target = {
                 TicketStatus.OPEN: {"Open", "To Do"},
                 TicketStatus.IN_PROGRESS: {"In Progress", "Doing"},
                 TicketStatus.RESOLVED: {"Done", "Resolved"},
                 TicketStatus.CLOSED: {"Closed"},
-            }[status]
+            }[new_status]
             choice = next((t for t in transitions if t.get("name") in target), None)
-            if choice:
-                await jc.do_transition(self.user_id, key, choice["id"])
-
-        try:
+            if not choice:
+                msg = f"No valid transition found to {new_status} for {key}"
+                raise ServiceError(msg)  # noqa: TRY301
+            await jc.do_transition(self.user_id, key, choice["id"])
             data = await jc.get_issue(self.user_id, key)
-        except Exception:  # noqa: BLE001
-            return None
-        return _jira_to_ticket(data, self.user_id)
+            return _jira_to_ticket(data, self.user_id)
+        except TicketNotFoundError:
+            raise
+        except Exception as e:
+            msg = f"Failed to transition status: {e}"
+            raise ServiceError(msg) from e
+
+    async def reassign_ticket(self, ticket_id: UUID, new_assignee: str) -> Ticket:  # noqa: D102
+        key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
+        try:
+            acct = await jc.find_user_account_id(self.user_id, new_assignee)
+            if not acct:
+                msg = f"Assignee '{new_assignee}' was not found"
+                raise ServiceError(msg)  # noqa: TRY301
+            await jc.update_issue_fields(self.user_id, key, {"assignee": {"id": acct}})
+            data = await jc.get_issue(self.user_id, key)
+            return _jira_to_ticket(data, self.user_id)
+        except TicketNotFoundError:
+            raise
+        except Exception as e:
+            msg = f"Failed to reassign ticket: {e}"
+            raise ServiceError(msg) from e
+
+    async def update_priority(self, ticket_id: UUID, new_priority: TicketPriority) -> Ticket:  # noqa: D102
+        key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
+        try:
+            await jc.update_issue_fields(self.user_id, key, {"priority": {"name": _priority_to_jira(new_priority)}})
+            data = await jc.get_issue(self.user_id, key)
+            return _jira_to_ticket(data, self.user_id)
+        except TicketNotFoundError:
+            raise
+        except Exception as e:
+            msg = f"Failed to update priority: {e}"
+            raise ServiceError(msg) from e
+
+    async def update_description(self, ticket_id: UUID, new_description: str) -> Ticket:  # noqa: D102
+        key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
+        try:
+            await jc.update_issue_fields(self.user_id, key, {"description": new_description})
+            data = await jc.get_issue(self.user_id, key)
+            return _jira_to_ticket(data, self.user_id)
+        except TicketNotFoundError:
+            raise
+        except Exception as e:
+            msg = f"Failed to update description: {e}"
+            raise ServiceError(msg) from e
 
     # DELETE
     async def delete_ticket(self, ticket_id: UUID) -> bool:
         """Delete a ticket by UUID mapped to a Jira issue key."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
-        return await jc.delete_issue(self.user_id, key)
+        try:
+            return await jc.delete_issue(self.user_id, key)
+        except Exception as e:
+            msg = f"Failed to delete ticket: {e}"
+            raise ServiceError(msg) from e
 
     # COMMENTS
-    async def add_comment(self, ticket_id: UUID, author: str, content: str) -> Comment | None:  # noqa: ARG002
+    async def add_comment(self, ticket_id: UUID, author: str, content: str) -> Comment:  # noqa: ARG002
         """Add a comment and return it in domain form."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
-        data = await jc.add_comment(self.user_id, key, content)
-        return _jira_comment_to_domain(data, ticket_id)
+        try:
+            data = await jc.add_comment(self.user_id, key, content)
+            return _jira_comment_to_domain(data, ticket_id)
+        except Exception as e:
+            msg = f"Failed to add comment: {e}"
+            raise ServiceError(msg) from e
 
     async def get_ticket_comments(self, ticket_id: UUID) -> list[Comment]:
         """Return all comments for a ticket as domain objects."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
-        raw = await jc.get_comments(self.user_id, key)
-        comments = raw.get("comments", [])
-        return [_jira_comment_to_domain(c, ticket_id) for c in comments]
+        try:
+            raw = await jc.get_comments(self.user_id, key)
+            comments = raw.get("comments", [])
+            return [_jira_comment_to_domain(c, ticket_id) for c in comments]
+        except Exception as e:
+            msg = f"Failed to get comments: {e}"
+            raise ServiceError(msg) from e
