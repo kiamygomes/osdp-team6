@@ -5,19 +5,19 @@ from uuid import UUID
 import httpx
 import pytest
 import respx
+from ticket_api.models import TicketPriority, TicketStatus
 
-from ticket_api import TicketPriority, TicketStatus
 from ticket_impl import TicketImpl
 
 BASE = "https://api.atlassian.com/ex/jira/00000000-0000-0000-0000-000000000000/rest/api/3"
-EXPECTED_GET_CALLS = 3  # replace magic number '3'
+EXPECTED_GET_CALLS = 3  # after create, explicit get, and after status transition
 
 
 @pytest.mark.asyncio
 @respx.mock
-async def test_create_get_list_update_comment_delete(seed_token: None) -> None:
+async def test_create_get_list_transition_comment_delete(seed_token: None) -> None:
     """End-to-end happy-path for TicketImpl using respx mocks."""
-    # user lookup
+    # user lookup (used for reporter/assignee mapping)
     respx.get(f"{BASE}/user/search").mock(
         return_value=httpx.Response(200, json=[{"accountId": "acc-1", "displayName": "Terra"}]),
     )
@@ -47,17 +47,18 @@ async def test_create_get_list_update_comment_delete(seed_token: None) -> None:
             },
         }
 
-    # SINGLE GET route with THREE sequential responses (create -> get -> after update)
+    # SINGLE GET route with THREE sequential responses:
+    # 1) after create_ticket()  2) explicit get_ticket()  3) after transition_status()
     route_issue = respx.get(f"{BASE}/issue/OSDP-101")
     route_issue.mock(
         side_effect=[
             httpx.Response(200, json=issue_payload()),  # 1) after create_ticket()
             httpx.Response(200, json=issue_payload()),  # 2) get_ticket() in the test
-            httpx.Response(200, json=issue_payload(summary="Renamed", status="In Progress", priority="High")),  # 3) after update
+            httpx.Response(200, json=issue_payload(status="In Progress", priority="High")),  # 3) after transition
         ],
     )
 
-    # update & transitions
+    # update fields & transitions
     respx.put(f"{BASE}/issue/OSDP-101").mock(return_value=httpx.Response(200, json={}))
     respx.get(f"{BASE}/issue/OSDP-101/transitions").mock(
         return_value=httpx.Response(
@@ -126,21 +127,19 @@ async def test_create_get_list_update_comment_delete(seed_token: None) -> None:
     assert isinstance(t.id, UUID)
 
     one = await svc.get_ticket(t.id)
-    assert one is not None
     assert one.title == "Hello HW2"
     assert one.status == TicketStatus.OPEN
 
     lst = await svc.list_tickets(limit=5)
     assert len(lst) >= 1
 
-    upd = await svc.update_ticket(t.id, title="Renamed", status=TicketStatus.IN_PROGRESS)
-    assert upd is not None
-    assert upd.title == "Renamed"
+    # NEW granular update: transition status (no title change in the new API)
+    upd = await svc.transition_status(t.id, TicketStatus.IN_PROGRESS)
+    assert upd.title == "Hello HW2"  # unchanged title
     assert upd.status == TicketStatus.IN_PROGRESS
     assert upd.priority == TicketPriority.HIGH
 
     c = await svc.add_comment(t.id, author="terra@nyu.edu", content="Ship it.")
-    assert c is not None
     assert "Ship it." in c.content
     cl = await svc.get_ticket_comments(t.id)
     assert cl
@@ -149,4 +148,5 @@ async def test_create_get_list_update_comment_delete(seed_token: None) -> None:
     ok = await svc.delete_ticket(t.id)
     assert ok is True
 
+    # ensure we hit GET three times as planned
     assert route_issue.call_count == EXPECTED_GET_CALLS
