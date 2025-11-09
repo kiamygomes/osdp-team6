@@ -5,7 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from ticket_api import Comment, Ticket, TicketNotFoundError, TicketPriority, TicketServiceAPI, TicketStatus, ServiceError
+from ticket_api import Comment, ServiceError, Ticket, TicketNotFoundError, TicketPriority, TicketServiceAPI, TicketStatus
 
 from . import jira_client as jc
 from .storage import ensure_mapping_for_keys, get_key_for_uuid, map_uuid_to_key
@@ -188,30 +188,31 @@ class TicketImpl(TicketServiceAPI):
         return out
 
     # UPDATE
-    async def update_ticket(  # noqa: PLR0913
+    async def update_ticket(
         self,
         ticket_id: UUID,
-        title: str | None = None,
-        description: str | None = None,
+        _title: str | None = None,
+        _description: str | None = None,
         status: TicketStatus | None = None,
-        priority: TicketPriority | None = None,
-        assignee: str | None = None,
+        _priority: TicketPriority | None = None,
+        _assignee: str | None = None,
     ) -> Ticket:
         """Update fields and/or workflow state; return the refreshed ticket."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
-            transitions = await jc.list_transitions(self.user_id, key)
-            target = {
-                TicketStatus.OPEN: {"Open", "To Do"},
-                TicketStatus.IN_PROGRESS: {"In Progress", "Doing"},
-                TicketStatus.RESOLVED: {"Done", "Resolved"},
-                TicketStatus.CLOSED: {"Closed"},
-            }[new_status]
-            choice = next((t for t in transitions if t.get("name") in target), None)
-            if not choice:
-                msg = f"No valid transition found to {new_status} for {key}"
-                raise ServiceError(msg)  # noqa: TRY301
-            await jc.do_transition(self.user_id, key, choice["id"])
+            if status:
+                transitions = await jc.list_transitions(self.user_id, key)
+                target = {
+                    TicketStatus.OPEN: {"Open", "To Do"},
+                    TicketStatus.IN_PROGRESS: {"In Progress", "Doing"},
+                    TicketStatus.RESOLVED: {"Done", "Resolved"},
+                    TicketStatus.CLOSED: {"Closed"},
+                }[status]
+                choice = next((t for t in transitions if t.get("name") in target), None)
+                if not choice:
+                    msg = f"No valid transition found to {status} for {key}"
+                    raise ServiceError(msg)  # noqa: TRY301
+                await jc.do_transition(self.user_id, key, choice["id"])
             data = await jc.get_issue(self.user_id, key)
             return _jira_to_ticket(data, self.user_id)
         except TicketNotFoundError:
@@ -289,15 +290,3 @@ class TicketImpl(TicketServiceAPI):
     async def transition_status(self, ticket_id: UUID, new_status: TicketStatus) -> Ticket:
         """Transition the ticket to a new status and return the updated ticket."""
         return await self.update_ticket(ticket_id, status=new_status)
-
-    async def reassign_ticket(self, ticket_id: UUID, new_assignee: str) -> Ticket:
-        """Reassign the ticket to a new assignee and return the updated ticket."""
-        return await self.update_ticket(ticket_id, assignee=new_assignee)
-
-    async def update_priority(self, ticket_id: UUID, new_priority: TicketPriority) -> Ticket:
-        """Update the ticket's priority and return the updated ticket."""
-        return await self.update_ticket(ticket_id, priority=new_priority)
-
-    async def update_description(self, ticket_id: UUID, new_description: str) -> Ticket:
-        """Update the ticket's description and return the updated ticket."""
-        return await self.update_ticket(ticket_id, description=new_description)

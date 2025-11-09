@@ -138,7 +138,11 @@ class _CompleteTestImplementation(TicketServiceAPI):
     """Test implementation with all required methods."""
 
     async def create_ticket(self, *_args: object, **kwargs: object) -> Ticket:
-        return Ticket(**kwargs)
+        # Type-safe construction: extract known fields with proper types
+        title = str(kwargs.get("title", ""))
+        description = str(kwargs.get("description", ""))
+        reporter = str(kwargs.get("reporter", ""))
+        return Ticket(title=title, description=description, reporter=reporter)
 
     async def get_ticket(self, _ticket_id: UUID) -> Ticket:
         return Ticket(title="t", description="d", reporter="r")
@@ -146,11 +150,11 @@ class _CompleteTestImplementation(TicketServiceAPI):
     async def update_ticket(
         self,
         _ticket_id: UUID,
-        title: str | None = None,
-        description: str | None = None,
-        status: TicketStatus | None = None,
-        priority: TicketPriority | None = None,
-        assignee: str | None = None,
+        _title: str | None = None,
+        _description: str | None = None,
+        _status: TicketStatus | None = None,
+        _priority: TicketPriority | None = None,
+        _assignee: str | None = None,
     ) -> Ticket:
         return Ticket(title="t", description="d", reporter="r")
 
@@ -184,6 +188,7 @@ class _CompleteTestImplementation(TicketServiceAPI):
 
     async def get_ticket_comments(self, _ticket_id: UUID) -> list[Comment]:
         return []
+
 
 class TestTicketServiceAPI:
     """Unit tests for the TicketServiceAPI abstract contract."""

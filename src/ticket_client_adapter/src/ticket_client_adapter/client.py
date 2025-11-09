@@ -237,8 +237,6 @@ class RemoteTicketService(TicketServiceAPI):
 
         return self._to_domain_ticket(response.parsed)
 
-
-
     async def delete_ticket(self, ticket_id: UUID) -> bool:
         """Delete a ticket via the generated client."""
         response = await delete_ticket_api_v1_tickets_ticket_id_delete.asyncio_detailed(
@@ -289,7 +287,6 @@ class RemoteTicketService(TicketServiceAPI):
             raise TypeError(msg)
 
         return self._to_domain_comment(response.parsed)
-
 
     async def get_ticket_comments(self, ticket_id: UUID) -> list[Comment]:
         """Retrieve all comments for a ticket via the generated client."""

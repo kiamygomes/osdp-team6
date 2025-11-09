@@ -41,6 +41,7 @@ class Comment:
     id: UUID = field(default_factory=uuid4)
     created_at: datetime = field(default_factory=lambda: datetime.now(UTC))
 
+
 @dataclass(frozen=True)
 class Ticket:
     """Represents a support ticket in the system.
