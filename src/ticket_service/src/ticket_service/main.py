@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 from fastapi import Depends, FastAPI, Header, HTTPException, Query, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from ticket_api import TicketServiceAPI, TicketStatus
+from ticket_api import TicketNotFoundError, TicketServiceAPI, TicketStatus
 from ticket_impl import TicketImpl
 
 # Import the actual OAuth functions from ticket_impl
@@ -427,6 +427,12 @@ async def update_ticket(
             priority=request.priority,
             assignee=request.assignee,
         )
+        return TicketResponse.model_validate(ticket)
+    except TicketNotFoundError as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail=f"Ticket {ticket_id} not found",
+        ) from exc
     except ValueError as e:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
@@ -437,12 +443,6 @@ async def update_ticket(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=f"Failed to update ticket: {e!s}",
         ) from e
-    if ticket is None:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail=f"Ticket {ticket_id} not found",
-        )
-    return TicketResponse.model_validate(ticket)
 
 
 @app.delete(
@@ -493,6 +493,12 @@ async def add_comment(
             author=request.author,
             content=request.content,
         )
+        return CommentResponse.model_validate(comment)
+    except TicketNotFoundError as exc:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail=f"Ticket {ticket_id} not found",
+        ) from exc
     except ValueError as e:
         raise HTTPException(
             status_code=HTTPStatus.BAD_REQUEST,
@@ -503,12 +509,6 @@ async def add_comment(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=f"Failed to add comment: {e!s}",
         ) from e
-    if comment is None:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail=f"Ticket {ticket_id} not found",
-        )
-    return CommentResponse.model_validate(comment)
 
 
 @app.get(

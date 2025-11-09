@@ -138,9 +138,20 @@ class _CompleteTestImplementation(TicketServiceAPI):
     """Test implementation with all required methods."""
 
     async def create_ticket(self, *_args: object, **kwargs: object) -> Ticket:
-        return Ticket(**kwargs)  # type: ignore[arg-type]
+        return Ticket(**kwargs)
 
     async def get_ticket(self, _ticket_id: UUID) -> Ticket:
+        return Ticket(title="t", description="d", reporter="r")
+
+    async def update_ticket(
+        self,
+        _ticket_id: UUID,
+        title: str | None = None,
+        description: str | None = None,
+        status: TicketStatus | None = None,
+        priority: TicketPriority | None = None,
+        assignee: str | None = None,
+    ) -> Ticket:
         return Ticket(title="t", description="d", reporter="r")
 
     async def list_tickets(
@@ -159,7 +170,7 @@ class _CompleteTestImplementation(TicketServiceAPI):
     async def transition_status(self, _ticket_id: UUID, _new_status: TicketStatus) -> Ticket:
         return Ticket(title="t", description="d", reporter="r")
 
-    async def reassign_ticket(self, _ticket_id: UUID, _new_assignee: str | None) -> Ticket:
+    async def reassign_ticket(self, _ticket_id: UUID, _new_assignee: str) -> Ticket:
         return Ticket(title="t", description="d", reporter="r")
 
     async def update_description(self, _ticket_id: UUID, _new_description: str) -> Ticket:
@@ -173,7 +184,6 @@ class _CompleteTestImplementation(TicketServiceAPI):
 
     async def get_ticket_comments(self, _ticket_id: UUID) -> list[Comment]:
         return []
-
 
 class TestTicketServiceAPI:
     """Unit tests for the TicketServiceAPI abstract contract."""

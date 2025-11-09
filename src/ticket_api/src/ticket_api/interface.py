@@ -33,8 +33,20 @@ class TicketServiceAPI(ABC):
     async def get_ticket(
         self,
         ticket_id: UUID,
+    ) -> Ticket | None:
+        """Retrieve a ticket by its ID. Returns None if not found."""
+
+    @abstractmethod
+    async def update_ticket(  # noqa: PLR0913
+        self,
+        ticket_id: UUID,
+        title: str | None = None,
+        description: str | None = None,
+        status: TicketStatus | None = None,
+        priority: TicketPriority | None = None,
+        assignee: str | None = None,
     ) -> Ticket:
-        """Retrieve a ticket by its ID."""
+        """Update ticket details."""
 
     @abstractmethod
     async def list_tickets(
@@ -87,7 +99,7 @@ class TicketServiceAPI(ABC):
         ticket_id: UUID,
         author: str,
         content: str,
-    ) -> Comment:
+    ) -> Comment:  # ← Remove | None
         """Add a comment to an existing ticket."""
 
     @abstractmethod

@@ -5,11 +5,7 @@ from __future__ import annotations
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
-from ticket_api.exceptions import ServiceError, TicketNotFoundError
-
-# Import from ticket_api submodules (dataclasses-based models + ABC + exceptions)
-from ticket_api.interface import TicketServiceAPI
-from ticket_api.models import Comment, Ticket, TicketPriority, TicketStatus
+from ticket_api import Comment, Ticket, TicketNotFoundError, TicketPriority, TicketServiceAPI, TicketStatus, ServiceError
 
 from . import jira_client as jc
 from .storage import ensure_mapping_for_keys, get_key_for_uuid, map_uuid_to_key
@@ -191,9 +187,17 @@ class TicketImpl(TicketServiceAPI):
         ensure_mapping_for_keys(self.user_id, pairs)
         return out
 
-    # --- granular update methods required by the ABC ---
-
-    async def transition_status(self, ticket_id: UUID, new_status: TicketStatus) -> Ticket:  # noqa: D102
+    # UPDATE
+    async def update_ticket(  # noqa: PLR0913
+        self,
+        ticket_id: UUID,
+        title: str | None = None,
+        description: str | None = None,
+        status: TicketStatus | None = None,
+        priority: TicketPriority | None = None,
+        assignee: str | None = None,
+    ) -> Ticket:
+        """Update fields and/or workflow state; return the refreshed ticket."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
             transitions = await jc.list_transitions(self.user_id, key)
@@ -249,12 +253,10 @@ class TicketImpl(TicketServiceAPI):
         try:
             await jc.update_issue_fields(self.user_id, key, {"description": new_description})
             data = await jc.get_issue(self.user_id, key)
-            return _jira_to_ticket(data, self.user_id)
-        except TicketNotFoundError:
-            raise
         except Exception as e:
-            msg = f"Failed to update description: {e}"
-            raise ServiceError(msg) from e
+            raise TicketNotFoundError(ticket_id) from e
+
+        return _jira_to_ticket(data, self.user_id)
 
     # DELETE
     async def delete_ticket(self, ticket_id: UUID) -> bool:
@@ -267,23 +269,35 @@ class TicketImpl(TicketServiceAPI):
             raise ServiceError(msg) from e
 
     # COMMENTS
-    async def add_comment(self, ticket_id: UUID, author: str, content: str) -> Comment:  # noqa: ARG002
+    async def add_comment(self, ticket_id: UUID, author: str, content: str) -> Comment:  # ← Remove | None  # noqa: ARG002
         """Add a comment and return it in domain form."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
             data = await jc.add_comment(self.user_id, key, content)
-            return _jira_comment_to_domain(data, ticket_id)
         except Exception as e:
-            msg = f"Failed to add comment: {e}"
-            raise ServiceError(msg) from e
+            raise TicketNotFoundError(ticket_id) from e
+
+        return _jira_comment_to_domain(data, ticket_id)
 
     async def get_ticket_comments(self, ticket_id: UUID) -> list[Comment]:
         """Return all comments for a ticket as domain objects."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
-        try:
-            raw = await jc.get_comments(self.user_id, key)
-            comments = raw.get("comments", [])
-            return [_jira_comment_to_domain(c, ticket_id) for c in comments]
-        except Exception as e:
-            msg = f"Failed to get comments: {e}"
-            raise ServiceError(msg) from e
+        raw = await jc.get_comments(self.user_id, key)
+        comments = raw.get("comments", [])
+        return [_jira_comment_to_domain(c, ticket_id) for c in comments]
+
+    async def transition_status(self, ticket_id: UUID, new_status: TicketStatus) -> Ticket:
+        """Transition the ticket to a new status and return the updated ticket."""
+        return await self.update_ticket(ticket_id, status=new_status)
+
+    async def reassign_ticket(self, ticket_id: UUID, new_assignee: str) -> Ticket:
+        """Reassign the ticket to a new assignee and return the updated ticket."""
+        return await self.update_ticket(ticket_id, assignee=new_assignee)
+
+    async def update_priority(self, ticket_id: UUID, new_priority: TicketPriority) -> Ticket:
+        """Update the ticket's priority and return the updated ticket."""
+        return await self.update_ticket(ticket_id, priority=new_priority)
+
+    async def update_description(self, ticket_id: UUID, new_description: str) -> Ticket:
+        """Update the ticket's description and return the updated ticket."""
+        return await self.update_ticket(ticket_id, description=new_description)

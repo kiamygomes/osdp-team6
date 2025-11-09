@@ -34,6 +34,7 @@ from ticket_service_client.models import (
 from ticket_api import (
     Comment,
     Ticket,
+    TicketNotFoundError,
     TicketPriority,
     TicketServiceAPI,
     TicketStatus,
@@ -204,7 +205,7 @@ class RemoteTicketService(TicketServiceAPI):
         status: TicketStatus | None = None,
         priority: TicketPriority | None = None,
         assignee: str | None = None,
-    ) -> Ticket | None:
+    ) -> Ticket:  # ← Changed from Ticket | None to Ticket
         """Update a ticket via the generated client."""
         request = TicketUpdateRequest(
             title=title,
@@ -222,8 +223,9 @@ class RemoteTicketService(TicketServiceAPI):
             x_project_key=self._project_key,
         )
 
+        # ← CHANGE: Raise exception instead of returning None
         if response.status_code == HTTPStatus.NOT_FOUND:
-            return None
+            raise TicketNotFoundError(ticket_id)
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to update ticket: HTTP {response.status_code}"
@@ -234,6 +236,8 @@ class RemoteTicketService(TicketServiceAPI):
             raise TypeError(msg)
 
         return self._to_domain_ticket(response.parsed)
+
+
 
     async def delete_ticket(self, ticket_id: UUID) -> bool:
         """Delete a ticket via the generated client."""
@@ -258,7 +262,7 @@ class RemoteTicketService(TicketServiceAPI):
         ticket_id: UUID,
         author: str,
         content: str,
-    ) -> Comment | None:
+    ) -> Comment:
         """Add a comment to a ticket via the generated client."""
         request = CommentCreateRequest(
             author=author,
@@ -274,7 +278,7 @@ class RemoteTicketService(TicketServiceAPI):
         )
 
         if response.status_code == HTTPStatus.NOT_FOUND:
-            return None
+            raise TicketNotFoundError(ticket_id)
 
         if response.status_code != HTTPStatus.CREATED:
             msg = f"Failed to add comment: HTTP {response.status_code}"
@@ -285,6 +289,7 @@ class RemoteTicketService(TicketServiceAPI):
             raise TypeError(msg)
 
         return self._to_domain_comment(response.parsed)
+
 
     async def get_ticket_comments(self, ticket_id: UUID) -> list[Comment]:
         """Retrieve all comments for a ticket via the generated client."""
@@ -331,3 +336,19 @@ class RemoteTicketService(TicketServiceAPI):
             content=generated.content,
             created_at=generated.created_at,
         )
+
+    async def transition_status(self, ticket_id: UUID, new_status: TicketStatus) -> Ticket:
+        """Transition the ticket to a new status."""
+        return await self.update_ticket(ticket_id, status=new_status)
+
+    async def reassign_ticket(self, ticket_id: UUID, new_assignee: str) -> Ticket:
+        """Reassign the ticket to a new assignee."""
+        return await self.update_ticket(ticket_id, assignee=new_assignee)
+
+    async def update_priority(self, ticket_id: UUID, new_priority: TicketPriority) -> Ticket:
+        """Update the ticket's priority."""
+        return await self.update_ticket(ticket_id, priority=new_priority)
+
+    async def update_description(self, ticket_id: UUID, new_description: str) -> Ticket:
+        """Update the ticket's description."""
+        return await self.update_ticket(ticket_id, description=new_description)
