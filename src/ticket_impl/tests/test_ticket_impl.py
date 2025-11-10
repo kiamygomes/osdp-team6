@@ -1,6 +1,7 @@
 """End-to-end happy-path for TicketImpl using respx mocks."""
 
 import re
+from uuid import uuid4
 
 import httpx
 import pytest
@@ -8,6 +9,8 @@ import respx
 from ticket_api.exceptions import ServiceError, TicketNotFoundError
 from ticket_api.models import TicketPriority, TicketStatus
 from ticket_impl.config import settings
+from ticket_impl.impl import _jira_comment_to_domain
+from ticket_impl.storage import map_uuid_to_key
 
 from ticket_impl import TicketImpl
 
@@ -347,9 +350,6 @@ async def test_get_ticket_comments_empty(seed_token: None) -> None:
 
     ticket_id = uuid4()
     key = "OSDP-101"
-
-    from ticket_impl.storage import map_uuid_to_key
-
     map_uuid_to_key("u1", ticket_id, key)
 
     respx.get(f"{BASE}/issue/{key}/comment").mock(return_value=httpx.Response(200, json={"comments": []}))
@@ -447,3 +447,168 @@ async def test_transition_status_all_states(seed_token: None) -> None:
         svc = TicketImpl(user_id="u1", project_key="OSDP")
         ticket = await svc.transition_status(ticket_id, status)
         assert ticket.status == status
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_status_name_to_domain_various_formats(seed_token: None) -> None:
+    """Test _status_name_to_domain with various status name formats."""
+    from ticket_impl.impl import _status_name_to_domain
+
+    # Line 30: Empty/None status
+    assert _status_name_to_domain(None) == TicketStatus.OPEN
+    assert _status_name_to_domain("") == TicketStatus.OPEN
+
+    # Line 40: Unknown status defaults to OPEN
+    assert _status_name_to_domain("Unknown Status") == TicketStatus.OPEN
+    assert _status_name_to_domain("Random") == TicketStatus.OPEN
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_jira_to_ticket_missing_fields(seed_token: None) -> None:
+    """Test _jira_to_ticket with missing or malformed fields."""
+    from ticket_impl.impl import _jira_to_ticket
+
+    # Line 76-85: Missing priority, assignee, reporter fields
+    minimal_data = {
+        "key": "OSDP-101",
+        "fields": {
+            "summary": "Test",
+            "status": {"name": "Open"},
+            # priority missing
+            # assignee missing
+            # reporter missing
+            # description missing
+        },
+    }
+
+    ticket = _jira_to_ticket(minimal_data, "user1")
+    assert ticket.title == "Test"
+    assert ticket.priority == TicketPriority.MEDIUM  # default
+    assert ticket.assignee is None
+    assert ticket.reporter == ""  # default empty string
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_jira_to_ticket_dict_description(seed_token: None) -> None:
+    """Test _jira_to_ticket with dict description (ADF format)."""
+    from ticket_impl.impl import _jira_to_ticket
+
+    # Lines 76-85: Non-string description
+    data_with_dict_desc = {
+        "key": "OSDP-101",
+        "fields": {
+            "summary": "Test",
+            "status": {"name": "Open"},
+            "priority": {"name": "High"},
+            "description": {"type": "doc", "content": []},  # dict format
+        },
+    }
+
+    ticket = _jira_to_ticket(data_with_dict_desc, "user1")
+    assert isinstance(ticket.description, str)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_ticket_reporter_lookup_fails(seed_token: None) -> None:
+    """Test create_ticket when reporter lookup returns None."""
+    # Line 149: reporter_id could be None
+    respx.get(re.compile(f"{re.escape(BASE)}/user/search\\?.*")).mock(
+        return_value=httpx.Response(200, json=[]),  # No users found
+    )
+    respx.post(f"{BASE}/issue").mock(
+        return_value=httpx.Response(201, json={"id": "10001", "key": "OSDP-101"}),
+    )
+    respx.get(f"{BASE}/issue/OSDP-101").mock(
+        return_value=httpx.Response(
+            200,
+            json={
+                "id": "10001",
+                "key": "OSDP-101",
+                "fields": {
+                    "summary": "Test",
+                    "status": {"name": "Open"},
+                    "priority": {"name": "Medium"},
+                    "description": "desc",
+                    "assignee": None,
+                    "reporter": None,
+                },
+            },
+        ),
+    )
+
+    svc = TicketImpl(user_id="u1", project_key="OSDP")
+    ticket = await svc.create_ticket(
+        title="Test",
+        description="desc",
+        reporter="nonexistent@example.com",
+    )
+    assert ticket.title == "Test"
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_jira_comment_to_domain_empty_body(seed_token: None) -> None:
+    """Test _jira_comment_to_domain with various body formats."""
+    ticket_id = uuid4()
+    # Line 188-198: Empty or missing body
+    empty_comment = {
+        "id": "c-1",
+        "body": {},  # Empty body
+        "author": {"displayName": "Author"},
+    }
+    comment = _jira_comment_to_domain(empty_comment, ticket_id)
+    assert comment.content == "<empty>"
+    # Missing body entirely
+    no_body_comment = {
+        "id": "c-2",
+        "author": {"displayName": "Author"},
+    }
+    comment = _jira_comment_to_domain(no_body_comment, ticket_id)
+    assert comment.content == "<empty>"
+    # Body with no content array
+    no_content_comment = {
+        "id": "c-3",
+        "body": {"type": "doc", "version": 1},
+        "author": {"displayName": "Author"},
+    }
+    comment = _jira_comment_to_domain(no_content_comment, ticket_id)
+    assert comment.content == "<empty>"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_delete_ticket_not_found(seed_token: None) -> None:
+    """Test delete_ticket when ticket doesn't exist."""
+    ticket_id = uuid4()
+    key = "OSDP-101"
+    map_uuid_to_key("u1", ticket_id, key)
+
+    # Line 295: Delete returns False or raises
+    respx.delete(f"{BASE}/issue/{key}").mock(
+        return_value=httpx.Response(404, json={"error": "Not found"}),
+    )
+
+    svc = TicketImpl(user_id="u1", project_key="OSDP")
+
+    with pytest.raises(ServiceError, match="Failed to delete ticket"):
+        await svc.delete_ticket(ticket_id)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_get_ticket_comments_service_error(seed_token: None) -> None:
+    """Test get_ticket_comments when service fails."""
+    ticket_id = uuid4()
+    key = "OSDP-101"
+    map_uuid_to_key("u1", ticket_id, key)
+
+    respx.get(f"{BASE}/issue/{key}/comment").mock(
+        return_value=httpx.Response(500, json={"error": "Server error"}),
+    )
+
+    svc = TicketImpl(user_id="u1", project_key="OSDP")
+
+    with pytest.raises(httpx.HTTPError):  # Will raise httpx exception
+        await svc.get_ticket_comments(ticket_id)
