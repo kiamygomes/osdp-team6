@@ -231,7 +231,8 @@ class TicketImpl(TicketServiceAPI):
             msg = f"Failed to transition status: {e}"
             raise ServiceError(msg) from e
 
-    async def reassign_ticket(self, ticket_id: UUID, new_assignee: str) -> Ticket:  # noqa: D102
+    async def reassign_ticket(self, ticket_id: UUID, new_assignee: str) -> Ticket:
+        """Reassign the ticket to a new assignee and return the updated ticket."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
             acct = await jc.find_user_account_id(self.user_id, new_assignee)
@@ -247,7 +248,8 @@ class TicketImpl(TicketServiceAPI):
             msg = f"Failed to reassign ticket: {e}"
             raise ServiceError(msg) from e
 
-    async def update_priority(self, ticket_id: UUID, new_priority: TicketPriority) -> Ticket:  # noqa: D102
+    async def update_priority(self, ticket_id: UUID, new_priority: TicketPriority) -> Ticket:
+        """Update the ticket priority and return the updated ticket."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
             await jc.update_issue_fields(self.user_id, key, {"priority": {"name": _priority_to_jira(new_priority)}})
@@ -259,7 +261,8 @@ class TicketImpl(TicketServiceAPI):
             msg = f"Failed to update priority: {e}"
             raise ServiceError(msg) from e
 
-    async def update_description(self, ticket_id: UUID, new_description: str) -> Ticket:  # noqa: D102
+    async def update_description(self, ticket_id: UUID, new_description: str) -> Ticket:
+        """Update the ticket description and return the updated ticket."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
             await jc.update_issue_fields(self.user_id, key, {"description": new_description})
