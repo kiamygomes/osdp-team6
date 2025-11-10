@@ -91,7 +91,7 @@ jobs:
   circleci_test:
     docker:
       - image: cimg/python:3.11
-    # Environment variables from the 'gmail-client' context will be available here
+    # Environment variables from the 'jira-oauth' context will be available here
     steps:
       - attach_workspace:
           at: . # Attach the workspace persisted from 'build'
@@ -100,6 +100,19 @@ jobs:
           command: |
             source .venv/bin/activate
             mkdir -p test-results/circleci # Separate directory for results
+      - run:
+          name: "Generate E2E Test Tokens (OAuth)"
+          command: |
+            source .venv/bin/activate
+            # Generate OAuth tokens for demo_user using stored credentials
+            # This allows e2e tests to run against real Jira Cloud
+            if [ -n "$OAUTH_CLIENT_ID" ] && [ -n "$OAUTH_CLIENT_SECRET" ]; then
+              echo "Generating e2e test tokens..."
+              python scripts/generate_e2e_tokens.py --tokens "$OAUTH_ACCESS_TOKEN" "$OAUTH_REFRESH_TOKEN" 3600
+              echo "✓ E2E tokens generated successfully"
+            else
+              echo "⚠ OAuth credentials not found. E2E tests will be skipped."
+            fi
       - run:
           name: "Execute All Tests Except Local Credentials"
           command: |
@@ -246,6 +259,7 @@ workflows:
       - circleci_test:
           requires:
             - unit_test # Run after unit tests pass
+          context: jira-oauth # Context containing OAuth credentials
           filters:
             branches:
               ignore:
@@ -304,6 +318,7 @@ workflows:
       - circleci_test:
           requires:
             - unit_test
+          context: jira-oauth # Context containing OAuth credentials
           filters:
             branches:
               only:

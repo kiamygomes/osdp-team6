@@ -7,6 +7,7 @@ from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import UUID
 
 import pytest
+from ticket_impl import config  # Load .env variables
 
 from ticket_api import Comment, Ticket, TicketPriority, TicketServiceAPI, TicketStatus
 

@@ -50,8 +50,28 @@ def setup_oauth_tokens() -> None:
     if not HAS_OAUTH_CREDENTIALS:
         return  # Skip if credentials not configured
 
+    # Ensure we use the correct (non-test) database for E2E tests
+    # The ticket_impl test conftest may have changed DB_URL to a test database
+    # We need to temporarily restore it to get tokens from the production database
+    if os.getenv("DB_URL", "").endswith("test_tokens.db"):
+        os.environ["DB_URL"] = "sqlite:///./jira_tokens.db"
+        # Reload the storage module to use the new DB_URL
+        import importlib
+
+        import ticket_impl.storage
+
+        importlib.reload(ticket_impl.storage)
+        from ticket_impl.storage import get_tokens as get_tokens_prod
+        from ticket_impl.storage import upsert_tokens as upsert_tokens_prod
+
+        get_tokens_fn = get_tokens_prod
+        upsert_tokens_fn = upsert_tokens_prod
+    else:
+        get_tokens_fn = get_tokens
+        upsert_tokens_fn = upsert_tokens
+
     # Get the real tokens from demo_user (obtained through OAuth flow)
-    demo_tokens = get_tokens("demo_user")
+    demo_tokens = get_tokens_fn("demo_user")
     if not demo_tokens:
         pytest.skip(
             "No valid OAuth tokens found for demo_user. Run main.py to authenticate first.",
@@ -67,7 +87,7 @@ def setup_oauth_tokens() -> None:
 
     for user_id in test_users:
         # Use the real OAuth tokens from demo_user for all E2E test users
-        upsert_tokens(
+        upsert_tokens_fn(
             user_id=user_id,
             access=demo_tokens.access_token,
             refresh=demo_tokens.refresh_token,
