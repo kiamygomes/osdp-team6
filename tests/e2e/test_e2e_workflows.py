@@ -15,15 +15,14 @@ These tests require real Jira Cloud access and valid OAuth tokens.
 """
 
 import os
-from datetime import UTC, datetime, timedelta
 from http import HTTPStatus
 from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
+from ticket_impl.storage import upsert_tokens
 
 from ticket_api import TicketPriority, TicketStatus
-from ticket_impl.storage import upsert_tokens
 from ticket_service import app
 
 pytestmark = pytest.mark.e2e
@@ -56,9 +55,6 @@ def setup_oauth_tokens() -> None:
         "e2e-test-user-oauth",
         "e2e-test-workflow",
     ]
-
-    # Create token with 1 hour expiration (future date)
-    expires_at = datetime.now(UTC) + timedelta(hours=1)
 
     for user_id in test_users:
         # Use dummy tokens - they won't be validated in our mock setup

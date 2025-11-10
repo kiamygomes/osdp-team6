@@ -16,11 +16,16 @@ Example retry implementation:
 """
 
 import asyncio
+import contextlib
 import hashlib
+import logging
+import secrets
+import time
 from collections.abc import Awaitable, Callable
+from enum import Enum
 from http import HTTPStatus
 from typing import TYPE_CHECKING, TypeVar, cast
-from uuid import UUID
+from uuid import UUID, uuid4
 
 import httpx
 from ticket_api import (
@@ -62,6 +67,90 @@ if TYPE_CHECKING:
 
 T = TypeVar("T")
 
+logger = logging.getLogger(__name__)
+
+
+class CircuitState(Enum):
+    """Circuit breaker states."""
+
+    CLOSED = "closed"
+    OPEN = "open"
+    HALF_OPEN = "half_open"
+
+
+class CircuitBreaker:
+    """Circuit breaker to prevent cascading failures.
+
+    Opens after a threshold of consecutive failures, preventing further requests.
+    After a timeout, enters half-open state to test if service has recovered.
+    """
+
+    def __init__(
+        self,
+        failure_threshold: int = 5,
+        recovery_timeout: float = 60.0,
+        expected_exception: type[Exception] = httpx.HTTPError,
+    ) -> None:
+        """Initialize circuit breaker.
+
+        Args:
+            failure_threshold: Number of consecutive failures before opening
+            recovery_timeout: Seconds to wait before attempting recovery
+            expected_exception: Exception type to track for failures
+
+        """
+        self.failure_threshold = failure_threshold
+        self.recovery_timeout = recovery_timeout
+        self.expected_exception = expected_exception
+        self.failure_count = 0
+        self.last_failure_time: float | None = None
+        self.state = CircuitState.CLOSED
+
+    def record_success(self) -> None:
+        """Record a successful operation."""
+        self.failure_count = 0
+        self.state = CircuitState.CLOSED
+
+    def record_failure(self) -> None:
+        """Record a failed operation."""
+        self.failure_count += 1
+        self.last_failure_time = time.time()
+        if self.failure_count >= self.failure_threshold:
+            self.state = CircuitState.OPEN
+            logger.warning(
+                "Circuit breaker opened after %s consecutive failures",
+                self.failure_count,
+            )
+
+    def can_attempt(self) -> bool:
+        """Check if operation can be attempted."""
+        if self.state == CircuitState.CLOSED:
+            return True
+        if self.state == CircuitState.OPEN:
+            if self.last_failure_time is not None and (
+                time.time() - self.last_failure_time >= self.recovery_timeout
+            ):
+                self.state = CircuitState.HALF_OPEN
+                logger.info("Circuit breaker entering half-open state")
+                return True
+            return False
+        return True
+
+    async def call(self, operation: Callable[[], Awaitable[T]]) -> T:
+        """Execute operation with circuit breaker protection."""
+        if not self.can_attempt():
+            msg = "Circuit breaker is open"
+            raise httpx.HTTPError(msg)
+
+        try:
+            result = await operation()
+        except self.expected_exception:
+            self.record_failure()
+            raise
+        else:
+            self.record_success()
+            return result
+
 
 class IdempotentClient(Client):
     """Extended Client that supports idempotency headers.
@@ -70,24 +159,65 @@ class IdempotentClient(Client):
     for safe retries on idempotent operations.
     """
 
-    def __init__(self, base_url: str) -> None:
-        """Initialize the idempotent client."""
-        super().__init__(base_url=base_url)
+    def __init__(self, base_url: str, timeout: float = 30.0) -> None:
+        """Initialize the idempotent client.
+
+        Args:
+            base_url: Base URL for the service
+            timeout: Request timeout in seconds
+
+        """
+        super().__init__(base_url=base_url, timeout=httpx.Timeout(timeout))
         self._idempotency_key: str | None = None
+        self._correlation_id: str | None = None
+        self._httpx_client: httpx.AsyncClient | None = None
 
     def set_idempotency_key(self, key: str) -> None:
         """Set the current idempotency key for the next request."""
         self._idempotency_key = key
+        self._reset_client()
 
     def clear_idempotency_key(self) -> None:
         """Clear the idempotency key after request."""
         self._idempotency_key = None
+        self._reset_client()
+
+    def set_correlation_id(self, correlation_id: str) -> None:
+        """Set the correlation ID for tracking requests."""
+        self._correlation_id = correlation_id
+        self._reset_client()
+
+    def clear_correlation_id(self) -> None:
+        """Clear the correlation ID."""
+        self._correlation_id = None
+        self._reset_client()
+
+    def _reset_client(self) -> None:
+        """Reset the httpx client to pick up new headers."""
+        if self._httpx_client is not None:
+            self._httpx_client = None
 
     def get_async_httpx_client(self) -> httpx.AsyncClient:
-        """Get the async httpx client with idempotency support via override."""
-        # Return the base client directly. Idempotency is set at the time
-        # of request in create_ticket and add_comment methods.
-        return super().get_async_httpx_client()
+        """Get the async httpx client with custom headers and timeout."""
+        if self._httpx_client is None:
+            headers: dict[str, str] = {}
+            if self._idempotency_key is not None:
+                headers["Idempotency-Key"] = self._idempotency_key
+            if self._correlation_id is not None:
+                headers["X-Correlation-ID"] = self._correlation_id
+
+            self._httpx_client = httpx.AsyncClient(
+                headers=headers,
+                timeout=self._timeout,
+                base_url=self._base_url,
+            )
+        return self._httpx_client
+
+    async def aclose(self) -> None:
+        """Close the httpx client."""
+        if self._httpx_client is not None:
+            await self._httpx_client.aclose()
+            self._httpx_client = None
 
 
 class RemoteTicketService(TicketServiceAPI):
@@ -125,6 +255,7 @@ class RemoteTicketService(TicketServiceAPI):
         project_key: str,
         max_retries: int = 3,
         initial_backoff_seconds: float = 1.0,
+        timeout: float = 30.0,
     ) -> None:
         """Initialize the remote ticket service adapter.
 
@@ -134,13 +265,18 @@ class RemoteTicketService(TicketServiceAPI):
             project_key: Jira project key
             max_retries: Maximum number of retry attempts for transient failures
             initial_backoff_seconds: Initial backoff duration in seconds for exponential backoff
+            timeout: Request timeout in seconds
 
         """
-        self._client = IdempotentClient(base_url=base_url)
+        self._client = IdempotentClient(base_url=base_url, timeout=timeout)
         self._user_id = user_id
         self._project_key = project_key
         self._max_retries = max_retries
         self._initial_backoff_seconds = initial_backoff_seconds
+        self._circuit_breaker = CircuitBreaker(
+            failure_threshold=5,
+            recovery_timeout=60.0,
+        )
 
     async def __aenter__(self) -> "RemoteTicketService":
         """Async context manager entry."""
@@ -148,18 +284,36 @@ class RemoteTicketService(TicketServiceAPI):
 
     async def __aexit__(self, *args: object) -> None:
         """Async context manager exit."""
-        # Clean up the underlying HTTP client
-        http_client = self._client.get_async_httpx_client()
-        await http_client.aclose()
+        await self._client.aclose()
+
+    def _calculate_backoff_with_jitter(self, attempt: int, retry_after: float | None = None) -> float:
+        """Calculate backoff time with exponential backoff and jitter.
+
+        Args:
+            attempt: Current retry attempt number (0-indexed)
+            retry_after: Optional Retry-After header value in seconds
+
+        Returns:
+            Backoff duration in seconds
+
+        """
+        if retry_after is not None:
+            return retry_after
+
+        base_backoff: float = self._initial_backoff_seconds * (2**attempt)
+        jitter_ms: int = secrets.randbelow(1000)
+        return base_backoff + float(jitter_ms) / 1000.0
 
     async def _retry_with_backoff(
         self,
         operation: Callable[[], Awaitable[object]],
+        correlation_id: str,
     ) -> object:
         """Execute operation with exponential backoff retry on transient failures.
 
         Args:
             operation: Async callable to execute with no arguments
+            correlation_id: Correlation ID for tracking this request
 
         Returns:
             Result from the operation
@@ -171,23 +325,57 @@ class RemoteTicketService(TicketServiceAPI):
         last_exception: httpx.HTTPStatusError | httpx.ConnectError | httpx.TimeoutException | None = None
         for attempt in range(self._max_retries):
             try:
-                return await operation()
+                return await self._circuit_breaker.call(operation)
             except httpx.HTTPStatusError as e:
                 last_exception = e
-                # Only retry on transient errors (5xx, 429). Raise immediately on client errors.
                 if e.response is not None and (
                     e.response.status_code < HTTPStatus.INTERNAL_SERVER_ERROR
                     and e.response.status_code != HTTPStatus.TOO_MANY_REQUESTS
                 ):
+                    logger.exception(
+                        "Client error for correlation_id=%s: HTTP %s",
+                        correlation_id,
+                        e.response.status_code,
+                    )
                     raise
+
                 if attempt < self._max_retries - 1:
-                    backoff_seconds = self._initial_backoff_seconds * (2 ** attempt)
+                    retry_after = None
+                    if e.response is not None and "Retry-After" in e.response.headers:
+                        with contextlib.suppress(ValueError):
+                            retry_after = float(e.response.headers["Retry-After"])
+
+                    backoff_seconds = self._calculate_backoff_with_jitter(attempt, retry_after)
+                    logger.warning(
+                        "Retry attempt %s for correlation_id=%s after %s seconds (HTTP %s)",
+                        attempt + 1,
+                        correlation_id,
+                        backoff_seconds,
+                        e.response.status_code if e.response else "unknown",
+                    )
                     await asyncio.sleep(backoff_seconds)
+                else:
+                    logger.exception(
+                        "All retries exhausted for correlation_id=%s",
+                        correlation_id,
+                    )
             except (httpx.ConnectError, httpx.TimeoutException) as e:
                 last_exception = e
                 if attempt < self._max_retries - 1:
-                    backoff_seconds = self._initial_backoff_seconds * (2 ** attempt)
+                    backoff_seconds = self._calculate_backoff_with_jitter(attempt)
+                    logger.warning(
+                        "Network error on attempt %s for correlation_id=%s, retrying after %s seconds",
+                        attempt + 1,
+                        correlation_id,
+                        backoff_seconds,
+                        exc_info=True,
+                    )
                     await asyncio.sleep(backoff_seconds)
+                else:
+                    logger.exception(
+                        "All retries exhausted for correlation_id=%s due to network error",
+                        correlation_id,
+                    )
 
         if last_exception:
             raise last_exception
@@ -211,42 +399,60 @@ class RemoteTicketService(TicketServiceAPI):
         assignee: str | None = None,
     ) -> Ticket:
         """Create a new ticket via the generated client with idempotency support."""
-        # Convert domain model to generated client model
-        request = TicketCreateRequest(
-            title=title,
-            description=description,
-            reporter=reporter,
-            priority=self._to_generated_priority(priority),
-            assignee=assignee,
+        correlation_id = str(uuid4())
+        request_data = "{}{}{}{}{}".format(title, description, reporter, priority.value, assignee or "")
+        idempotency_key = hashlib.sha256(request_data.encode()).hexdigest()
+
+        logger.info(
+            "Creating ticket with correlation_id=%s, idempotency_key=%s",
+            correlation_id,
+            idempotency_key,
         )
 
-        # Generate idempotency key for tracking (for future use when custom client is implemented)
-        request_data = f"{title}{description}{reporter}{priority.value}{assignee or ''}"
-        _idempotency_key = hashlib.sha256(request_data.encode()).hexdigest()
+        self._client.set_idempotency_key(idempotency_key)
+        self._client.set_correlation_id(correlation_id)
 
-        # Call the generated client with exponential backoff retry
-        # Note: Response[T] generic syntax is valid but mypy has issues with it in nested functions.
-        # We use the proper type annotation for clarity, and response handling validates the type.
-        async def _make_request() -> object:  # Returns Response[TicketResponse]
-            response = await create_ticket_api_v1_tickets_post.asyncio_detailed(
-                client=self._client,
-                body=request,
-                x_user_id=self._user_id,
-                x_project_key=self._project_key,
+        try:
+            request = TicketCreateRequest(
+                title=title,
+                description=description,
+                reporter=reporter,
+                priority=self._to_generated_priority(priority),
+                assignee=assignee,
             )
-            if response.status_code != HTTPStatus.CREATED:
-                msg = f"Failed to create ticket: HTTP {response.status_code}"
-                raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
-            return response
 
-        response_obj = cast("Response[TicketResponse]", await self._retry_with_backoff(_make_request))
+            async def _make_request() -> object:
+                response = await create_ticket_api_v1_tickets_post.asyncio_detailed(
+                    client=self._client,
+                    body=request,
+                    x_user_id=self._user_id,
+                    x_project_key=self._project_key,
+                )
+                if response.status_code != HTTPStatus.CREATED:
+                    msg = f"Failed to create ticket: HTTP {response.status_code}"
+                    req = cast("httpx.Request", response)
+                    resp = cast("httpx.Response", response)
+                    raise httpx.HTTPStatusError(msg, request=req, response=resp)
+                return response
 
-        # Convert generated model back to domain model
-        if not isinstance(response_obj.parsed, TicketResponse):
-            msg = f"Unexpected response type: {type(response_obj.parsed)}"
-            raise TypeError(msg)
+            response_obj = cast(
+                "Response[TicketResponse]",
+                await self._retry_with_backoff(_make_request, correlation_id),
+            )
 
-        return self._to_domain_ticket(response_obj.parsed)
+            if not isinstance(response_obj.parsed, TicketResponse):
+                msg = f"Unexpected response type: {type(response_obj.parsed)}"
+                raise TypeError(msg)
+
+            logger.info(
+                "Successfully created ticket with correlation_id=%s, ticket_id=%s",
+                correlation_id,
+                response_obj.parsed.id,
+            )
+            return self._to_domain_ticket(response_obj.parsed)
+        finally:
+            self._client.clear_idempotency_key()
+            self._client.clear_correlation_id()
 
     async def get_ticket(self, ticket_id: UUID) -> Ticket | None:
         """Retrieve a ticket by ID via the generated client."""
@@ -365,46 +571,71 @@ class RemoteTicketService(TicketServiceAPI):
         content: str,
     ) -> Comment | None:
         """Add a comment to a ticket via the generated client with idempotency support."""
-        request = CommentCreateRequest(
-            author=author,
-            content=content,
+        correlation_id = str(uuid4())
+        request_data = f"{ticket_id}{author}{content}"
+        idempotency_key = hashlib.sha256(request_data.encode()).hexdigest()
+
+        logger.info(
+            "Adding comment with correlation_id=%s, idempotency_key=%s, ticket_id=%s",
+            correlation_id,
+            idempotency_key,
+            ticket_id,
         )
 
-        # Generate idempotency key for tracking (for future use when custom client is implemented)
-        request_data = f"{ticket_id}{author}{content}"
-        _idempotency_key = hashlib.sha256(request_data.encode()).hexdigest()
+        self._client.set_idempotency_key(idempotency_key)
+        self._client.set_correlation_id(correlation_id)
 
-        # Call the generated client with exponential backoff retry
-        async def _make_request() -> object:
-            response = await add_comment_api_v1_tickets_ticket_id_comments_post.asyncio_detailed(
-                client=self._client,
-                ticket_id=ticket_id,
-                body=request,
-                x_user_id=self._user_id,
-                x_project_key=self._project_key,
+        try:
+            request = CommentCreateRequest(
+                author=author,
+                content=content,
             )
 
-            if response.status_code == HTTPStatus.NOT_FOUND:
+            async def _make_request() -> object:
+                response = await add_comment_api_v1_tickets_ticket_id_comments_post.asyncio_detailed(
+                    client=self._client,
+                    ticket_id=ticket_id,
+                    body=request,
+                    x_user_id=self._user_id,
+                    x_project_key=self._project_key,
+                )
+
+                if response.status_code == HTTPStatus.NOT_FOUND:
+                    return None
+
+                if response.status_code != HTTPStatus.CREATED:
+                    msg = f"Failed to add comment: HTTP {response.status_code}"
+                    req = cast("httpx.Request", response)
+                    resp = cast("httpx.Response", response)
+                    raise httpx.HTTPStatusError(msg, request=req, response=resp)
+
+                return response
+
+            response_result = await self._retry_with_backoff(_make_request, correlation_id)
+
+            if response_result is None:
+                logger.info(
+                    "Ticket not found for correlation_id=%s, ticket_id=%s",
+                    correlation_id,
+                    ticket_id,
+                )
                 return None
 
-            if response.status_code != HTTPStatus.CREATED:
-                msg = f"Failed to add comment: HTTP {response.status_code}"
-                raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            response = cast("Response[CommentResponse]", response_result)
 
-            return response
+            if not isinstance(response.parsed, CommentResponse):
+                msg = f"Unexpected response type: {type(response.parsed)}"
+                raise TypeError(msg)
 
-        response_result = await self._retry_with_backoff(_make_request)
-
-        if response_result is None:
-            return None
-
-        response = cast("Response[CommentResponse]", response_result)
-
-        if not isinstance(response.parsed, CommentResponse):
-            msg = f"Unexpected response type: {type(response.parsed)}"
-            raise TypeError(msg)
-
-        return self._to_domain_comment(response.parsed)
+            logger.info(
+                "Successfully added comment with correlation_id=%s, comment_id=%s",
+                correlation_id,
+                response.parsed.id,
+            )
+            return self._to_domain_comment(response.parsed)
+        finally:
+            self._client.clear_idempotency_key()
+            self._client.clear_correlation_id()
 
     async def get_ticket_comments(self, ticket_id: UUID) -> list[Comment]:
         """Retrieve all comments for a ticket via the generated client."""
