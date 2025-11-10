@@ -340,3 +340,123 @@ class TestGetTicketComments:
 
             assert response.status_code == HTTPStatus.UNAUTHORIZED
             assert "session expired" in response.json()["detail"].lower()
+
+    @pytest.mark.asyncio
+    async def test_create_ticket_value_error(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+        """Test create ticket with invalid input."""
+        with (
+            patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
+            patch("ticket_service.main.TicketImpl") as mock_impl,
+        ):
+            mock_service = AsyncMock()
+            mock_service.create_ticket.side_effect = ValueError("bad input")
+            mock_impl.return_value = mock_service
+            resp = await async_client.post(
+                "/api/v1/tickets",
+                headers={"X-User-ID": mock_user_id, "X-Project-Key": mock_project_key},
+                json={"title": "t", "description": "d", "reporter": "r"},
+            )
+            assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+    @pytest.mark.asyncio
+    async def test_get_ticket_not_found(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+        """Test get ticket when ticket is not found."""
+        with (
+            patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
+            patch("ticket_service.main.TicketImpl") as mock_impl,
+        ):
+            mock_service = AsyncMock()
+            mock_service.get_ticket.return_value = None
+            mock_impl.return_value = mock_service
+            ticket_id = str(uuid4())
+            resp = await async_client.get(
+                f"/api/v1/tickets/{ticket_id}",
+                headers={"X-User-ID": mock_user_id, "X-Project-Key": mock_project_key},
+            )
+            assert resp.status_code == HTTPStatus.NOT_FOUND
+
+    @pytest.mark.asyncio
+    async def test_get_ticket_comments_exception(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+        """Test get ticket comments when an exception occurs."""
+        with (
+            patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
+            patch("ticket_service.main.TicketImpl") as mock_impl,
+        ):
+            mock_service = AsyncMock()
+            mock_service.get_ticket.return_value = AsyncMock()
+            mock_service.get_ticket_comments.side_effect = Exception("fail")
+            mock_impl.return_value = mock_service
+            ticket_id = str(uuid4())
+            resp = await async_client.get(
+                f"/api/v1/tickets/{ticket_id}",
+                headers={"X-User-ID": mock_user_id, "X-Project-Key": mock_project_key},
+            )
+            assert resp.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+    @pytest.mark.asyncio
+    async def test_list_tickets_value_error(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+        """Test list tickets with invalid input."""
+        with (
+            patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
+            patch("ticket_service.main.TicketImpl") as mock_impl,
+        ):
+            mock_service = AsyncMock()
+            mock_service.list_tickets.side_effect = ValueError("bad params")
+            mock_impl.return_value = mock_service
+            resp = await async_client.get(
+                "/api/v1/tickets",
+                headers={"X-User-ID": mock_user_id, "X-Project-Key": mock_project_key},
+            )
+            assert resp.status_code == HTTPStatus.BAD_REQUEST
+
+    @pytest.mark.asyncio
+    async def test_list_tickets_exception(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+        """Test list tickets when an exception occurs."""
+        with (
+            patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
+            patch("ticket_service.main.TicketImpl") as mock_impl,
+        ):
+            mock_service = AsyncMock()
+            mock_service.list_tickets.side_effect = Exception("fail")
+            mock_impl.return_value = mock_service
+            resp = await async_client.get(
+                "/api/v1/tickets",
+                headers={"X-User-ID": mock_user_id, "X-Project-Key": mock_project_key},
+            )
+            assert resp.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+    @pytest.mark.asyncio
+    async def test_update_ticket_exception(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+        """Test update ticket when an exception occurs."""
+        with (
+            patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
+            patch("ticket_service.main.TicketImpl") as mock_impl,
+        ):
+            mock_service = AsyncMock()
+            mock_service.update_ticket.side_effect = Exception("fail")
+            mock_impl.return_value = mock_service
+            ticket_id = str(uuid4())
+            resp = await async_client.patch(
+                f"/api/v1/tickets/{ticket_id}",
+                headers={"X-User-ID": mock_user_id, "X-Project-Key": mock_project_key},
+                json={},
+            )
+            assert resp.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
+
+    @pytest.mark.asyncio
+    async def test_update_ticket_not_found(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+        """Test update ticket when ticket is not found."""
+        with (
+            patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
+            patch("ticket_service.main.TicketImpl") as mock_impl,
+        ):
+            mock_service = AsyncMock()
+            mock_service.update_ticket.return_value = None
+            mock_impl.return_value = mock_service
+            ticket_id = str(uuid4())
+            resp = await async_client.patch(
+                f"/api/v1/tickets/{ticket_id}",
+                headers={"X-User-ID": mock_user_id, "X-Project-Key": mock_project_key},
+                json={},
+            )
+            assert resp.status_code == HTTPStatus.NOT_FOUND
