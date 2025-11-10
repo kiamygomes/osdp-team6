@@ -268,37 +268,292 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 
 ## Component Overview
 
-### ticket_api - Foundation Layer
-Abstract interface and data models defining the ticketing contract:
-- `TicketServiceAPI` abstract base class with all required operations
-- `Ticket` and `Comment` Pydantic models with validation
+### 📦 ticket_api - Foundation Layer
+**Abstract interface and data models defining the ticketing contract**
+
+The foundation of the entire system, providing clean abstractions and type-safe models.
+
+**Key Features:**
+- `TicketServiceAPI` abstract base class with 10 required operations
+- Immutable `Ticket` and `Comment` frozen dataclasses
 - `TicketStatus` and `TicketPriority` enumerations
-- 100% test coverage with comprehensive validation
+- Custom exception hierarchy (`TicketAPIError`, `ServiceError`, `TicketNotFoundError`)
+- Zero external dependencies (pure Python stdlib)
+- 100% test coverage (22 tests)
 
-### ticket_impl - Jira Integration
-Concrete implementation for Jira Cloud with OAuth 2.0:
-- Complete Jira REST API v3 integration
-- OAuth token management and refresh
-- UUID to Jira key mapping for clean abstractions
-- Data transformation between domain and Jira models
+**Documentation:** See [`src/ticket_api/README.md`](src/ticket_api/README.md) for complete API reference, usage examples, and integration guide.
 
-### ticket_service - HTTP API
-FastAPI web service exposing REST endpoints:
-- Complete CRUD operations for tickets and comments
-- OAuth 2.0 authentication flow endpoints
-- Automatic OpenAPI documentation generation
+**Quick Example:**
+```python
+from ticket_api import Ticket, TicketStatus, TicketPriority
+
+ticket = Ticket(
+    title="Bug in login",
+    description="Users cannot authenticate",
+    reporter="user@example.com",
+    priority=TicketPriority.HIGH
+)
+```
+
+---
+
+### 🔌 ticket_impl - Jira Cloud Integration
+**Production-ready Jira Cloud implementation with OAuth 2.0**
+
+Complete implementation of `TicketServiceAPI` that integrates directly with Jira Cloud REST API v3.
+
+**Key Features:**
+- Full Jira Cloud REST API v3 integration
+- OAuth 2.0 (3-legged) authentication with automatic token refresh
+- UUID abstraction (hides Jira issue keys from domain layer)
+- Atlassian Document Format (ADF) support for rich text
+- SQLAlchemy-based token and mapping storage
+- Comprehensive error handling and logging
+
+**Components:**
+- `TicketImpl` - Main service implementation
+- `jira_client` - Low-level HTTP client for Jira API
+- `oauth` - OAuth 2.0 flow and token management
+- `storage` - SQLite/PostgreSQL persistence layer
+- `config` - Environment-based configuration
+
+**Documentation:** See [`src/ticket_impl/README.md`](src/ticket_impl/README.md) for OAuth setup, Jira integration guide, and data transformation details.
+
+**Quick Example:**
+```python
+from ticket_impl import TicketImpl
+
+service = TicketImpl(user_id="user-123", project_key="PROJ")
+ticket = await service.create_ticket(
+    title="Bug Report",
+    description="System issue",
+    reporter="user@example.com"
+)
+```
+
+---
+
+### 🌐 ticket_service - FastAPI Web Service
+**Production-ready REST API with cookie-based authentication**
+
+FastAPI-based HTTP service exposing ticket operations through REST endpoints.
+
+**Key Features:**
+- RESTful API with 13 endpoints (tickets, comments, auth, health)
+- Cookie-based session authentication (seamless for browsers)
+- OAuth 2.0 integration for Jira Cloud
+- Automatic OpenAPI/Swagger documentation
 - Request/response validation with Pydantic
+- CORS support for web applications
+- Dependency injection for clean architecture
 
-### ticket_client_generated - HTTP Client
-Auto-generated type-safe client from OpenAPI specification:
-- Generated Pydantic models for all requests/responses
+**Endpoints:**
+- **Auth:** `/api/v1/auth/login`, `/api/v1/auth/callback`, `/api/v1/auth/status`, `/api/v1/auth/logout`
+- **Tickets:** `POST /api/v1/tickets`, `GET /api/v1/tickets/{id}`, `GET /api/v1/tickets`, `PATCH /api/v1/tickets/{id}`, `DELETE /api/v1/tickets/{id}`
+- **Comments:** `POST /api/v1/tickets/{id}/comments`, `GET /api/v1/tickets/{id}/comments`
+- **Health:** `GET /health`
+
+**Documentation:** See [`src/ticket_service/README.md`](src/ticket_service/README.md) for complete API reference, authentication guide, and deployment instructions.
+
+**Quick Start:**
+```bash
+# Start the service
+uv run uvicorn ticket_service.main:app --reload
+
+# Visit interactive docs
+open http://localhost:8000/docs
+```
+
+---
+
+### 🤖 ticket_client_generated - Auto-Generated HTTP Client
+**Type-safe HTTP client generated from OpenAPI specification**
+
+Auto-generated client code providing type-safe API interactions with the ticket service.
+
+**Key Features:**
+- Generated from OpenAPI 3.0 specification
+- Type-safe Pydantic models for all requests/responses
 - Async and sync operation support
 - Comprehensive error handling
-- Full OpenAPI 3.0 compatibility
+- Automatic serialization/deserialization
 
-### ticket_client_adapter - Domain Interface
-Adapter wrapping the generated client with clean domain interface:
-- Implements `TicketServiceAPI` for remote service access
-- Hides HTTP/network details from business logic
-- Model conversion between HTTP and domain models
-- Connection management and error translation
+**Documentation:** See [`src/ticket_client_generated/README.md`](src/ticket_client_generated/README.md) for generation process and usage examples.
+
+**Quick Example:**
+```python
+from ticket_service_client import Client
+from ticket_service_client.api.tickets import create_ticket_api_v1_tickets_post
+
+client = Client(base_url="http://localhost:8000")
+response = await create_ticket_api_v1_tickets_post.asyncio_detailed(
+    client=client,
+    body=TicketCreateRequest(...)
+)
+```
+
+---
+
+### 🔄 ticket_client_adapter - Remote Service Adapter
+**Enterprise-grade HTTP client with reliability features**
+
+Adapter wrapping the generated client with the clean `TicketServiceAPI` interface, adding production-critical reliability features.
+
+**Key Features:**
+- Implements `TicketServiceAPI` for location transparency
+- **Idempotency:** Safe retries with idempotency keys
+- **Retry Logic:** Exponential backoff with jitter for transient failures
+- **Circuit Breaker:** Prevents cascading failures
+- **Observability:** Correlation IDs and structured logging
+- Hides all HTTP/network details from business logic
+
+**Components:**
+- `RemoteTicketService` - Main adapter implementing `TicketServiceAPI`
+- `IdempotentClient` - Enhanced HTTP client with idempotency support
+- `CircuitBreaker` - Fault tolerance mechanism
+
+**Documentation:** See [`src/ticket_client_adapter/README.md`](src/ticket_client_adapter/README.md) for reliability features, retry strategies, and production configuration.
+
+**Quick Example:**
+```python
+from ticket_client_adapter import RemoteTicketService
+
+async with RemoteTicketService(
+    base_url="http://localhost:8000",
+    user_id="user-123",
+    project_key="PROJ",
+    max_retries=3
+) as service:
+    # Same interface as TicketImpl - no HTTP details!
+    ticket = await service.create_ticket(
+        title="Bug Report",
+        description="System issue",
+        reporter="user@example.com"
+    )
+```
+
+---
+
+## 📊 Test Coverage Summary
+
+| Package | Tests | Coverage | Key Features Tested |
+|---------|-------|----------|---------------------|
+| **ticket_api** | 22 | 100% | Models, interface, exceptions, enums |
+| **ticket_impl** | 30+ | 95%+ | Jira integration, OAuth, storage, UUID mapping |
+| **ticket_service** | 25+ | 90%+ | REST endpoints, auth flow, validation |
+| **ticket_client_adapter** | 50+ | 95%+ | HTTP client, retries, circuit breaker, idempotency |
+| **Integration** | 15+ | N/A | Component interaction, end-to-end workflows |
+
+**Total:** 140+ tests ensuring production-ready quality
+
+---
+
+## 🏗️ Architecture Patterns
+
+### Interface-Implementation Separation
+```python
+# Define the contract (ticket_api)
+class TicketServiceAPI(ABC):
+    @abstractmethod
+    async def create_ticket(...) -> Ticket: ...
+
+# Implement for Jira (ticket_impl)
+class TicketImpl(TicketServiceAPI):
+    async def create_ticket(...) -> Ticket:
+        # Jira-specific implementation
+
+# Implement for remote HTTP (ticket_client_adapter)
+class RemoteTicketService(TicketServiceAPI):
+    async def create_ticket(...) -> Ticket:
+        # HTTP client implementation
+```
+
+### Location Transparency
+```python
+# Same code works with local or remote implementation
+def get_service() -> TicketServiceAPI:
+    if USE_REMOTE:
+        return RemoteTicketService(...)  # HTTP client
+    else:
+        return TicketImpl(...)  # Direct Jira
+
+# Business logic doesn't care which implementation
+service = get_service()
+ticket = await service.create_ticket(...)
+```
+
+### Dependency Injection
+```python
+# FastAPI automatically injects the right implementation
+@app.post("/api/v1/tickets")
+async def create_ticket(
+    request: TicketCreateRequest,
+    service: Annotated[TicketServiceAPI, Depends(get_ticket_service)]
+):
+    return await service.create_ticket(...)
+```
+
+---
+
+## 🚀 Production Deployment
+
+### Render Deployment
+The project includes `render.yaml` for one-click deployment to Render:
+- Web service with auto-scaling
+- PostgreSQL database
+- Environment variable management
+- Health check monitoring
+
+### Docker Deployment
+Each component can be containerized:
+```dockerfile
+FROM python:3.11-slim
+WORKDIR /app
+RUN pip install uv
+COPY pyproject.toml uv.lock ./
+RUN uv sync --frozen --no-dev
+COPY src/ ./src/
+EXPOSE 8000
+CMD ["uv", "run", "uvicorn", "ticket_service.main:app", "--host", "0.0.0.0"]
+```
+
+### Environment Configuration
+```bash
+# Jira OAuth
+OAUTH_CLIENT_ID="your-client-id"
+OAUTH_CLIENT_SECRET="your-client-secret"
+OAUTH_REDIRECT_URI="https://your-app.com/api/v1/auth/callback"
+JIRA_CLOUD_ID="your-cloud-id"
+
+# Database
+DB_URL="postgresql://user:pass@localhost/dbname"
+
+# Service
+CORS_ORIGINS="https://your-frontend.com"
+LOG_LEVEL="INFO"
+```
+
+---
+
+## 📚 Additional Documentation
+
+- **[DESIGN.md](DESIGN.md)** - Architecture decisions and design patterns
+- **[docs/testing.md](docs/testing.md)** - Comprehensive testing guide
+- **[.env.example](.env.example)** - Environment variable template
+- **Component READMEs** - Detailed documentation in each `src/*/README.md`
+
+---
+
+## 🤝 Contributing
+
+1. **Code Quality:** All code must pass `ruff check`, `ruff format`, and `mypy`
+2. **Testing:** Maintain 90%+ test coverage
+3. **Documentation:** Update relevant README files
+4. **Type Safety:** Full type annotations required
+5. **Interface Compatibility:** Don't break `TicketServiceAPI` contract
+
+---
+
+## 📄 License
+
+This project is part of the OSDP coursework and follows university guidelines.

@@ -1,63 +1,85 @@
 # Ticket Client Adapter
 
-Adapter that wraps the generated HTTP client and exposes it through the `TicketServiceAPI` interface.
+HTTP client with enterprise reliability features.
 
-## Features
+## Overview
 
-- Implements `TicketServiceAPI` interface for remote service access
-- Hides HTTP/network details from business logic
-- Model conversion between HTTP and domain models
-- Connection management and error translation
+- **Package**: `ticket_client_adapter`
+- **Purpose**: Remote `TicketServiceAPI` implementation
+- **Dependencies**: httpx, ticket-service-client
+- **Coverage**: 95%+ (50+ tests)
 
-## Components
+## Key Features
 
-::: ticket_client_adapter.client.RemoteTicketService
+- Implements `TicketServiceAPI` for HTTP access
+- Retry logic with exponential backoff
+- Circuit breaker pattern
+- Idempotency support
+- Correlation IDs for tracing
 
 ## Usage
 
 ```python
 from ticket_client_adapter import RemoteTicketService
-from ticket_api import TicketPriority, TicketStatus
 
-# Use as context manager for automatic connection cleanup
 async with RemoteTicketService(
     base_url="http://localhost:8000",
-    user_id="your-user-id",
-    project_key="PROJ"
+    user_id="user-123",
+    project_key="PROJ",
+    max_retries=3
 ) as service:
-    
-    # Clean domain interface - no HTTP details!
     ticket = await service.create_ticket(
         title="Bug Report",
-        description="Found an issue",
-        reporter="user@example.com",
-        priority=TicketPriority.HIGH
-    )
-    
-    # List tickets with domain filters
-    tickets = await service.list_tickets(
-        status=TicketStatus.OPEN,
-        assignee="dev@example.com"
-    )
-    
-    # Add comment
-    comment = await service.add_comment(
-        ticket_id=ticket.id,
-        author="support@example.com",
-        content="Investigating this issue"
+        description="System issue",
+        reporter="user@example.com"
     )
 ```
 
-## Pattern
+## Reliability Features
 
-Implements the Adapter Pattern to bridge HTTP client and domain interface:
+**Retry Logic:**
+- Retries 5xx and 429 errors
+- Exponential backoff with jitter
+- Respects `Retry-After` header
+- Configurable max retries
 
+**Circuit Breaker:**
+- Opens after 5 failures
+- Prevents cascading failures
+- Recovers after 60 seconds
+
+**Idempotency:**
+- Generates keys for create/update/delete
+- Safe to retry without duplicates
+- Hash-based deterministic keys
+
+**Observability:**
+- Correlation IDs for tracing
+- Structured logging
+- Request/response timing
+
+## Configuration
+
+```python
+service = RemoteTicketService(
+    base_url="http://localhost:8000",
+    user_id="user-123",
+    project_key="PROJ",
+    max_retries=3,
+    initial_backoff_seconds=1.0,
+    timeout=30.0
+)
 ```
-Domain Layer (ticket_api)
-    ↓
-Adapter Layer (ticket_client_adapter) 
-    ↓
-Generated Client (ticket_client_generated)
-    ↓
-HTTP Layer (httpx)
-```
+
+## Error Handling
+
+- 4xx (except 429): Fail immediately
+- 5xx: Retry with backoff
+- 429: Retry with backoff
+- Network errors: Retry
+- Circuit open: Fail fast
+
+## Related
+
+- [ticket_api](ticket_api.md) - Abstract interface
+- [ticket_service](ticket_service.md) - REST API this connects to

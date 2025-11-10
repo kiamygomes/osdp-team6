@@ -1,167 +1,80 @@
 # Ticket Implementation
 
-Concrete implementation of the `TicketServiceAPI` that integrates with Jira Cloud using OAuth 2.0 authentication.
+Jira Cloud implementation of `TicketServiceAPI` with OAuth 2.0 authentication.
 
-## Overview
+## Purpose
 
-The `ticket_impl` package provides a production-ready implementation that:
+- Implements `TicketServiceAPI` for Jira Cloud REST API v3
+- OAuth 2.0 (3-legged) authentication with automatic token refresh
+- UUID abstraction (hides Jira issue keys)
+- SQLAlchemy-based token and mapping storage
 
-- Implements the complete `TicketServiceAPI` interface
-- Integrates with Jira Cloud REST API v3
-- Handles OAuth 2.0 authentication and token management
-- Maps domain UUIDs to Jira issue keys transparently
-- Transforms data between domain models and Jira formats
-- Provides persistent storage for tokens and mappings
+## Installation
 
-## Core Components
+```bash
+uv add ticket-impl
+```
 
-### TicketImpl Service
+## Configuration
 
-The main service class implementing `TicketServiceAPI`:
+Set environment variables:
+
+```bash
+OAUTH_CLIENT_ID="your-jira-oauth-client-id"
+OAUTH_CLIENT_SECRET="your-jira-oauth-client-secret"
+OAUTH_REDIRECT_URI="http://localhost:8000/api/v1/auth/callback"
+JIRA_CLOUD_ID="your-jira-cloud-id"
+DB_URL="sqlite:///./tickets.db"  # or postgresql://...
+```
+
+## Usage
 
 ```python
 from ticket_impl import TicketImpl
 
 service = TicketImpl(user_id="user-123", project_key="PROJ")
+
 ticket = await service.create_ticket(
     title="Bug Report",
-    description="System issue description",
+    description="Found an issue",
     reporter="user@example.com"
 )
 ```
 
-### OAuth Management
+## OAuth Flow
 
-Handles Jira Cloud OAuth 2.0 authentication:
+1. User visits `/api/v1/auth/login`
+2. Redirects to Jira authorization page
+3. User grants permission
+4. Callback to `/api/v1/auth/callback` with code
+5. Exchange code for access/refresh tokens
+6. Store tokens in database
+7. Automatic refresh when expired
 
-```python
-from ticket_impl.oauth import build_authorize_url, exchange_code_for_tokens
+## Components
 
-# Start OAuth flow
-auth_url = build_authorize_url(state="csrf-token")
+- `impl.py` - Main `TicketImpl` class
+- `jira_client.py` - Low-level Jira REST API calls
+- `oauth.py` - OAuth 2.0 flow and token management
+- `storage.py` - SQLAlchemy models and database operations
+- `config.py` - Environment configuration
 
-# Handle callback
-await exchange_code_for_tokens(user_id="user-123", code="auth-code")
-```
+## Key Features
 
-### Jira Client
+**UUID Abstraction:** Uses UUID v5 (deterministic) to hide Jira issue keys from domain layer.
 
-Low-level HTTP client for Jira REST API operations:
-- Issue creation, retrieval, and updates
-- Comment management
-- User lookup and validation
-- Workflow transitions
+**ADF Support:** Converts plain text to Atlassian Document Format for rich text.
 
-### Storage Layer
+**Token Management:** Automatic refresh before expiration, stored securely in database.
 
-SQLite-based persistence for:
-- OAuth access and refresh tokens
-- UUID to Jira key mappings
-- User session management
-
-## Configuration
-
-Set environment variables for Jira integration:
-
-```bash
-JIRA_API_BASE="https://your-domain.atlassian.net"
-OAUTH_CLIENT_ID="your-oauth-client-id"
-OAUTH_CLIENT_SECRET="your-oauth-client-secret"
-OAUTH_REDIRECT_URI="http://localhost:8000/api/v1/auth/callback"
-DB_URL="sqlite:///jira_tokens.db"
-```
+**Error Handling:** Maps Jira errors to domain exceptions (`ServiceError`, `TicketNotFoundError`).
 
 ## Testing
 
-The implementation includes comprehensive tests with mocked Jira API responses:
-
-### Test Structure
-
-**test_ticket_impl.py** - End-to-end implementation testing
-- Complete CRUD operations with mocked Jira responses
-- OAuth token handling and refresh
-- Data transformation validation
-- Error handling and edge cases
-- UUID to Jira key mapping
-
-**conftest.py** - Test configuration and fixtures
-- Mock token setup for testing
-- Jira API response fixtures
-- Test database configuration
-
-### Test Categories
-
-- **CRUD Operations**: Create, read, update, delete tickets
-- **Comment Management**: Add and retrieve comments
-- **OAuth Flow**: Token exchange and refresh
-- **Data Mapping**: UUID to Jira key transformation
-- **Error Handling**: Network failures and API errors
-
-### Running Tests
-
 ```bash
-# All implementation tests
 uv run pytest src/ticket_impl/tests/ -v
-
-# Specific test scenarios
-uv run pytest src/ticket_impl/tests/test_ticket_impl.py::test_create_get_list_update_comment_delete -v
-
-# Coverage reporting
-uv run pytest src/ticket_impl/tests/ --cov=ticket_impl --cov-report=term-missing
 ```
 
-### Mock Strategy
+**Coverage:** 95%+ (30+ tests)
 
-Tests use `respx` to mock Jira API responses:
-- User lookup responses
-- Issue creation and retrieval
-- Comment operations
-- Workflow transitions
-- Error scenarios
-
-## Architecture
-
-### Data Flow
-
-```
-Domain Models → TicketImpl → Jira Client → Jira REST API
-     ↑              ↓            ↓             ↓
-UUID Mapping ← Storage Layer ← OAuth Tokens ← Auth Response
-```
-
-### Key Features
-
-- **UUID Abstraction**: Clean domain UUIDs mapped to Jira issue keys
-- **Token Management**: Automatic refresh of expired OAuth tokens
-- **Data Transformation**: Bidirectional conversion between domain and Jira models
-- **Error Handling**: Graceful handling of network and API errors
-- **Type Safety**: Full type annotations and validation
-
-## Integration
-
-### With Ticket Service
-
-```python
-from ticket_impl import TicketImpl
-from ticket_service import get_ticket_service
-
-def get_ticket_service() -> TicketServiceAPI:
-    return TicketImpl(
-        user_id=get_current_user_id(),
-        project_key=get_project_key()
-    )
-```
-
-### With Other Components
-
-The implementation works seamlessly with other components through the `TicketServiceAPI` interface:
-- `ticket_service` uses it as the backend implementation
-- `ticket_client_adapter` provides the same interface for remote access
-- All components share the same domain models from `ticket_api`
-
-## Dependencies
-
-- `ticket_api` - Abstract interface and domain models
-- `httpx` - Async HTTP client for Jira API calls
-- `sqlalchemy` - Database ORM for token and mapping storage
-- `pydantic` - Data validation and serialization
+All tests mock Jira API calls - no real network requests.

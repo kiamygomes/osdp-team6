@@ -1,83 +1,35 @@
-# OSDP Jira Service
+# Welcome to the Ticket Service Template
 
-A professional-grade microservice for ticketing system integration using component-based architecture with OAuth 2.0 authentication.
+This project is a professional-grade template for a modern Python application, built using a component-based architecture with a clear separation between interface and implementation.
 
-## Overview
+This documentation site provides an overview of the project's architecture, API contracts, and usage guidelines.
 
-The OSDP Jira Service provides a flexible platform for integrating with Jira Cloud through a unified interface. The system demonstrates modern Python development practices through clean abstractions, dependency injection, and comprehensive testing.
+## Project Components
 
-## Key Features
+### Ticket Management System
 
-- **Component-Based Architecture**: Five distinct components with clear responsibilities
-- **OAuth 2.0 Integration**: Secure authentication for Jira Cloud
-- **Abstract Interface Design**: Clean separation between interface and implementation
-- **Type Safety**: Full type hints and Pydantic validation
-- **Auto-Generated Clients**: Type-safe HTTP clients from OpenAPI specifications
+The ticket subsystem provides ticketing functionality:
 
-## Architecture
+- **ticket_api**: Abstract interface for ticket clients
+- **ticket_impl**: Jira Cloud implementation with OAuth 2.0
+- **ticket_client_adapter**: HTTP adapter with reliability features
+- **ticket_client_generated**: Auto-generated OpenAPI client
+- **ticket_service**: FastAPI REST service for tickets
 
-```
-Client Applications
-        ↓ HTTP/REST
-   ticket_service (FastAPI)
-        ↓ TicketServiceAPI
-    ticket_impl (Jira)
-        ↓ Jira REST API
-   External Services
-```
+## Architecture Principles
 
-**Components:**
-- **[ticket_api](api/ticket_api.md)** - Abstract interfaces and data models
-- **[ticket_impl](api/ticket_impl.md)** - Jira Cloud integration
-- **[ticket_service](api/ticket_service.md)** - FastAPI HTTP service
-- **[ticket_client_generated](api/ticket_client_generated.md)** - Auto-generated HTTP client
-- **[ticket_client_adapter](api/ticket_client_adapter.md)** - Domain interface adapter
+This project follows these key architectural principles:
 
-## Quick Start
+1. **Contract-First Design**: Abstract interfaces define contracts before implementations
+2. **Dependency Injection**: Implementations are injected at runtime
+3. **Adapter Pattern**: Generated clients are wrapped in adapters for consistency
+4. **Async/Await**: All I/O operations are async for performance
+5. **Comprehensive Testing**: Unit tests, integration tests, and end-to-end tests (140+ total)
+6. **OpenAPI First**: Generated clients from API specifications
 
-```bash
-# Install dependencies
-uv sync --all-packages --extra dev
+## Getting Started
 
-# Configure OAuth (see .env.example)
-export OAUTH_CLIENT_ID="your-jira-oauth-client-id"
-export OAUTH_CLIENT_SECRET="your-jira-oauth-client-secret"
-
-# Start the service
-uv run uvicorn ticket_service.main:app --reload
-
-# Run tests
-uv run pytest
-```
-
-## Usage Example
-
-```python
-from ticket_client_adapter import RemoteTicketService
-from ticket_api import TicketPriority
-
-async with RemoteTicketService(
-    base_url="http://localhost:8000",
-    user_id="your-user-id",
-    project_key="PROJ"
-) as service:
-    ticket = await service.create_ticket(
-        title="Bug Report",
-        description="Found an issue",
-        reporter="user@example.com",
-        priority=TicketPriority.HIGH
-    )
-```
-
-## Documentation
-
-- **[Architecture](architecture.md)** - System design and component relationships
-- **[Testing](testing.md)** - Testing strategy and guidelines  
-- **[CI/CD Setup](circleci-setup.md)** - Continuous integration configuration
-
-### API Reference
-- **[Ticket API](api/ticket_api.md)** - Core abstractions and models
-- **[Ticket Implementation](api/ticket_impl.md)** - Jira integration
-- **[Ticket Service](api/ticket_service.md)** - HTTP service endpoints
-- **[Ticket Client Generated](api/ticket_client_generated.md)** - Auto-generated client
-- **[Ticket Client Adapter](api/ticket_client_adapter.md)** - Domain interface adapter
+1. **Read the [Architecture Guide](architecture.md)** to understand the service architecture
+2. **Browse API References** for specific package documentation
+3. **Check [testing guide](testing.md)** for test strategy and examples
+4. **Review integration tests** for usage examples

@@ -1,40 +1,66 @@
 # Ticket API
 
-Core abstract interface and data models for the ticketing system.
+Abstract interface and data models for ticketing operations.
+
+## Overview
+
+- **Package**: `ticket_api`
+- **Purpose**: Define contract for all implementations
+- **Dependencies**: None (stdlib only)
+- **Coverage**: 100% (22 tests)
+
+## Key Features
+
+- Zero external dependencies
+- Immutable frozen dataclasses
+- Full type hints
+- Custom exception hierarchy
 
 ## Interface
 
-::: ticket_api.interface.TicketServiceAPI
+`TicketServiceAPI` - Abstract base class with 10 required methods:
 
-## Models
+- `create_ticket()` - Create new ticket
+- `get_ticket()` - Get by ID
+- `list_tickets()` - List with filters
+- `update_ticket()` - Update fields
+- `delete_ticket()` - Delete ticket
+- `add_comment()` - Add comment
+- `get_ticket_comments()` - Get comments
+- `transition_status()` - Change status
+- `reassign_ticket()` - Change assignee
+- `update_priority()` - Change priority
+- `update_description()` - Update description
 
-::: ticket_api.models.Ticket
+## Data Models
 
-::: ticket_api.models.Comment
+**Ticket** - Frozen dataclass with id, title, description, status, priority, assignee, reporter, timestamps, comments
 
-::: ticket_api.models.TicketStatus
+**Comment** - Frozen dataclass with id, ticket_id, author, content, created_at
 
-::: ticket_api.models.TicketPriority
+## Enums
+
+- `TicketStatus`: OPEN, IN_PROGRESS, RESOLVED, CLOSED
+- `TicketPriority`: LOW, MEDIUM, HIGH, CRITICAL
+
+## Exceptions
+
+- `ServiceError` - Base exception for service errors
+- `TicketNotFoundError` - Ticket not found (extends ServiceError)
 
 ## Usage
 
 ```python
 from ticket_api import TicketServiceAPI, Ticket, TicketPriority
 
-# Implement the interface
-class MyTicketService(TicketServiceAPI):
-    async def create_ticket(self, title: str, description: str, reporter: str) -> Ticket:
-        # Implementation logic
+class MyService(TicketServiceAPI):
+    async def create_ticket(self, title, description, reporter, 
+                          priority=TicketPriority.MEDIUM, assignee=None):
+        # Implementation
         pass
-
-# Work with models
-ticket = Ticket(
-    title="Bug Report",
-    description="Issue description",
-    reporter="user@example.com",
-    priority=TicketPriority.HIGH
-)
-
-# Add comment (returns new instance)
-updated_ticket = ticket.add_comment("author", "comment content")
 ```
+
+## Related
+
+- [ticket_impl](ticket_impl.md) - Jira implementation
+- [ticket_client_adapter](ticket_client_adapter.md) - Remote HTTP implementation

@@ -1,39 +1,36 @@
 # Ticket Client Generated
 
-Auto-generated HTTP client from the Ticket Service OpenAPI specification.
+Auto-generated HTTP client from OpenAPI spec.
+
+## Overview
+
+- **Package**: `ticket_client_generated`
+- **Purpose**: Type-safe HTTP client
+- **Generated**: From OpenAPI 3.0 spec
+- **Note**: Use `ticket_client_adapter` instead
 
 ## Features
 
-- Type-safe async HTTP client
-- Generated Pydantic models for requests/responses
-- Built on `httpx` for high performance
-- Structured error handling
+- Auto-generated from service OpenAPI spec
+- Type-safe Pydantic models
+- Async and sync support
+- Comprehensive error handling
 
-## Components
+## Generation
 
-::: ticket_service_client.Client
-
-::: ticket_service_client.AuthenticatedClient
+```bash
+openapi-python-client generate \
+    --url http://localhost:8000/api/v1/openapi.json \
+    --output-path src/ticket_client_generated
+```
 
 ## Usage
 
 ```python
 from ticket_service_client import Client
 from ticket_service_client.api.tickets import create_ticket_api_v1_tickets_post
-from ticket_service_client.models import TicketCreateRequest, TicketPriority
 
-# Initialize client
 client = Client(base_url="http://localhost:8000")
-
-# Create request
-request = TicketCreateRequest(
-    title="Bug Report",
-    description="Issue description",
-    reporter="user@example.com",
-    priority=TicketPriority.HIGH
-)
-
-# Make API call
 response = await create_ticket_api_v1_tickets_post.asyncio_detailed(
     client=client,
     body=request,
@@ -42,12 +39,15 @@ response = await create_ticket_api_v1_tickets_post.asyncio_detailed(
 )
 ```
 
-## Generation
+## Recommendation
 
-Generated using `openapi-python-client`:
+**Don't use this directly!** Use `ticket_client_adapter` instead for:
+- Clean `TicketServiceAPI` interface
+- Retry logic and circuit breaker
+- Idempotency support
+- Domain model conversion
 
-```bash
-openapi-python-client generate \
-    --url http://localhost:8000/api/v1/openapi.json \
-    --output-path src/ticket_client_generated
-```
+## Related
+
+- [ticket_client_adapter](ticket_client_adapter.md) - Recommended wrapper
+- [ticket_service](ticket_service.md) - Service this client connects to

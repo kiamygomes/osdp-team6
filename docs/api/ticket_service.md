@@ -1,64 +1,83 @@
 # Ticket Service
 
-FastAPI-based HTTP service exposing ticket operations over REST endpoints.
+FastAPI REST service with cookie-based authentication.
 
-## Features
+## Overview
 
-- Complete CRUD operations for tickets and comments
-- OAuth 2.0 authentication flow
-- Automatic OpenAPI documentation generation
-- Request/response validation with Pydantic
+- **Package**: `ticket_service`
+- **Purpose**: HTTP wrapper around `ticket_impl`
+- **Dependencies**: fastapi, uvicorn, pydantic
+- **Coverage**: 90%+ (25+ tests)
 
-## Components
+## Key Features
 
-::: ticket_service.main.app
+- 13 REST endpoints
+- Cookie-based sessions
+- OAuth 2.0 integration
+- OpenAPI/Swagger docs
+- Pydantic validation
 
-::: ticket_service.models
-
-## Key Endpoints
+## Endpoints
 
 ### Authentication
-- `GET /api/v1/auth/login` - Start OAuth flow
-- `GET /api/v1/auth/callback` - Handle OAuth callback
-- `POST /api/v1/auth/logout` - Clear tokens
+- `GET /api/v1/auth/login` - Start OAuth
+- `GET /api/v1/auth/callback` - OAuth callback
+- `GET /api/v1/auth/status` - Check status
+- `POST /api/v1/auth/logout` - Logout
 
 ### Tickets
-- `POST /api/v1/tickets` - Create ticket
-- `GET /api/v1/tickets/{id}` - Get ticket
-- `GET /api/v1/tickets` - List tickets (with filters)
-- `PATCH /api/v1/tickets/{id}` - Update ticket
-- `DELETE /api/v1/tickets/{id}` - Delete ticket
+- `POST /api/v1/tickets` - Create
+- `GET /api/v1/tickets/{id}` - Get
+- `GET /api/v1/tickets` - List
+- `PATCH /api/v1/tickets/{id}` - Update
+- `DELETE /api/v1/tickets/{id}` - Delete
 
 ### Comments
-- `POST /api/v1/tickets/{id}/comments` - Add comment
-- `GET /api/v1/tickets/{id}/comments` - Get comments
+- `POST /api/v1/tickets/{id}/comments` - Add
+- `GET /api/v1/tickets/{id}/comments` - Get
 
 ### Health
-- `GET /health` - Service health check
+- `GET /health` - Health check
 
-All ticket/comment endpoints require `X-User-ID` and `X-Project-Key` headers.
+## Running
 
-## Usage
-
-```python
-import httpx
-
-# Start OAuth flow
-response = httpx.get("http://localhost:8000/api/v1/auth/login")
-# Complete OAuth in browser, get user_id
-
-# Use service
-headers = {"X-User-ID": "user-id", "X-Project-Key": "PROJ"}
-response = httpx.post(
-    "http://localhost:8000/api/v1/tickets",
-    json={"title": "Bug", "description": "Issue", "reporter": "user@example.com"},
-    headers=headers
-)
+```bash
+uv run uvicorn ticket_service.main:app --reload
 ```
 
-## Documentation
+Visit http://localhost:8000/docs for interactive API documentation.
 
-Interactive API documentation available at:
-- `/docs` - Swagger UI
-- `/redoc` - ReDoc
-- `/api/v1/openapi.json` - OpenAPI specification
+## Authentication
+
+Cookie-based sessions:
+1. Visit `/api/v1/auth/login`
+2. Complete OAuth flow
+3. Cookie set automatically
+4. All requests authenticated
+
+For programmatic access, use headers:
+- `X-User-ID: user-123`
+- `X-Project-Key: PROJ`
+
+## Error Codes
+
+- `200/201` - Success
+- `400` - Invalid input
+- `401` - Not authenticated
+- `404` - Not found
+- `500` - Server error
+
+## Configuration
+
+```bash
+OAUTH_CLIENT_ID="..."
+OAUTH_CLIENT_SECRET="..."
+OAUTH_REDIRECT_URI="http://localhost:8000/api/v1/auth/callback"
+JIRA_CLOUD_ID="..."
+CORS_ORIGINS="http://localhost:3000"
+```
+
+## Related
+
+- [ticket_impl](ticket_impl.md) - Backend implementation
+- [ticket_client_adapter](ticket_client_adapter.md) - HTTP client
