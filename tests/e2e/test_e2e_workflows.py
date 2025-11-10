@@ -20,7 +20,7 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from ticket_impl.storage import get_tokens, upsert_tokens
+from ticket_impl.storage import get_tokens
 
 from ticket_api import TicketPriority, TicketStatus
 from ticket_service import app
@@ -40,15 +40,32 @@ HAS_OAUTH_CREDENTIALS = all(
 )
 
 
+@pytest.fixture
+def oauth_user_id() -> str:
+    """Get the OAuth user ID for E2E tests.
+
+    This is either set by OAUTH_USER_ID environment variable
+    (when tokens are generated via generate_e2e_tokens.py),
+    or defaults to 'demo_user' for backward compatibility.
+    """
+    return os.getenv("OAUTH_USER_ID", "demo_user")
+
+
 @pytest.fixture(autouse=True)
 def setup_oauth_tokens() -> None:
-    """Set up valid OAuth tokens for E2E test users.
+    """Set up valid OAuth tokens for E2E tests.
 
-    This fixture retrieves real OAuth tokens from demo_user and copies them
-    to test users for E2E testing against a real Jira Cloud instance.
+    This fixture verifies that OAuth tokens are available in the database.
+    The tokens should be stored by the generate_e2e_tokens.py script during CI/CD.
     """
     if not HAS_OAUTH_CREDENTIALS:
         return  # Skip if credentials not configured
+
+    # Skip E2E tests in CircleCI when using fallback tokens
+    # (tokens that aren't valid Jira OAuth tokens)
+    if os.getenv("OAUTH_SKIP_E2E_TESTS"):
+        pytest.skip("Using fallback demo_user tokens. Real OAuth credentials required for E2E tests.")
+        return
 
     # Ensure we use the correct (non-test) database for E2E tests
     # The ticket_impl test conftest may have changed DB_URL to a test database
@@ -62,37 +79,23 @@ def setup_oauth_tokens() -> None:
 
         importlib.reload(ticket_impl.storage)
         from ticket_impl.storage import get_tokens as get_tokens_prod
-        from ticket_impl.storage import upsert_tokens as upsert_tokens_prod
 
         get_tokens_fn = get_tokens_prod
-        upsert_tokens_fn = upsert_tokens_prod
     else:
         get_tokens_fn = get_tokens
-        upsert_tokens_fn = upsert_tokens
 
-    # Get the real tokens from demo_user (obtained through OAuth flow)
-    demo_tokens = get_tokens_fn("demo_user")
-    if not demo_tokens:
+    # Get the real OAuth user from generate_e2e_tokens.py
+    # This user is determined by extract_user_email_from_token() during setup
+    # Try both 'demo_user' (fallback) and the environment variable
+    oauth_user = os.getenv("OAUTH_USER_ID", "demo_user")
+    tokens = get_tokens_fn(oauth_user)
+
+    if not tokens:
         pytest.skip(
-            "No valid OAuth tokens found for demo_user. Run main.py to authenticate first.",
+            f"No valid OAuth tokens found for user '{oauth_user}'. "
+            "Run generate_e2e_tokens.py to set up tokens first.",
         )
         return
-
-    # Set up tokens for both E2E test users using real tokens
-    test_users = [
-        "e2e-test-user-oauth",
-        "e2e-test-workflow",
-        "e2e-test-list-tickets",
-    ]
-
-    for user_id in test_users:
-        # Use the real OAuth tokens from demo_user for all E2E test users
-        upsert_tokens_fn(
-            user_id=user_id,
-            access=demo_tokens.access_token,
-            refresh=demo_tokens.refresh_token,
-            expires_in_sec=3600,
-        )
 
 
 class TestE2ETicketManagement:
@@ -106,7 +109,7 @@ class TestE2ETicketManagement:
         not HAS_OAUTH_CREDENTIALS,
         reason="Jira OAuth credentials not configured",
     )
-    def test_e2e_create_ticket_oauth_flow(self) -> None:
+    def test_e2e_create_ticket_oauth_flow(self, oauth_user_id: str) -> None:
         """Test creating a ticket with real OAuth flow and Jira integration.
 
         This E2E test validates:
@@ -117,7 +120,6 @@ class TestE2ETicketManagement:
         5. No mocking at service layer
         """
         client = TestClient(app)
-        test_user_id = "e2e-test-user-oauth"
         project_key = os.getenv("JIRA_PROJECT_KEY", "TEST")
 
         # Create ticket through REAL API (no mocking of TicketImpl)
@@ -126,11 +128,11 @@ class TestE2ETicketManagement:
             json={
                 "title": "E2E Test: OAuth & Jira Integration",
                 "description": "Testing real Jira Cloud integration with OAuth flow",
-                "reporter": f"{test_user_id}@example.com",
+                "reporter": oauth_user_id,
                 "priority": "high",
             },
             headers={
-                "X-User-ID": test_user_id,
+                "X-User-ID": oauth_user_id,
                 "X-Project-Key": project_key,
             },
         )
@@ -150,7 +152,7 @@ class TestE2ETicketManagement:
         get_response = client.get(
             f"/api/v1/tickets/{ticket_id}",
             headers={
-                "X-User-ID": test_user_id,
+                "X-User-ID": oauth_user_id,
                 "X-Project-Key": project_key,
             },
         )
@@ -164,7 +166,7 @@ class TestE2ETicketManagement:
         not HAS_OAUTH_CREDENTIALS,
         reason="Jira OAuth credentials not configured",
     )
-    def test_e2e_complete_ticket_workflow(self) -> None:
+    def test_e2e_complete_ticket_workflow(self, oauth_user_id: str) -> None:
         """Test complete ticket lifecycle with real Jira Cloud.
 
         This E2E test validates the full workflow:
@@ -176,7 +178,6 @@ class TestE2ETicketManagement:
         No mocking at any layer.
         """
         client = TestClient(app)
-        test_user_id = "e2e-test-workflow"
         project_key = os.getenv("JIRA_PROJECT_KEY", "TEST")
 
         # Step 1: Create ticket
@@ -185,11 +186,11 @@ class TestE2ETicketManagement:
             json={
                 "title": "E2E Workflow: Complete Lifecycle",
                 "description": "Testing full ticket workflow in real Jira",
-                "reporter": f"{test_user_id}@example.com",
+                "reporter": oauth_user_id,
                 "priority": "medium",
             },
             headers={
-                "X-User-ID": test_user_id,
+                "X-User-ID": oauth_user_id,
                 "X-Project-Key": project_key,
             },
         )
@@ -202,10 +203,10 @@ class TestE2ETicketManagement:
             f"/api/v1/tickets/{ticket_id}",
             json={
                 "status": TicketStatus.IN_PROGRESS.value,
-                "assignee": f"{test_user_id}@example.com",
+                "assignee": oauth_user_id,
             },
             headers={
-                "X-User-ID": test_user_id,
+                "X-User-ID": oauth_user_id,
                 "X-Project-Key": project_key,
             },
         )
@@ -218,11 +219,11 @@ class TestE2ETicketManagement:
         comment_response = client.post(
             f"/api/v1/tickets/{ticket_id}/comments",
             json={
-                "author": f"{test_user_id}@example.com",
+                "author": oauth_user_id,
                 "content": "Progress update: Working on implementation",
             },
             headers={
-                "X-User-ID": test_user_id,
+                "X-User-ID": oauth_user_id,
                 "X-Project-Key": project_key,
             },
         )
@@ -236,7 +237,7 @@ class TestE2ETicketManagement:
             f"/api/v1/tickets/{ticket_id}",
             json={"status": TicketStatus.RESOLVED.value},
             headers={
-                "X-User-ID": test_user_id,
+                "X-User-ID": oauth_user_id,
                 "X-Project-Key": project_key,
             },
         )
@@ -249,7 +250,7 @@ class TestE2ETicketManagement:
         final_response = client.get(
             f"/api/v1/tickets/{ticket_id}",
             headers={
-                "X-User-ID": test_user_id,
+                "X-User-ID": oauth_user_id,
                 "X-Project-Key": project_key,
             },
         )
@@ -271,7 +272,7 @@ class TestE2EDataConsistency:
         not HAS_OAUTH_CREDENTIALS,
         reason="Jira OAuth credentials not configured",
     )
-    def test_e2e_list_tickets_with_filters(self) -> None:
+    def test_e2e_list_tickets_with_filters(self, oauth_user_id: str) -> None:
         """Test listing tickets with filters from real Jira Cloud.
 
         This test validates:
@@ -280,14 +281,13 @@ class TestE2EDataConsistency:
         3. Data consistency across operations
         """
         client = TestClient(app)
-        test_user_id = "e2e-test-list-tickets"
-        project_key = os.getenv("JIRA_PROJECT_KEY", "TEST")
+        project_key = os.getenv("JIRA_PROJECT_KEY", "SCRUM")
 
         # List all tickets from real Jira
         response = client.get(
             "/api/v1/tickets",
             headers={
-                "X-User-ID": test_user_id,
+                "X-User-ID": oauth_user_id,
                 "X-Project-Key": project_key,
             },
         )

@@ -108,10 +108,22 @@ jobs:
             # This allows e2e tests to run against real Jira Cloud
             if [ -n "$OAUTH_CLIENT_ID" ] && [ -n "$OAUTH_CLIENT_SECRET" ]; then
               echo "Generating e2e test tokens..."
-              python scripts/generate_e2e_tokens.py --tokens "$OAUTH_ACCESS_TOKEN" "$OAUTH_REFRESH_TOKEN" 3600
-              echo "✓ E2E tokens generated successfully"
+              OUTPUT=$(python scripts/generate_e2e_tokens.py --tokens "$OAUTH_ACCESS_TOKEN" "$OAUTH_REFRESH_TOKEN" 3600 2>&1)
+              echo "$OUTPUT"
+              # Extract OAUTH_USER_ID from output
+              USER_ID=$(echo "$OUTPUT" | grep "OAUTH_USER_ID=" | cut -d'=' -f2)
+              if [ -n "$USER_ID" ]; then
+                echo "export OAUTH_USER_ID=$USER_ID" >> "$BASH_ENV"
+              fi
+              # Check if we had to fall back to demo_user
+              if echo "$OUTPUT" | grep -q "OAUTH_USER_FALLBACK=true"; then
+                echo "export OAUTH_SKIP_E2E_TESTS=true" >> "$BASH_ENV"
+                echo "E2E tests will be skipped (using fallback demo_user tokens)"
+              else
+                echo "E2E tokens generated successfully"
+              fi
             else
-              echo "⚠ OAuth credentials not found. E2E tests will be skipped."
+              echo "OAuth credentials not found. E2E tests will be skipped."
             fi
       - run:
           name: "Execute All Tests Except Local Credentials"
