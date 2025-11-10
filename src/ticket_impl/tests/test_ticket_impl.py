@@ -26,7 +26,7 @@ async def test_create_get_list_transition_comment_delete(seed_token: None) -> No
         return_value=httpx.Response(201, json={"id": "10001", "key": "OSDP-101"}),
     )
 
-    def issue_payload(  # noqa: PLR0913
+    def issue_payload(
         summary: str = "Hello HW2",
         status: str = "Open",
         priority: str = "High",

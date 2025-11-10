@@ -1,21 +1,17 @@
 """Integration tests for FastAPI service endpoints."""
 
 from datetime import datetime
+from http import HTTPStatus
 from unittest.mock import MagicMock
 from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
 
-from ticket_api import Ticket, TicketPriority, TicketStatus
+from ticket_api import Comment, Ticket, TicketPriority, TicketStatus
 from ticket_service import app
 
 pytestmark = pytest.mark.integration
-
-# HTTP status codes
-HTTP_OK = 200
-HTTP_CREATED = 201
-HTTP_UNPROCESSABLE_ENTITY = 422
 
 # Test data constants
 MIN_TICKETS_COUNT = 3
@@ -46,7 +42,7 @@ class TestServiceEndpointsWithMockedBackend:
             headers={"X-User-ID": "test-user-001", "X-Project-Key": "PROJ"},
         )
 
-        assert response.status_code == HTTP_CREATED
+        assert response.status_code == HTTPStatus.CREATED
         data = response.json()
         assert data["title"] == "Fix login bug"
         assert data["status"] == "open"
@@ -66,7 +62,7 @@ class TestServiceEndpointsWithMockedBackend:
             headers={"X-User-ID": "test-user-001", "X-Project-Key": "PROJ"},
         )
 
-        assert response.status_code == HTTP_OK
+        assert response.status_code == HTTPStatus.OK
         data = response.json()
         assert data["id"] == str(sample_ticket.id)
         assert data["title"] == "Fix login bug"
@@ -102,7 +98,7 @@ class TestServiceEndpointsWithMockedBackend:
             headers={"X-User-ID": "test-user-001", "X-Project-Key": "PROJ"},
         )
 
-        assert response.status_code == HTTP_OK
+        assert response.status_code == HTTPStatus.OK
         data = response.json()
         assert data["title"] == "Fix login bug - URGENT"
         assert data["priority"] == "critical"
@@ -140,7 +136,7 @@ class TestServiceEndpointsWithMockedBackend:
             headers={"X-User-ID": "test-user-001", "X-Project-Key": "PROJ"},
         )
 
-        assert response.status_code == HTTP_OK
+        assert response.status_code == HTTPStatus.OK
         data = response.json()
         # Response may be wrapped in a dict with "tickets" key
         tickets = data if isinstance(data, list) else data.get("tickets", [])
@@ -154,8 +150,6 @@ class TestServiceEndpointsWithMockedBackend:
         mock_jira_backend: dict[str, MagicMock],
     ) -> None:
         """Test adding a comment through the REST API."""
-        from ticket_api import Comment
-
         comment = Comment(
             id=UUID("550e8400-e29b-41d4-a716-446655440100"),
             ticket_id=sample_ticket.id,
@@ -172,7 +166,7 @@ class TestServiceEndpointsWithMockedBackend:
             headers={"X-User-ID": "test-user-001", "X-Project-Key": "PROJ"},
         )
 
-        assert response.status_code == HTTP_CREATED
+        assert response.status_code == HTTPStatus.CREATED
         data = response.json()
         assert data["content"] == "I'm working on this"
         assert data["author"] == "jane@example.com"
@@ -191,7 +185,7 @@ class TestServiceEndpointsWithMockedBackend:
             headers={"X-User-ID": "test-user-001", "X-Project-Key": "PROJ"},
         )
 
-        assert response.status_code == HTTP_OK
+        assert response.status_code == HTTPStatus.OK
         data = response.json()
         assert len(data) == COMMENTS_COUNT
         assert data[0]["content"] == "Started investigating the slow queries"
@@ -215,7 +209,7 @@ class TestServiceInputValidation:
         )
 
         # Should fail without headers (401 Unauthorized)
-        assert response.status_code in [400, 401, HTTP_UNPROCESSABLE_ENTITY, 500]
+        assert response.status_code in [400, 401, HTTPStatus.UNPROCESSABLE_ENTITY, 500]
 
     def test_invalid_priority_value(self) -> None:
         """Test that invalid priority values are rejected."""
@@ -231,7 +225,7 @@ class TestServiceInputValidation:
             headers={"X-User-ID": "test-user-001", "X-Project-Key": "PROJ"},
         )
 
-        assert response.status_code == HTTP_UNPROCESSABLE_ENTITY
+        assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY
 
     def test_empty_title_rejected(self) -> None:
         """Test that empty title is rejected."""
@@ -247,4 +241,4 @@ class TestServiceInputValidation:
             headers={"X-User-ID": "test-user-001", "X-Project-Key": "PROJ"},
         )
 
-        assert response.status_code == HTTP_UNPROCESSABLE_ENTITY
+        assert response.status_code == HTTPStatus.UNPROCESSABLE_ENTITY

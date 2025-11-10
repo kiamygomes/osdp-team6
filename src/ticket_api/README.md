@@ -28,7 +28,8 @@ The Ticket API serves as the foundation layer in a component-based architecture:
 The central entity representing a support ticket, issue, or task:
 
 ```python
-class Ticket(BaseModel):
+@dataclass(frozen=True)
+class Ticket:
     id: UUID                     # Unique identifier
     title: str                   # Brief description (1-200 chars)
     description: str             # Detailed description (1-5000 chars)
@@ -41,23 +42,19 @@ class Ticket(BaseModel):
     comments: list[Comment]     # Associated comments
 ```
 
-**Business Logic Methods:**
-- `add_comment(author, content)`: Add a new comment and update timestamp
-- `update_status(new_status)`: Change ticket status and update timestamp
-- `assign_to(assignee)`: Assign ticket to a person and update timestamp
+**Note:** Ticket is an immutable frozen dataclass. State changes should be handled through service methods, not on the model itself.
 
 #### Comment Model
 Immutable comments associated with tickets:
 
 ```python
-class Comment(BaseModel):
+@dataclass(frozen=True)
+class Comment:
     id: UUID                    # Unique identifier
     ticket_id: UUID            # Parent ticket reference
     author: str                # Comment author
     content: str               # Comment text (1-2000 chars)
     created_at: datetime       # Creation timestamp (UTC)
-    
-    model_config = ConfigDict(frozen=True)  # Immutable
 ```
 
 #### Enumerations
@@ -165,31 +162,36 @@ class TicketServiceAPI(ABC):
 ### Basic Ticket Operations
 
 ```python
-from ticket_api import Ticket, TicketStatus, TicketPriority
+from ticket_api import Ticket, TicketStatus, TicketPriority, TicketServiceAPI
+
+# Models are immutable data classes - state changes go through the service
+service: TicketServiceAPI  # Implementation injected at runtime
 
 # Create a new ticket
-ticket = Ticket(
+ticket = await service.create_ticket(
     title="Login system not responding",
-    description="Users report that the login page is not loading properly. Error occurs on both Chrome and Firefox.",
+    description="Users report that the login page is not loading properly.",
     reporter="support@company.com",
     priority=TicketPriority.HIGH
 )
 
-# Add a comment
-ticket_with_comment = ticket.add_comment(
+# Add a comment through the service
+comment = await service.add_comment(
+    ticket_id=ticket.id,
     author="dev@company.com",
     content="Investigating the issue. Checking server logs for errors."
 )
 
-# Update ticket status
-in_progress_ticket = ticket_with_comment.update_status(TicketStatus.IN_PROGRESS)
+# Update ticket status through the service
+updated_ticket = await service.update_ticket(
+    ticket_id=ticket.id,
+    status=TicketStatus.IN_PROGRESS,
+    assignee="senior-dev@company.com"
+)
 
-# Assign the ticket
-assigned_ticket = in_progress_ticket.assign_to("senior-dev@company.com")
-
-print(f"Ticket {assigned_ticket.id} is now assigned to {assigned_ticket.assignee}")
-print(f"Status: {assigned_ticket.status.value}")
-print(f"Comments: {len(assigned_ticket.comments)}")
+print(f"Ticket {updated_ticket.id} is now assigned to {updated_ticket.assignee}")
+print(f"Status: {updated_ticket.status.value}")
+print(f"Comments: {len(updated_ticket.comments)}")
 ```
 
 ### Implementing the Service Interface
@@ -236,41 +238,35 @@ class JiraTicketService(TicketServiceAPI):
     # ... implement other abstract methods
 ```
 
-### Data Validation Examples
+### Data Model Examples
 
 ```python
 from ticket_api import Ticket, Comment
-from pydantic import ValidationError
+from uuid import uuid4
+from datetime import datetime, UTC
 
-# Validation success
-valid_ticket = Ticket(
+# Create a valid ticket
+ticket = Ticket(
     title="Valid ticket title",
     description="This is a valid description with appropriate length.",
     reporter="user@example.com"
 )
 
-# Validation failures
-try:
-    # Empty title
-    invalid_ticket = Ticket(
-        title="",
-        description="Valid description",
-        reporter="user@example.com"
-    )
-except ValidationError as e:
-    print(f"Validation error: {e}")
+# Create a comment
+comment = Comment(
+    ticket_id=ticket.id,
+    author="dev@example.com",
+    content="This is a comment"
+)
 
+# Models are frozen (immutable) - attempts to modify will raise FrozenInstanceError
 try:
-    # Title too long
-    long_title = "x" * 201  # Exceeds 200 character limit
-    invalid_ticket = Ticket(
-        title=long_title,
-        description="Valid description",
-        reporter="user@example.com"
-    )
-except ValidationError as e:
-    print(f"Validation error: {e}")
+    ticket.title = "New title"  # This will raise FrozenInstanceError
+except Exception as e:
+    print(f"Cannot modify frozen dataclass: {type(e).__name__}")
 ```
+
+**Note:** Data validation happens at the API layer (in `ticket_service`) via Pydantic models, not on the domain models themselves. This separates concerns: the API validates input, domain models just hold data.
 
 ## Testing
 
@@ -279,26 +275,26 @@ The package includes comprehensive tests ensuring contract compliance and data m
 ### Test Structure
 
 **test_api_contract.py** - Core contract validation
-- Ticket model creation and validation
+- Ticket and Comment dataclass creation
 - Comment model immutability testing
 - Enum value validation
 - Abstract interface enforcement
-- Business logic method testing
+- Dataclass field requirements
 
 **test_edge_cases.py** - Boundary and edge case testing
 - Unicode content handling
 - Maximum field length validation
 - Empty and null value handling
 - Timestamp consistency
-- Multiple comment scenarios
+- Immutable frozen dataclass behavior
 
 ### Test Categories
 
-- **Model Validation**: Pydantic field constraints and type checking
-- **Business Logic**: Ticket state transitions and comment addition
-- **Immutability**: Comment freeze behavior and audit trail
+- **Model Creation**: Dataclass instantiation and field defaults
+- **Immutability**: Frozen dataclass behavior and FrozenInstanceError
 - **Interface Contract**: Abstract method enforcement
-- **Edge Cases**: Boundary conditions and error scenarios
+- **Enum Validation**: Status and Priority enum values
+- **Edge Cases**: Unicode, boundary conditions, and error scenarios
 
 ### Running Tests
 
@@ -317,9 +313,9 @@ uv run pytest src/ticket_api/tests/ --cov=ticket_api --cov-report=term-missing
 ### Test Coverage
 
 - **Coverage**: 100% line and branch coverage
-- **Test Count**: 24 comprehensive test cases
-- **Validation**: All Pydantic constraints and business rules
-- **Error Handling**: Invalid data and constraint violations
+- **Test Count**: 16 comprehensive test cases
+- **Model Testing**: Dataclass creation, defaults, and field handling
+- **Error Handling**: Immutability violations and type errors
 
 ## Integration with External Systems
 
@@ -347,11 +343,12 @@ The interface is designed to work with various ticketing systems:
 ### Adding New Fields
 When extending the models, follow these guidelines:
 
-1. **Add to Model**: Add the field to the appropriate Pydantic model
+1. **Add to Model**: Add the field to the appropriate frozen dataclass
 2. **Update Interface**: Add parameters to relevant abstract methods if needed
 3. **Maintain Compatibility**: Use optional fields with defaults for backward compatibility
 4. **Add Tests**: Include comprehensive tests for new functionality
 5. **Update Documentation**: Update docstrings and README
+6. **Keep Models Simple**: Business logic belongs in services, not models
 
 ### Error Handling
 The interface defines expected exceptions:
@@ -366,7 +363,7 @@ The interface defines expected exceptions:
 ## Dependencies
 
 ### Runtime Dependencies
-- **pydantic**: Data validation and serialization
+- **None**: Uses only Python standard library (dataclasses, ABC, enums, etc.)
 
 ### Development Dependencies
 - **pytest**: Testing framework
@@ -377,8 +374,8 @@ The interface defines expected exceptions:
 ## Version Compatibility
 
 - **Python**: 3.11+
-- **Pydantic**: 2.0+
 - **Type Hints**: Uses modern Python type hint syntax (`str | None` instead of `Optional[str]`)
+- **Dataclasses**: Uses Python 3.10+ frozen dataclasses for immutable models
 
 ## Contributing
 

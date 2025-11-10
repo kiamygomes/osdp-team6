@@ -1,8 +1,11 @@
 """Additional edge case tests for ticket API."""
 
+from dataclasses import FrozenInstanceError  # Used in test_ticket_immutability
 from uuid import uuid4
 
-from ticket_api import Comment, Ticket, TicketPriority, TicketStatus
+import pytest
+
+from ticket_api import Comment, Ticket, TicketPriority
 
 # Constants for boundary values
 MAX_TITLE_LENGTH = 200
@@ -49,45 +52,6 @@ class TestEdgeCases:
         )
         assert len(comment.content) == MAX_COMMENT_LENGTH
 
-    def test_multiple_comments_on_ticket(self) -> None:
-        """Test adding multiple comments to a ticket."""
-        ticket = Ticket(
-            title="Multi-comment test",
-            description="Testing multiple comments",
-            reporter="test@example.com",
-        )
-
-        # Add multiple comments
-        ticket = ticket.add_comment("dev1@example.com", "First comment")
-        ticket = ticket.add_comment("dev2@example.com", "Second comment")
-        ticket = ticket.add_comment("qa@example.com", "Third comment")
-
-        assert len(ticket.comments) == EXPECTED_COMMENT_COUNT
-        assert ticket.comments[0].content == "First comment"
-        assert ticket.comments[1].content == "Second comment"
-        assert ticket.comments[2].content == "Third comment"
-
-    def test_ticket_status_transitions(self) -> None:
-        """Test various status transitions."""
-        ticket = Ticket(
-            title="Status test",
-            description="Testing status changes",
-            reporter="test@example.com",
-        )
-
-        # Test all status transitions
-        ticket = ticket.update_status(TicketStatus.IN_PROGRESS)
-        assert ticket.status == TicketStatus.IN_PROGRESS
-
-        ticket = ticket.update_status(TicketStatus.RESOLVED)
-        assert ticket.status == TicketStatus.RESOLVED
-
-        ticket = ticket.update_status(TicketStatus.CLOSED)
-        assert ticket.status == TicketStatus.CLOSED
-
-        # Can reopen
-        ticket = ticket.update_status(TicketStatus.OPEN)
-        assert ticket.status == TicketStatus.OPEN
 
     def test_ticket_priority_levels(self) -> None:
         """Test all priority levels."""
@@ -127,17 +91,16 @@ class TestEdgeCases:
         assert ticket.description == "B"
         assert ticket.reporter == "a@b.c"
 
-    def test_ticket_immutability_on_update(self) -> None:
-        """Test that updating ticket creates new instance."""
-        original = Ticket(
-            title="Original",
+    def test_ticket_immutability(self) -> None:
+        """Test that tickets are immutable frozen dataclasses."""
+        ticket = Ticket(
+            title="Immutable test",
             description="Testing immutability",
             reporter="test@example.com",
         )
-        original_id = original.id
 
-        updated = original.update_status(TicketStatus.IN_PROGRESS)
-
-        assert original.status == TicketStatus.OPEN
-        assert updated.status == TicketStatus.IN_PROGRESS
-        assert original.id == updated.id == original_id
+        # Verify the ticket cannot be modified - frozen dataclasses raise
+        # FrozenInstanceError on attribute assignment. This assignment intentionally
+        # violates the read-only property to test immutability at runtime.
+        with pytest.raises(FrozenInstanceError):
+            ticket.title = "Modified"  # type: ignore[misc]

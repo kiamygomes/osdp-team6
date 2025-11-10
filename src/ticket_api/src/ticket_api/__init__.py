@@ -3,9 +3,13 @@
 This package defines the base contract for ticket operations including:
 - Data models (Ticket, Comment)
 - Abstract service interface (TicketServiceAPI)
+- Custom exceptions (ServiceError, TicketNotFoundError)
 """
 
-from .interface import TicketServiceAPI
-from .models import Comment, Ticket, TicketPriority, TicketStatus
-
-__all__ = ["Comment", "Ticket", "TicketPriority", "TicketServiceAPI", "TicketStatus"]
+from .exceptions import ServiceError as ServiceError
+from .exceptions import TicketNotFoundError as TicketNotFoundError
+from .interface import TicketServiceAPI as TicketServiceAPI
+from .models import Comment as Comment
+from .models import Ticket as Ticket
+from .models import TicketPriority as TicketPriority
+from .models import TicketStatus as TicketStatus

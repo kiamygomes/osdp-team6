@@ -321,3 +321,109 @@ async def test_get_comments_wrong_response_type() -> None:
                 await service.get_ticket_comments(ticket_id)
         finally:
             get_comments_module.asyncio_detailed = original_func
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_ticket_with_retry_on_server_error() -> None:
+    """Test that create_ticket retries on 5xx errors."""
+    from uuid import uuid4
+
+    ticket_id = uuid4()
+    route = respx.post(f"{BASE_URL}/api/v1/tickets")
+    # First attempt returns 503, second succeeds
+    route.side_effect = [
+        httpx.Response(503, json={"detail": "Service unavailable"}),
+        httpx.Response(201, json={
+            "id": str(ticket_id),
+            "title": "Test",
+            "description": "Test",
+            "status": "open",
+            "priority": "medium",
+            "reporter": "test@example.com",
+            "assignee": None,
+            "created_at": "2025-10-29T00:00:00Z",
+            "updated_at": "2025-10-29T00:00:00Z",
+            "comments": [],
+        }),
+    ]
+
+    async with RemoteTicketService(BASE_URL, TEST_USER, TEST_PROJECT, max_retries=3, initial_backoff_seconds=0.01) as service:
+        # This should retry and succeed
+        ticket = await service.create_ticket(
+            title="Test",
+            description="Test",
+            reporter="test@example.com",
+        )
+        assert ticket.title == "Test"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_ticket_with_429_retry() -> None:
+    """Test that create_ticket retries on 429 (Too Many Requests)."""
+    from uuid import uuid4
+
+    ticket_id = uuid4()
+    route = respx.post(f"{BASE_URL}/api/v1/tickets")
+    # First attempt returns 429, second succeeds
+    route.side_effect = [
+        httpx.Response(429, json={"detail": "Too many requests"}),
+        httpx.Response(201, json={
+            "id": str(ticket_id),
+            "title": "Test",
+            "description": "Test",
+            "status": "open",
+            "priority": "medium",
+            "reporter": "test@example.com",
+            "assignee": None,
+            "created_at": "2025-10-29T00:00:00Z",
+            "updated_at": "2025-10-29T00:00:00Z",
+            "comments": [],
+        }),
+    ]
+
+    async with RemoteTicketService(BASE_URL, TEST_USER, TEST_PROJECT, max_retries=3, initial_backoff_seconds=0.01) as service:
+        # This should retry and succeed
+        ticket = await service.create_ticket(
+            title="Test",
+            description="Test",
+            reporter="test@example.com",
+        )
+        assert ticket.title == "Test"
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_ticket_retries_exhausted() -> None:
+    """Test that create_ticket raises after retries exhausted."""
+    respx.post(f"{BASE_URL}/api/v1/tickets").mock(
+        return_value=httpx.Response(503, json={"detail": "Service unavailable"}),
+    )
+
+    async with RemoteTicketService(BASE_URL, TEST_USER, TEST_PROJECT, max_retries=2, initial_backoff_seconds=0.01) as service:
+        # Should raise after 2 retries (all attempts fail)
+        with pytest.raises(httpx.HTTPStatusError):
+            await service.create_ticket(
+                title="Test",
+                description="Test",
+                reporter="test@example.com",
+            )
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_create_ticket_client_error_no_retry() -> None:
+    """Test that create_ticket doesn't retry on 4xx client errors."""
+    respx.post(f"{BASE_URL}/api/v1/tickets").mock(
+        return_value=httpx.Response(400, json={"detail": "Bad request"}),
+    )
+
+    async with RemoteTicketService(BASE_URL, TEST_USER, TEST_PROJECT, max_retries=3, initial_backoff_seconds=0.01) as service:
+        # Should immediately raise without retrying on 4xx errors
+        with pytest.raises(httpx.HTTPStatusError, match="Failed to create ticket"):
+            await service.create_ticket(
+                title="Test",
+                description="Test",
+                reporter="test@example.com",
+            )

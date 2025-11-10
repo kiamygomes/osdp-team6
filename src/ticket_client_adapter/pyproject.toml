@@ -15,3 +15,6 @@ dependencies = [
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ticket_client_adapter"]
+
+[tool.ruff]
+extend = "../../pyproject.toml"

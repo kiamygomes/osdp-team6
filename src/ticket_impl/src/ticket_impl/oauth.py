@@ -6,6 +6,7 @@ import base64
 import json
 import logging
 import re
+from http import HTTPStatus
 from typing import cast
 from urllib.parse import urlencode
 
@@ -21,8 +22,6 @@ TOKEN_URL = f"{AUTH_BASE}/oauth/token"
 SCOPE = "read:jira-user read:jira-work write:jira-work offline_access"
 AUDIENCE = "api.atlassian.com"
 
-# HTTP status codes
-HTTP_OK = 200
 # JWT parts count
 JWT_PARTS = 3
 # Base64 padding value
@@ -167,7 +166,7 @@ async def fetch_project_key_from_api(access_token: str, cloud_id: str) -> str | 
                         headers=headers,
                         params={"maxResults": 1} if "search" in api_url else {},
                     )
-                    if r.status_code == HTTP_OK:
+                    if r.status_code == HTTPStatus.OK:
                         projects = r.json()
                         # Handle both array and dict responses
                         if isinstance(projects, list) and projects:
@@ -210,7 +209,7 @@ async def fetch_cloud_id_from_api(access_token: str) -> str | None:
                 "https://api.atlassian.com/oauth/token/accessible-resources",
                 headers=headers,
             )
-            if r.status_code == HTTP_OK:
+            if r.status_code == HTTPStatus.OK:
                 resources = r.json()
 
                 # Response should be a list of accessible resources

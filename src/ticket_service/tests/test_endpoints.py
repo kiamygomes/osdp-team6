@@ -313,7 +313,8 @@ class TestListTickets:
             mock_impl.return_value = mock_service
 
             response = await async_client.get(
-                "/api/v1/tickets?status=open&assignee=assignee@example.com",
+                "/api/v1/tickets",
+                params={"status": "open", "assignee": "assignee@example.com"},
                 headers={"X-User-ID": "test-user", "X-Project-Key": "TEST"},
             )
 
@@ -334,7 +335,8 @@ class TestListTickets:
             mock_impl.return_value = mock_service
 
             response = await async_client.get(
-                f"/api/v1/tickets?limit={CUSTOM_LIMIT}&offset={CUSTOM_OFFSET}",
+                "/api/v1/tickets",
+                params={"limit": CUSTOM_LIMIT, "offset": CUSTOM_OFFSET},
                 headers={"X-User-ID": "test-user", "X-Project-Key": "TEST"},
             )
 

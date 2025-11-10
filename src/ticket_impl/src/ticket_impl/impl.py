@@ -91,7 +91,10 @@ def _jira_comment_to_domain(c: dict[str, Any], ticket_uuid: UUID) -> Comment:
 
 
 class TicketImpl(TicketServiceAPI):
-    """Jira-backed implementation of the TicketServiceAPI. All methods are async and map domain UUIDs to Jira issue keys internally."""  # noqa: E501
+    """Jira-backed implementation of the TicketServiceAPI.
+
+    All methods are async and map domain UUIDs to Jira issue keys internally.
+    """
 
     def __init__(self, user_id: str, project_key: str) -> None:
         """Initialize with a Jira-authorized user and a default project key."""
@@ -270,8 +273,12 @@ class TicketImpl(TicketServiceAPI):
             raise ServiceError(msg) from e
 
     # COMMENTS
-    async def add_comment(self, ticket_id: UUID, author: str, content: str) -> Comment:  # ← Remove | None  # noqa: ARG002
-        """Add a comment and return it in domain form."""
+    async def add_comment(self, ticket_id: UUID, author: str, content: str) -> Comment:  # noqa: ARG002
+        """Add a comment and return it in domain form.
+
+        Note: The author parameter is not used because Jira automatically assigns
+        comments to the authenticated user making the API call.
+        """
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
             data = await jc.add_comment(self.user_id, key, content)

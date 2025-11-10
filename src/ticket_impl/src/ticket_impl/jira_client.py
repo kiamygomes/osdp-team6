@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+from http import HTTPStatus
 from typing import Any, cast
 
 import httpx
@@ -40,7 +41,7 @@ async def delete_issue(user_id: str, issue_key: str) -> bool:
     """DELETE an issue by key; return True if deleted."""
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.delete(_v3(f"/issue/{issue_key}"), headers=await _headers(user_id))
-        if r.status_code == 204:  # noqa: PLR2004
+        if r.status_code == HTTPStatus.NO_CONTENT:
             return True
         r.raise_for_status()
         return False
@@ -55,7 +56,7 @@ async def search_issues(user_id: str, jql: str, max_results: int = 50, start_at:
         return cast("dict[str, Any]", r.json())
 
 
-async def create_issue(  # noqa: PLR0913
+async def create_issue(
     user_id: str,
     project_key: str,
     summary: str,

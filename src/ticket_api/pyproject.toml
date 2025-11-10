@@ -8,9 +8,7 @@ version = "0.1.0"
 description = "Abstract interface and data models for ticketing microservice"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = [
-    "pydantic",
-]
+dependencies = []
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/ticket_api"]

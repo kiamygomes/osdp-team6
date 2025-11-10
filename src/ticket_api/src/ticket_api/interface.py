@@ -87,7 +87,7 @@ class TicketServiceAPI(ABC):
         """
 
     @abstractmethod
-    async def update_ticket(  # noqa: PLR0913
+    async def update_ticket(
         self,
         ticket_id: UUID,
         title: str | None = None,
@@ -97,6 +97,10 @@ class TicketServiceAPI(ABC):
         assignee: str | None = None,
     ) -> Ticket | None:
         """Update an existing ticket.
+
+        Note: This method intentionally accepts multiple optional parameters to allow
+        atomic updates of any combination of fields. This provides a flexible API that
+        avoids the need for separate methods for each field update.
 
         Args:
             ticket_id: Unique identifier of the ticket to update
@@ -165,5 +169,96 @@ class TicketServiceAPI(ABC):
 
         Raises:
             ServiceError: If retrieval operation fails
+
+        """
+
+    @abstractmethod
+    async def transition_status(
+        self,
+        ticket_id: UUID,
+        new_status: TicketStatus,
+    ) -> Ticket | None:
+        """Transition a ticket to a new status.
+
+        Domain-specific operation for changing ticket workflow state.
+
+        Args:
+            ticket_id: Unique identifier of the ticket
+            new_status: New status to transition to
+
+        Returns:
+            Updated Ticket instance if found, None if ticket not found
+
+        Raises:
+            ValueError: If status transition is invalid
+            ServiceError: If transition operation fails
+
+        """
+
+    @abstractmethod
+    async def reassign_ticket(
+        self,
+        ticket_id: UUID,
+        new_assignee: str,
+    ) -> Ticket | None:
+        """Reassign a ticket to a different person.
+
+        Domain-specific operation for changing ticket ownership.
+
+        Args:
+            ticket_id: Unique identifier of the ticket
+            new_assignee: Username or email of the new assignee
+
+        Returns:
+            Updated Ticket instance if found, None if ticket not found
+
+        Raises:
+            ValueError: If new_assignee is invalid
+            ServiceError: If reassignment operation fails
+
+        """
+
+    @abstractmethod
+    async def update_priority(
+        self,
+        ticket_id: UUID,
+        new_priority: TicketPriority,
+    ) -> Ticket | None:
+        """Update a ticket's priority level.
+
+        Domain-specific operation for changing importance level.
+
+        Args:
+            ticket_id: Unique identifier of the ticket
+            new_priority: New priority level
+
+        Returns:
+            Updated Ticket instance if found, None if ticket not found
+
+        Raises:
+            ServiceError: If update operation fails
+
+        """
+
+    @abstractmethod
+    async def update_description(
+        self,
+        ticket_id: UUID,
+        new_description: str,
+    ) -> Ticket | None:
+        """Update a ticket's description.
+
+        Domain-specific operation for updating ticket details.
+
+        Args:
+            ticket_id: Unique identifier of the ticket
+            new_description: New description text
+
+        Returns:
+            Updated Ticket instance if found, None if ticket not found
+
+        Raises:
+            ValueError: If new_description is invalid
+            ServiceError: If update operation fails
 
         """

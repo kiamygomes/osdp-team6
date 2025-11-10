@@ -12,64 +12,61 @@ The OSDP Jira Service implements a layered, component-based architecture that se
 ## System Overview
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                    Client Applications                       │
-│                 (Web, Mobile, CLI, etc.)                   │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ HTTP/REST
-┌─────────────────────────▼───────────────────────────────────┐
-│              ticket_client_adapter                          │
-│           (Domain Interface Adapter)                        │
-│  • Clean TicketServiceAPI interface                         │
-│  • HTTP abstraction                                         │
-│  • Model conversion                                          │
-│  • Error handling                                           │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-┌─────────────────────────▼───────────────────────────────────┐
-│            ticket_client_generated                          │
-│              (Auto-Generated Client)                        │
-│  • Type-safe HTTP client                                    │
-│  • Generated from OpenAPI spec                              │
-│  • Request/Response models                                   │
-│  • Async/await support                                      │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ HTTP/REST
-┌─────────────────────────▼───────────────────────────────────┐
-│                  ticket_service                             │
-│              (FastAPI HTTP Service)                         │
-│  • REST API endpoints                                       │
-│  • Request/Response validation                              │
-│  • OAuth 2.0 authentication                                │
-│  • OpenAPI documentation                                    │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ TicketServiceAPI
-┌─────────────────────────▼───────────────────────────────────┐
-│                   ticket_impl                               │
-│              (Jira Implementation)                          │
-│  • Jira Cloud integration                                   │
-│  • OAuth token management                                   │
-│  • Data mapping & transformation                            │
-│  • UUID abstraction                                         │
-└─────────────────────────┬───────────────────────────────────┘
-                          │ Jira REST API
-┌─────────────────────────▼───────────────────────────────────┐
-│                 External Services                           │
-│              (Jira Cloud, Auth0, etc.)                     │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│               Client Applications                            │
+│          (Web, Mobile, CLI, etc.)                           │
+└──────────┬───────────────────────────────────┬───────────────┘
+           │                                   │
+           │ (HTTP/REST)                       │ (Direct)
+           │                                   │
+┌──────────▼──────────────────────────┐  ┌────▼─────────────────────────┐
+│      ticket_client_adapter          │  │      ticket_impl             │
+│   (Domain Interface Adapter)        │  │   (Jira Implementation)      │
+│  • TicketServiceAPI interface      │  │  • Jira Cloud integration    │
+│  • HTTP abstraction                 │  │  • OAuth token management   │
+│  • Model conversion                 │  │  • Data mapping             │
+│  • Error handling                   │  │  • UUID abstraction         │
+└──────────┬──────────────────────────┘  └────────────────────────────┘
+           │                                   │
+           │                                   │ (TicketServiceAPI)
+           │                                   │
+           └───────────────────┬───────────────┘
+                               │ HTTP/REST
+                  ┌────────────▼──────────────────┐
+                  │    ticket_service            │
+                  │ (FastAPI HTTP Service)       │
+                  │ • REST API endpoints         │
+                  │ • Request/Response validation│
+                  │ • OAuth 2.0 authentication   │
+                  │ • OpenAPI documentation      │
+                  └────────────┬──────────────────┘
+                               │ HTTP/REST
+                  ┌────────────▼──────────────────┐
+                  │ ticket_client_generated      │
+                  │  (Auto-Generated Client)     │
+                  │ • Type-safe HTTP client      │
+                  │ • Generated from OpenAPI     │
+                  │ • Request/Response models    │
+                  │ • Async/await support        │
+                  └────────────┬──────────────────┘
+                               │ Jira REST API
+                  ┌────────────▼──────────────────┐
+                  │  External Services           │
+                  │  (Jira Cloud, Auth0, etc.)   │
+                  └───────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────┐
-│                   Core Abstractions                         │
-└─────────────────────────┬───────────────────────────────────┘
-                          │
-┌─────────────────────────▼───────────────────────────────────┐
-│                   ticket_api                                │
-│              (Abstract Interface & Models)                  │
-│  • TicketServiceAPI interface                               │
-│  • Domain models (Ticket, Comment)                          │
-│  • Enums (Status, Priority)                                 │
-│  • Type definitions                                         │
-└─────────────────────────────────────────────────────────────┘
+┌──────────────────────────────────────────────────────────────┐
+│              Core Abstractions                               │
+└──────────────────────┬──────────────────────────────────────┘
+                       │
+           ┌───────────▼───────────┐
+           │    ticket_api         │
+           │ (Abstract Interface & │
+           │       Models)         │
+           │ • TicketServiceAPI    │
+           │ • Domain models       │
+           │ • Enums & types       │
+           └───────────────────────┘
 ```
 
 ## Components
@@ -78,7 +75,7 @@ The OSDP Jira Service implements a layered, component-based architecture that se
 **Purpose**: Abstract interface and data models
 
 - `TicketServiceAPI` abstract base class
-- `Ticket` and `Comment` data models with Pydantic validation
+- `Ticket` and `Comment` frozen dataclass models
 - `TicketStatus` and `TicketPriority` enumerations
 - Type safety and contract enforcement
 
