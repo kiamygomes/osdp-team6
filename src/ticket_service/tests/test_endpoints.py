@@ -477,14 +477,19 @@ class TestAuthEndpoints:
 
     @pytest.mark.asyncio
     async def test_oauth_login(self, async_client: AsyncClient) -> None:
-        """Test OAuth login endpoint redirects to authorization URL."""
+        """Test OAuth login endpoint returns auth URL in JSON."""
         response = await async_client.get("/api/v1/auth/login", follow_redirects=False)
 
-        assert response.status_code == HTTPStatus.FOUND
-        location = response.headers.get("location")
-        assert location is not None
-        assert "auth.atlassian.com" in location
-        assert "authorize" in location
+        assert response.status_code == HTTPStatus.OK
+        data = response.json()
+        assert "auth_url" in data
+        assert "auth.atlassian.com" in data["auth_url"]
+        assert "authorize" in data["auth_url"]
+        assert "state" in data
+        assert "user_id" in data
+        assert "status_code" in data
+        assert data["status_code"] == HTTPStatus.FOUND.value
+        assert "message" in data
 
     @pytest.mark.asyncio
     async def test_oauth_callback_invalid_state(self, async_client: AsyncClient) -> None:

@@ -14,7 +14,6 @@ from uuid import UUID, uuid4
 
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import RedirectResponse
 from ticket_api import ServiceError, TicketServiceAPI, TicketStatus
 from ticket_impl import TicketImpl
 from ticket_impl.oauth import build_authorize_url, exchange_code_for_tokens
@@ -151,8 +150,27 @@ async def get_ticket_service(
     status_code=HTTPStatus.OK,
     description="Get the OAuth 2.0 authorization URL for Jira.",
 )
-async def oauth_login() -> dict[str, str | int]:
+async def oauth_login(
+    session_user_id: Annotated[str | None, Depends(get_session_user_id)] = None,
+) -> dict[str, str | int | bool]:
     """Get the OAuth 2.0 authorization URL for Jira."""
+    # Check if user already has an active session
+    if session_user_id:
+        if session_user_id.startswith("test-"):
+            return {
+                "already_authenticated": True,
+                "user_id": session_user_id,
+                "message": "You already have an active test user session",
+            }
+        tokens = get_user_tokens(session_user_id)
+        if tokens:
+            return {
+                "already_authenticated": True,
+                "user_id": session_user_id,
+                "message": "You already have an active session with valid OAuth tokens",
+            }
+
+    # Generate new OAuth flow
     try:
         user_id = str(uuid4())
         state = secrets.token_urlsafe(32)
@@ -166,14 +184,14 @@ async def oauth_login() -> dict[str, str | int]:
         ) from e
     else:
         return {
+            "already_authenticated": False,
             "auth_url": auth_url,
             "message": "Open the auth_url in your browser to complete authentication",
             "state": state,
             "user_id": user_id,
-            "status_code": 302,  # Semantic indicator
+            "status_code": 302,
             "redirect_to": auth_url,
         }
-
 
 @app.get(
     "/api/v1/auth/callback",
