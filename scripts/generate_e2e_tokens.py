@@ -45,6 +45,9 @@ TOKENS_MIN_ARGS = 4
 TOKENS_MAX_ARG_INDEX = 4
 TOKEN_PREVIEW_LENGTH = 20
 DEFAULT_EXPIRES_SEC = 3600
+JWT_PARTS = 3
+BASE64_PADDING = 4
+USER_ID_ARG_INDEX = 5
 
 # Setup logging
 logger = logging.getLogger(__name__)
@@ -55,25 +58,23 @@ def extract_user_email_from_token(access_token: str) -> str | None:
     """Extract user email from JWT access token."""
     try:
         parts = access_token.split(".")
-        if len(parts) != 3:
+        if len(parts) != JWT_PARTS:
             return None
 
         payload = parts[1]
-        padding = 4 - len(payload) % 4
-        if padding != 4:
+        padding = BASE64_PADDING - len(payload) % BASE64_PADDING
+        if padding != BASE64_PADDING:
             payload += "=" * padding
 
         decoded = base64.urlsafe_b64decode(payload)
         claims = json.loads(decoded)
 
         # Try multiple possible email field names
-        email = (
+        return (
             claims.get("email")
             or claims.get("preferred_username")
             or claims.get("sub")
         )
-
-        return email
     except (ValueError, KeyError, json.JSONDecodeError):
         return None
 
@@ -143,12 +144,11 @@ async def main() -> None:
             )
 
             # Optional: allow passing a user_id, otherwise extract from token
-            user_id = None
-            if len(sys.argv) > 5:
-                user_id = sys.argv[5]
-            else:
-                # Try to extract user email from the access token
-                user_id = extract_user_email_from_token(access_token)
+            user_id = (
+                sys.argv[USER_ID_ARG_INDEX]
+                if len(sys.argv) > USER_ID_ARG_INDEX
+                else extract_user_email_from_token(access_token)
+            )
 
             if not user_id:
                 user_id = "demo_user"
