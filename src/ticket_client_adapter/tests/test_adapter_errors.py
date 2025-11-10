@@ -334,18 +334,21 @@ async def test_create_ticket_with_retry_on_server_error() -> None:
     # First attempt returns 503, second succeeds
     route.side_effect = [
         httpx.Response(503, json={"detail": "Service unavailable"}),
-        httpx.Response(201, json={
-            "id": str(ticket_id),
-            "title": "Test",
-            "description": "Test",
-            "status": "open",
-            "priority": "medium",
-            "reporter": "test@example.com",
-            "assignee": None,
-            "created_at": "2025-10-29T00:00:00Z",
-            "updated_at": "2025-10-29T00:00:00Z",
-            "comments": [],
-        }),
+        httpx.Response(
+            201,
+            json={
+                "id": str(ticket_id),
+                "title": "Test",
+                "description": "Test",
+                "status": "open",
+                "priority": "medium",
+                "reporter": "test@example.com",
+                "assignee": None,
+                "created_at": "2025-10-29T00:00:00Z",
+                "updated_at": "2025-10-29T00:00:00Z",
+                "comments": [],
+            },
+        ),
     ]
 
     async with RemoteTicketService(BASE_URL, TEST_USER, TEST_PROJECT, max_retries=3, initial_backoff_seconds=0.01) as service:
@@ -369,18 +372,21 @@ async def test_create_ticket_with_429_retry() -> None:
     # First attempt returns 429, second succeeds
     route.side_effect = [
         httpx.Response(429, json={"detail": "Too many requests"}),
-        httpx.Response(201, json={
-            "id": str(ticket_id),
-            "title": "Test",
-            "description": "Test",
-            "status": "open",
-            "priority": "medium",
-            "reporter": "test@example.com",
-            "assignee": None,
-            "created_at": "2025-10-29T00:00:00Z",
-            "updated_at": "2025-10-29T00:00:00Z",
-            "comments": [],
-        }),
+        httpx.Response(
+            201,
+            json={
+                "id": str(ticket_id),
+                "title": "Test",
+                "description": "Test",
+                "status": "open",
+                "priority": "medium",
+                "reporter": "test@example.com",
+                "assignee": None,
+                "created_at": "2025-10-29T00:00:00Z",
+                "updated_at": "2025-10-29T00:00:00Z",
+                "comments": [],
+            },
+        ),
     ]
 
     async with RemoteTicketService(BASE_URL, TEST_USER, TEST_PROJECT, max_retries=3, initial_backoff_seconds=0.01) as service:

@@ -342,11 +342,7 @@ async def get_ticket(
         comments = await service.get_ticket_comments(ticket_id)
 
         # Create response with comments
-        ticket_dict = (
-            ticket.model_dump()
-            if hasattr(ticket, "model_dump")
-            else ticket.__dict__
-        )
+        ticket_dict = ticket.model_dump() if hasattr(ticket, "model_dump") else ticket.__dict__
         ticket_dict["comments"] = [
             CommentResponse.model_validate(
                 c.model_dump() if hasattr(c, "model_dump") else c.__dict__,
@@ -453,26 +449,25 @@ async def update_ticket(
 
     Returns 404 if the ticket is not found.
     """
-    # Update status if provided (only status is implemented in TicketImpl.update_ticket)
-    if request.status:
-        try:
-            ticket = await service.update_ticket(
-                ticket_id=ticket_id,
-                status=request.status,
-            )
-        except Exception as e:
-            raise HTTPException(
-                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-                detail=f"Failed to update ticket: {e!s}",
-            ) from e
-    else:
-        # If no status update, fetch the ticket as-is
-        ticket = await service.get_ticket(ticket_id)
-        if ticket is None:
-            raise HTTPException(
-                status_code=HTTPStatus.NOT_FOUND,
-                detail=f"Ticket {ticket_id} not found",
-            )
+    # Always call update_ticket to check if ticket exists and apply any status changes
+    # (other fields like title, description, priority are not yet supported by TicketImpl)
+    try:
+        ticket = await service.update_ticket(
+            ticket_id=ticket_id,
+            status=request.status,
+        )
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update ticket: {e!s}",
+        ) from e
+
+    # Verify ticket exists
+    if ticket is None:
+        raise HTTPException(
+            status_code=HTTPStatus.NOT_FOUND,
+            detail=f"Ticket {ticket_id} not found",
+        )
 
     # Handle assignee separately if provided (skip if user not found)
     if request.assignee:
@@ -481,21 +476,16 @@ async def update_ticket(
         except (ServiceError, ValueError):
             # If assignee reassignment fails (user not found), just log and continue
             logger.warning("Failed to reassign ticket to %s", request.assignee)
-            # ticket already has the latest state from update_ticket or get_ticket
+            # ticket already has the latest state from update_ticket
 
     # Note: title, description, and priority updates are not yet supported
     # by the TicketImpl backend and would require implementation
-    if ticket is None:
-        raise HTTPException(
-            status_code=HTTPStatus.NOT_FOUND,
-            detail=f"Ticket {ticket_id} not found",
-        )
     try:
         return TicketResponse.model_validate(ticket)
     except Exception as e:
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update ticket: {e!s}",
+            detail=f"Failed to validate ticket: {e!s}",
         ) from e
 
 

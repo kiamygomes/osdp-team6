@@ -52,7 +52,6 @@ class TestEdgeCases:
         )
         assert len(comment.content) == MAX_COMMENT_LENGTH
 
-
     def test_ticket_priority_levels(self) -> None:
         """Test all priority levels."""
         priorities = [

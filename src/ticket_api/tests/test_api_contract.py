@@ -65,7 +65,6 @@ class TestTicketModel:
         assert ticket.updated_at == created_time
 
 
-
 class TestCommentModel:
     """Test cases for the Comment data model."""
 

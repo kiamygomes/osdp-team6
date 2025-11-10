@@ -127,9 +127,7 @@ class CircuitBreaker:
         if self.state == CircuitState.CLOSED:
             return True
         if self.state == CircuitState.OPEN:
-            if self.last_failure_time is not None and (
-                time.time() - self.last_failure_time >= self.recovery_timeout
-            ):
+            if self.last_failure_time is not None and (time.time() - self.last_failure_time >= self.recovery_timeout):
                 self.state = CircuitState.HALF_OPEN
                 logger.info("Circuit breaker entering half-open state")
                 return True
@@ -591,6 +589,7 @@ class RemoteTicketService(TicketServiceAPI):
         self._client.set_correlation_id(correlation_id)
 
         try:
+
             async def _make_request() -> object:
                 response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
                     client=self._client,
@@ -652,6 +651,7 @@ class RemoteTicketService(TicketServiceAPI):
         self._client.set_correlation_id(correlation_id)
 
         try:
+
             async def _make_request() -> object:
                 response = await delete_ticket_api_v1_tickets_ticket_id_delete.asyncio_detailed(
                     client=self._client,
@@ -831,6 +831,7 @@ class RemoteTicketService(TicketServiceAPI):
         self._client.set_correlation_id(correlation_id)
 
         try:
+
             async def _make_request() -> object:
                 response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
                     client=self._client,
@@ -901,6 +902,7 @@ class RemoteTicketService(TicketServiceAPI):
         self._client.set_correlation_id(correlation_id)
 
         try:
+
             async def _make_request() -> object:
                 response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
                     client=self._client,
@@ -971,6 +973,7 @@ class RemoteTicketService(TicketServiceAPI):
         self._client.set_correlation_id(correlation_id)
 
         try:
+
             async def _make_request() -> object:
                 response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
                     client=self._client,
@@ -1040,6 +1043,7 @@ class RemoteTicketService(TicketServiceAPI):
         self._client.set_correlation_id(correlation_id)
 
         try:
+
             async def _make_request() -> object:
                 response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
                     client=self._client,

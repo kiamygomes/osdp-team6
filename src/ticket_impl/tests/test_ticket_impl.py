@@ -71,7 +71,7 @@ async def test_create_get_list_transition_comment_delete(seed_token: None) -> No
     respx.post(f"{BASE}/issue/OSDP-101/transitions").mock(return_value=httpx.Response(204))
 
     # search/list
-    respx.post(f"{BASE}/search").mock(
+    respx.post(f"{BASE}/search/jql").mock(
         return_value=httpx.Response(200, json={"issues": [issue_payload()]}),
     )
 
