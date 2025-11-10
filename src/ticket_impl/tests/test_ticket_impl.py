@@ -7,10 +7,12 @@ import httpx
 import pytest
 import respx
 from ticket_api.models import TicketPriority, TicketStatus
+from ticket_impl.config import settings
 
 from ticket_impl import TicketImpl
 
-BASE = "https://api.atlassian.com/ex/jira/00000000-0000-0000-0000-000000000000/rest/api/3"
+# Use the cloud ID from settings to match actual requests
+BASE = f"https://api.atlassian.com/ex/jira/{settings.jira_cloud_id}/rest/api/3"
 EXPECTED_GET_CALLS = 3  # after create, explicit get, and after status transition
 
 
