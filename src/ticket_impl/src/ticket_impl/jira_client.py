@@ -3,12 +3,15 @@
 from __future__ import annotations
 
 from http import HTTPStatus
+from logging import getLogger
 from typing import Any, cast
 
 import httpx
 
 from .config import settings
 from .oauth import get_valid_access_token
+
+logger = getLogger(__name__)
 
 
 def _v3(path: str) -> str:
@@ -47,11 +50,16 @@ async def delete_issue(user_id: str, issue_key: str) -> bool:
         return False
 
 
-async def search_issues(user_id: str, jql: str, max_results: int = 50, start_at: int = 0) -> dict[str, Any]:
+async def search_issues(user_id: str, jql: str, max_results: int = 50, start_at: int = 0) -> dict[str, Any]:  # noqa: ARG001
     """Search issues using JQL with pagination."""
-    payload = {"jql": jql, "maxResults": max_results, "startAt": start_at}
+    payload = {
+        "jql": jql,
+        "maxResults": max_results,
+    }
     async with httpx.AsyncClient(timeout=30.0) as client:
-        r = await client.post(_v3("/search"), headers=await _headers(user_id), json=payload)
+        r = await client.post(_v3("/search/jql"), headers=await _headers(user_id), json=payload)
+        if r.status_code != HTTPStatus.OK:
+            logger.error("Jira API error response: %s", r.text)
         r.raise_for_status()
         return cast("dict[str, Any]", r.json())
 

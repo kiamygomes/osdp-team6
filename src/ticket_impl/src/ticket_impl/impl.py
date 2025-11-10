@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import logging
 from typing import Any
 from uuid import NAMESPACE_URL, UUID, uuid5
 
@@ -9,6 +10,8 @@ from ticket_api import Comment, ServiceError, Ticket, TicketNotFoundError, Ticke
 
 from . import jira_client as jc
 from .storage import ensure_mapping_for_keys, get_key_for_uuid, map_uuid_to_key
+
+logger = logging.getLogger(__name__)
 
 # ---- mapping helpers ----
 
@@ -176,11 +179,15 @@ class TicketImpl(TicketServiceAPI):
         jql = " AND ".join(clauses) + " ORDER BY updated DESC"
         try:
             raw = await jc.search_issues(self.user_id, jql=jql, max_results=min(50, limit), start_at=offset)
+            logger.debug("Jira search raw response: %s", raw)
         except Exception as e:
             msg = f"Failed to list tickets: {e}"
             raise ServiceError(msg) from e
 
+        # The /search/jql endpoint returns issues directly in the response
         issues = raw.get("issues", [])
+        logger.info("Jira search returned %d issues", len(issues))
+
         out: list[Ticket] = []
         pairs: list[tuple[UUID, str]] = []
         for it in issues:
