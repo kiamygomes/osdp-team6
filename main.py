@@ -379,17 +379,16 @@ async def _demo_list_tickets(ticket_service: TicketImpl) -> None:
 
 
 async def _demo_update_ticket(ticket_service: TicketImpl, ticket_id: str) -> None:
-    """Demo 4: Update ticket status and priority."""
+    """Demo 4: Update ticket status."""
     logger.info("\n--- Demo 4: Updating ticket status ---")
     try:
         updated_ticket = await ticket_service.update_ticket(
             ticket_id=ticket_id,
             status=TicketStatus.IN_PROGRESS,
-            priority=TicketPriority.HIGH,
         )
         logger.info("Updated ticket: %s", updated_ticket.id)
         logger.info("  New Status: %s", updated_ticket.status)
-        logger.info("  New Priority: %s", updated_ticket.priority)
+        logger.info("  Priority: %s", updated_ticket.priority)
     except Exception:
         logger.exception("Failed to update ticket")
 

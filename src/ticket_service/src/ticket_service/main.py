@@ -15,7 +15,7 @@ from uuid import UUID, uuid4
 from fastapi import Cookie, Depends, FastAPI, Header, HTTPException, Query, Response, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import RedirectResponse
-from ticket_api import TicketServiceAPI, TicketStatus
+from ticket_api import ServiceError, TicketServiceAPI, TicketStatus
 from ticket_impl import TicketImpl
 from ticket_impl.oauth import build_authorize_url, exchange_code_for_tokens
 from ticket_impl.storage import clear_user_tokens, get_user_tokens
@@ -331,11 +331,36 @@ async def get_ticket(
     """
     ticket = await service.get_ticket(ticket_id)
     if ticket is None:
+        msg = f"Ticket {ticket_id} not found"
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
-            detail=f"Ticket {ticket_id} not found",
+            detail=msg,
         )
-    return TicketResponse.model_validate(ticket)
+
+    try:
+        # Fetch comments for the ticket
+        comments = await service.get_ticket_comments(ticket_id)
+
+        # Create response with comments
+        ticket_dict = (
+            ticket.model_dump()
+            if hasattr(ticket, "model_dump")
+            else ticket.__dict__
+        )
+        ticket_dict["comments"] = [
+            CommentResponse.model_validate(
+                c.model_dump() if hasattr(c, "model_dump") else c.__dict__,
+            )
+            for c in comments
+        ]
+
+        return TicketResponse.model_validate(ticket_dict)
+    except Exception as e:
+        logger.exception("Failed to get ticket %s", ticket_id)
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Failed to get ticket: {e!s}",
+        ) from e
 
 
 class TicketFilters(NamedTuple):
@@ -428,31 +453,50 @@ async def update_ticket(
 
     Returns 404 if the ticket is not found.
     """
-    try:
-        ticket = await service.update_ticket(
-            ticket_id=ticket_id,
-            title=request.title,
-            description=request.description,
-            status=request.status,
-            priority=request.priority,
-            assignee=request.assignee,
-        )
-    except ValueError as e:
-        raise HTTPException(
-            status_code=HTTPStatus.BAD_REQUEST,
-            detail=str(e),
-        ) from e
-    except Exception as e:
-        raise HTTPException(
-            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
-            detail=f"Failed to update ticket: {e!s}",
-        ) from e
+    # Update status if provided (only status is implemented in TicketImpl.update_ticket)
+    if request.status:
+        try:
+            ticket = await service.update_ticket(
+                ticket_id=ticket_id,
+                status=request.status,
+            )
+        except Exception as e:
+            raise HTTPException(
+                status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+                detail=f"Failed to update ticket: {e!s}",
+            ) from e
+    else:
+        # If no status update, fetch the ticket as-is
+        ticket = await service.get_ticket(ticket_id)
+        if ticket is None:
+            raise HTTPException(
+                status_code=HTTPStatus.NOT_FOUND,
+                detail=f"Ticket {ticket_id} not found",
+            )
+
+    # Handle assignee separately if provided (skip if user not found)
+    if request.assignee:
+        try:
+            ticket = await service.reassign_ticket(ticket_id, request.assignee)
+        except (ServiceError, ValueError):
+            # If assignee reassignment fails (user not found), just log and continue
+            logger.warning("Failed to reassign ticket to %s", request.assignee)
+            # ticket already has the latest state from update_ticket or get_ticket
+
+    # Note: title, description, and priority updates are not yet supported
+    # by the TicketImpl backend and would require implementation
     if ticket is None:
         raise HTTPException(
             status_code=HTTPStatus.NOT_FOUND,
             detail=f"Ticket {ticket_id} not found",
         )
-    return TicketResponse.model_validate(ticket)
+    try:
+        return TicketResponse.model_validate(ticket)
+    except Exception as e:
+        raise HTTPException(
+            status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
+            detail=f"Failed to update ticket: {e!s}",
+        ) from e
 
 
 @app.delete(

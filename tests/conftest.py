@@ -20,8 +20,16 @@ def event_loop() -> Generator[asyncio.AbstractEventLoop, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def mock_token_storage() -> Generator[MagicMock, None, None]:
-    """Auto-patch token storage to allow test users."""
+def mock_token_storage(request: pytest.FixtureRequest) -> Generator[MagicMock | None, None, None]:
+    """Auto-patch token storage to allow test users.
+
+    Note: This fixture is skipped for e2e tests which use real OAuth tokens.
+    """
+    # Skip mocking for e2e tests
+    if "e2e" in request.keywords:
+        yield None
+        return
+
     with patch("ticket_service.main.get_user_tokens") as mock_get_tokens:
         # Allow test- prefixed users to pass token verification
         mock_get_tokens.return_value = {"access_token": "test-token"}
@@ -29,8 +37,24 @@ def mock_token_storage() -> Generator[MagicMock, None, None]:
 
 
 @pytest.fixture(autouse=True)
-def mock_jira_backend() -> Generator[dict[str, MagicMock], None, None]:
-    """Auto-patch Jira backend to prevent actual API calls."""
+def mock_jira_backend(request: pytest.FixtureRequest) -> Generator[dict[str, MagicMock | None], None, None]:
+    """Auto-patch Jira backend to prevent actual API calls.
+
+    Note: This fixture is skipped for e2e tests which need real API calls.
+    """
+    # Skip mocking for e2e tests
+    if "e2e" in request.keywords:
+        yield {
+            "create_ticket": None,
+            "get_ticket": None,
+            "list_tickets": None,
+            "update_ticket": None,
+            "delete_ticket": None,
+            "add_comment": None,
+            "get_ticket_comments": None,
+        }
+        return
+
     with (
         patch("ticket_impl.impl.TicketImpl.create_ticket") as mock_create,
         patch("ticket_impl.impl.TicketImpl.get_ticket") as mock_get,

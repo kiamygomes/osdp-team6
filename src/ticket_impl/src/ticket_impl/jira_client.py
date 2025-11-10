@@ -99,6 +99,9 @@ async def update_issue_fields(user_id: str, issue_key: str, fields: dict[str, An
     async with httpx.AsyncClient(timeout=30.0) as client:
         r = await client.put(_v3(f"/issue/{issue_key}"), headers=await _headers(user_id), json=payload)
         r.raise_for_status()
+        # PUT endpoint may return empty response; if so, fetch the updated issue
+        if r.status_code == HTTPStatus.NO_CONTENT or not r.content:
+            return await get_issue(user_id, issue_key)
         return cast("dict[str, Any]", r.json())
 
 

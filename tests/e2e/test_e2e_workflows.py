@@ -20,7 +20,7 @@ from uuid import UUID
 
 import pytest
 from fastapi.testclient import TestClient
-from ticket_impl.storage import upsert_tokens
+from ticket_impl.storage import get_tokens, upsert_tokens
 
 from ticket_api import TicketPriority, TicketStatus
 from ticket_service import app
@@ -44,25 +44,33 @@ HAS_OAUTH_CREDENTIALS = all(
 def setup_oauth_tokens() -> None:
     """Set up valid OAuth tokens for E2E test users.
 
-    This fixture simulates successful OAuth token exchange by storing
-    valid tokens for the test users before each test runs.
+    This fixture retrieves real OAuth tokens from demo_user and copies them
+    to test users for E2E testing against a real Jira Cloud instance.
     """
     if not HAS_OAUTH_CREDENTIALS:
         return  # Skip if credentials not configured
 
-    # Set up tokens for both E2E test users
+    # Get the real tokens from demo_user (obtained through OAuth flow)
+    demo_tokens = get_tokens("demo_user")
+    if not demo_tokens:
+        pytest.skip(
+            "No valid OAuth tokens found for demo_user. Run main.py to authenticate first.",
+        )
+        return
+
+    # Set up tokens for both E2E test users using real tokens
     test_users = [
         "e2e-test-user-oauth",
         "e2e-test-workflow",
+        "e2e-test-list-tickets",
     ]
 
     for user_id in test_users:
-        # Use dummy tokens - they won't be validated in our mock setup
-        # In a real scenario, these would be actual Jira OAuth tokens
+        # Use the real OAuth tokens from demo_user for all E2E test users
         upsert_tokens(
             user_id=user_id,
-            access="dummy-access-token-for-e2e-testing",
-            refresh="dummy-refresh-token-for-e2e-testing",
+            access=demo_tokens.access_token,
+            refresh=demo_tokens.refresh_token,
             expires_in_sec=3600,
         )
 

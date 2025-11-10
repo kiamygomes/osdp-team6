@@ -99,14 +99,14 @@ class CommentCreateRequest(BaseModel):
 
 
 class CommentResponse(BaseModel):
-    """Schema for a comment in API responses."""
+    """Schema for a comment in API responses and ticket responses."""
 
     model_config = ConfigDict(from_attributes=True)
 
     id: UUID = Field(description="Unique identifier for the comment")
     ticket_id: UUID = Field(description="ID of the ticket this comment belongs to")
     author: str = Field(description="Author of the comment")
-    content: str = Field(description="Comment text content")
+    content: str = Field(description="Comment content")
     created_at: datetime = Field(description="When the comment was created")
 
 
@@ -124,6 +124,10 @@ class TicketResponse(BaseModel):
     assignee: str | None = Field(description="Person assigned to the ticket")
     created_at: datetime = Field(description="When the ticket was created")
     updated_at: datetime = Field(description="When the ticket was last updated")
+    comments: list[CommentResponse] = Field(
+        default_factory=list,
+        description="Comments on the ticket",
+    )
 
 
 class TicketListResponse(BaseModel):
