@@ -209,44 +209,81 @@ class TicketImpl(TicketServiceAPI):
     ) -> Ticket:
         """Update fields and/or workflow state; return the refreshed ticket."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
-        try:
-            if status:
+
+        # If a status transition is requested, compute the transition first.
+        if status:
+            try:
                 transitions = await jc.list_transitions(self.user_id, key)
-                target = {
-                    TicketStatus.OPEN: {"Open", "To Do"},
-                    TicketStatus.IN_PROGRESS: {"In Progress", "Doing"},
-                    TicketStatus.RESOLVED: {"Done", "Resolved"},
-                    TicketStatus.CLOSED: {"Closed"},
-                }[status]
-                choice = next((t for t in transitions if t.get("name") in target), None)
-                if not choice:
-                    msg = f"No valid transition found to {status} for {key}"
-                    raise ServiceError(msg)  # noqa: TRY301
+            except TicketNotFoundError:
+                raise
+            except Exception as e:
+                msg = f"Failed to list transitions: {e}"
+                raise ServiceError(msg) from e
+
+            target = {
+                TicketStatus.OPEN: {"Open", "To Do"},
+                TicketStatus.IN_PROGRESS: {"In Progress", "Doing"},
+                TicketStatus.RESOLVED: {"Done", "Resolved"},
+                TicketStatus.CLOSED: {"Closed"},
+            }[status]
+
+            choice = next((t for t in transitions if t.get("name") in target), None)
+            if not choice:
+                # Raise *outside* the try block to satisfy TRY301
+                msg = f"No valid transition found to {status} for {key}"
+                raise ServiceError(msg)
+
+            try:
                 await jc.do_transition(self.user_id, key, choice["id"])
+            except TicketNotFoundError:
+                raise
+            except Exception as e:
+                msg = f"Failed to perform transition: {e}"
+                raise ServiceError(msg) from e
+
+        try:
             data = await jc.get_issue(self.user_id, key)
-            return _jira_to_ticket(data, self.user_id)
         except TicketNotFoundError:
             raise
         except Exception as e:
-            msg = f"Failed to transition status: {e}"
+            msg = f"Failed to fetch updated ticket: {e}"
             raise ServiceError(msg) from e
 
+        return _jira_to_ticket(data, self.user_id)
+
+
     async def reassign_ticket(self, ticket_id: UUID, new_assignee: str) -> Ticket:
-        """Reassign the ticket to a new assignee."""
+        """Reassign the ticket to a new assignee and return the updated ticket."""
         key = get_key_for_uuid(self.user_id, ticket_id) or str(ticket_id)
         try:
             acct = await jc.find_user_account_id(self.user_id, new_assignee)
-            if not acct:
-                msg = f"Assignee '{new_assignee}' was not found"
-                raise ServiceError(msg)  # noqa: TRY301
-            await jc.update_issue_fields(self.user_id, key, {"assignee": {"id": acct}})
-            data = await jc.get_issue(self.user_id, key)
-            return _jira_to_ticket(data, self.user_id)
         except TicketNotFoundError:
             raise
         except Exception as e:
-            msg = f"Failed to reassign ticket: {e}"
+            msg = f"Failed to look up assignee '{new_assignee}': {e}"
             raise ServiceError(msg) from e
+
+        if not acct:
+            msg = f"Assignee '{new_assignee}' was not found"
+            raise ServiceError(msg)
+        try:
+            await jc.update_issue_fields(self.user_id, key, {"assignee": {"id": acct}})
+        except TicketNotFoundError:
+            raise
+        except Exception as e:
+            msg = f"Failed to update assignee for {key}: {e}"
+            raise ServiceError(msg) from e
+
+        try:
+            data = await jc.get_issue(self.user_id, key)
+        except TicketNotFoundError:
+            raise
+        except Exception as e:
+            msg = f"Failed to fetch updated ticket {key}: {e}"
+            raise ServiceError(msg) from e
+
+        return _jira_to_ticket(data, self.user_id)
+
 
     async def update_priority(self, ticket_id: UUID, new_priority: TicketPriority) -> Ticket:
         """Update the priority field of a ticket."""
