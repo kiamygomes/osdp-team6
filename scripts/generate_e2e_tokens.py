@@ -21,6 +21,8 @@ The following environment variables must be set:
 """
 
 import asyncio
+import base64
+import json
 import logging
 import sys
 from pathlib import Path
@@ -49,12 +51,39 @@ logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO, format="%(message)s")
 
 
+def extract_user_email_from_token(access_token: str) -> str | None:
+    """Extract user email from JWT access token."""
+    try:
+        parts = access_token.split(".")
+        if len(parts) != 3:
+            return None
+
+        payload = parts[1]
+        padding = 4 - len(payload) % 4
+        if padding != 4:
+            payload += "=" * padding
+
+        decoded = base64.urlsafe_b64decode(payload)
+        claims = json.loads(decoded)
+
+        # Try multiple possible email field names
+        email = (
+            claims.get("email")
+            or claims.get("preferred_username")
+            or claims.get("sub")
+        )
+
+        return email
+    except (ValueError, KeyError, json.JSONDecodeError):
+        return None
+
+
 def print_usage() -> None:
     """Print usage instructions."""
     usage_text = (
         "Usage:\n"
         "  python generate_e2e_tokens.py --code <authorization_code>\n"
-        "  python generate_e2e_tokens.py --tokens <access_token> <refresh_token> [expires_in_sec]\n"
+        "  python generate_e2e_tokens.py --tokens <access_token> <refresh_token> [expires_in_sec] [user_id]\n"
         "\nEnvironment variables required:\n"
         "  - OAUTH_CLIENT_ID\n"
         "  - OAUTH_CLIENT_SECRET\n"
@@ -113,9 +142,21 @@ async def main() -> None:
                 else DEFAULT_EXPIRES_SEC
             )
 
-            logger.info("Storing tokens for demo_user...")
-            ticket_impl.storage.upsert_tokens("demo_user", access_token, refresh_token, expires_in_sec)
-            logger.info("✓ Successfully stored tokens for demo_user")
+            # Optional: allow passing a user_id, otherwise extract from token
+            user_id = None
+            if len(sys.argv) > 5:
+                user_id = sys.argv[5]
+            else:
+                # Try to extract user email from the access token
+                user_id = extract_user_email_from_token(access_token)
+
+            if not user_id:
+                user_id = "demo_user"
+                logger.warning("Could not extract user email from token. Using 'demo_user'")
+
+            logger.info("Storing tokens for user: %s", user_id)
+            ticket_impl.storage.upsert_tokens(user_id, access_token, refresh_token, expires_in_sec)
+            logger.info("✓ Successfully stored tokens for %s", user_id)
             logger.info("  Access token: %s...", access_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Refresh token: %s...", refresh_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Expires in: %d seconds", expires_in_sec)
