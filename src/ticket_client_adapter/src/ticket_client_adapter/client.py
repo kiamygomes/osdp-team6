@@ -455,27 +455,53 @@ class RemoteTicketService(TicketServiceAPI):
             self._client.clear_correlation_id()
 
     async def get_ticket(self, ticket_id: UUID) -> Ticket | None:
-        """Retrieve a ticket by ID via the generated client."""
-        response = await get_ticket_api_v1_tickets_ticket_id_get.asyncio_detailed(
-            client=self._client,
-            ticket_id=ticket_id,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
+        """Retrieve a ticket by ID via the generated client with retry support."""
+        correlation_id = str(uuid4())
+        logger.info(
+            "Getting ticket with correlation_id=%s, ticket_id=%s",
+            correlation_id,
+            ticket_id,
         )
 
-        # 404 means ticket not found
-        if response.status_code == HTTPStatus.NOT_FOUND:
+        async def _make_request() -> object:
+            response = await get_ticket_api_v1_tickets_ticket_id_get.asyncio_detailed(
+                client=self._client,
+                ticket_id=ticket_id,
+                x_user_id=self._user_id,
+                x_project_key=self._project_key,
+            )
+
+            # 404 means ticket not found - don't retry
+            if response.status_code == HTTPStatus.NOT_FOUND:
+                return None
+
+            if response.status_code != HTTPStatus.OK:
+                msg = f"Failed to get ticket: HTTP {response.status_code}"
+                req = cast("httpx.Request", response)
+                resp = cast("httpx.Response", response)
+                raise httpx.HTTPStatusError(msg, request=req, response=resp)
+            return response
+
+        response_result = await self._retry_with_backoff(_make_request, correlation_id)
+
+        if response_result is None:
+            logger.info(
+                "Ticket not found for correlation_id=%s, ticket_id=%s",
+                correlation_id,
+                ticket_id,
+            )
             return None
 
-        if response.status_code != HTTPStatus.OK:
-            msg = f"Failed to get ticket: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+        response = cast("Response[TicketResponse]", response_result)
         if not isinstance(response.parsed, TicketResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
             raise TypeError(msg)
 
+        logger.info(
+            "Successfully retrieved ticket with correlation_id=%s, ticket_id=%s",
+            correlation_id,
+            ticket_id,
+        )
         return self._to_domain_ticket(response.parsed)
 
     async def list_tickets(
@@ -486,28 +512,49 @@ class RemoteTicketService(TicketServiceAPI):
         limit: int = 100,
         offset: int = 0,
     ) -> list[Ticket]:
-        """List tickets with optional filters via the generated client."""
-        response = await list_tickets_api_v1_tickets_get.asyncio_detailed(
-            client=self._client,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
-            status=self._to_generated_status(status) if status else None,
-            assignee=assignee,
-            reporter=reporter,
-            limit=limit,
-            offset=offset,
+        """List tickets with optional filters via the generated client with retry support."""
+        correlation_id = str(uuid4())
+        logger.info(
+            "Listing tickets with correlation_id=%s, status=%s, assignee=%s, reporter=%s",
+            correlation_id,
+            status,
+            assignee,
+            reporter,
         )
 
-        if response.status_code != HTTPStatus.OK:
-            msg = f"Failed to list tickets: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+        async def _make_request() -> object:
+            response = await list_tickets_api_v1_tickets_get.asyncio_detailed(
+                client=self._client,
+                x_user_id=self._user_id,
+                x_project_key=self._project_key,
+                status=self._to_generated_status(status) if status else None,
+                assignee=assignee,
+                reporter=reporter,
+                limit=limit,
+                offset=offset,
+            )
+
+            if response.status_code != HTTPStatus.OK:
+                msg = f"Failed to list tickets: HTTP {response.status_code}"
+                req = cast("httpx.Request", response)
+                resp = cast("httpx.Response", response)
+                raise httpx.HTTPStatusError(msg, request=req, response=resp)
+            return response
+
+        response = cast(
+            "Response[TicketListResponse]",
+            await self._retry_with_backoff(_make_request, correlation_id),
+        )
 
         if not isinstance(response.parsed, TicketListResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
             raise TypeError(msg)
 
+        logger.info(
+            "Successfully listed tickets with correlation_id=%s, count=%s",
+            correlation_id,
+            len(response.parsed.tickets),
+        )
         return [self._to_domain_ticket(t) for t in response.parsed.tickets]
 
     async def update_ticket(
@@ -519,7 +566,19 @@ class RemoteTicketService(TicketServiceAPI):
         priority: TicketPriority | None = None,
         assignee: str | None = None,
     ) -> Ticket | None:
-        """Update a ticket via the generated client."""
+        """Update a ticket via the generated client with retry and idempotency support."""
+        correlation_id = str(uuid4())
+        # Generate idempotency key from ticket ID and update fields
+        request_data = f"update_{ticket_id}_{title}_{description}_{status}_{priority}_{assignee}"
+        idempotency_key = hashlib.sha256(request_data.encode()).hexdigest()
+
+        logger.info(
+            "Updating ticket with correlation_id=%s, idempotency_key=%s, ticket_id=%s",
+            correlation_id,
+            idempotency_key,
+            ticket_id,
+        )
+
         request = TicketUpdateRequest(
             title=title,
             description=description,
@@ -528,48 +587,108 @@ class RemoteTicketService(TicketServiceAPI):
             assignee=assignee,
         )
 
-        response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
-            client=self._client,
-            ticket_id=ticket_id,
-            body=request,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
-        )
+        self._client.set_idempotency_key(idempotency_key)
+        self._client.set_correlation_id(correlation_id)
 
-        if response.status_code == HTTPStatus.NOT_FOUND:
-            return None
+        try:
+            async def _make_request() -> object:
+                response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
+                    client=self._client,
+                    ticket_id=ticket_id,
+                    body=request,
+                    x_user_id=self._user_id,
+                    x_project_key=self._project_key,
+                )
 
-        if response.status_code != HTTPStatus.OK:
-            msg = f"Failed to update ticket: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+                if response.status_code == HTTPStatus.NOT_FOUND:
+                    return None
 
-        if not isinstance(response.parsed, TicketResponse):
-            msg = f"Unexpected response type: {type(response.parsed)}"
-            raise TypeError(msg)
+                if response.status_code != HTTPStatus.OK:
+                    msg = f"Failed to update ticket: HTTP {response.status_code}"
+                    req = cast("httpx.Request", response)
+                    resp = cast("httpx.Response", response)
+                    raise httpx.HTTPStatusError(msg, request=req, response=resp)
+                return response
 
-        return self._to_domain_ticket(response.parsed)
+            response_result = await self._retry_with_backoff(_make_request, correlation_id)
+
+            if response_result is None:
+                logger.info(
+                    "Ticket not found for correlation_id=%s, ticket_id=%s",
+                    correlation_id,
+                    ticket_id,
+                )
+                return None
+
+            response = cast("Response[TicketResponse]", response_result)
+            if not isinstance(response.parsed, TicketResponse):
+                msg = f"Unexpected response type: {type(response.parsed)}"
+                raise TypeError(msg)
+
+            logger.info(
+                "Successfully updated ticket with correlation_id=%s, ticket_id=%s",
+                correlation_id,
+                ticket_id,
+            )
+            return self._to_domain_ticket(response.parsed)
+        finally:
+            self._client.clear_idempotency_key()
+            self._client.clear_correlation_id()
 
     async def delete_ticket(self, ticket_id: UUID) -> bool:
-        """Delete a ticket via the generated client."""
-        response = await delete_ticket_api_v1_tickets_ticket_id_delete.asyncio_detailed(
-            client=self._client,
-            ticket_id=ticket_id,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
+        """Delete a ticket via the generated client with retry and idempotency support."""
+        correlation_id = str(uuid4())
+        # DELETE is idempotent - same idempotency key for multiple attempts
+        idempotency_key = hashlib.sha256(f"delete_{ticket_id}".encode()).hexdigest()
+
+        logger.info(
+            "Deleting ticket with correlation_id=%s, idempotency_key=%s, ticket_id=%s",
+            correlation_id,
+            idempotency_key,
+            ticket_id,
         )
 
-        if response.status_code == HTTPStatus.NOT_FOUND:
-            return False
+        self._client.set_idempotency_key(idempotency_key)
+        self._client.set_correlation_id(correlation_id)
 
-        if response.status_code != HTTPStatus.NO_CONTENT:
-            msg = f"Failed to delete ticket: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+        try:
+            async def _make_request() -> object:
+                response = await delete_ticket_api_v1_tickets_ticket_id_delete.asyncio_detailed(
+                    client=self._client,
+                    ticket_id=ticket_id,
+                    x_user_id=self._user_id,
+                    x_project_key=self._project_key,
+                )
 
-        return True
+                if response.status_code == HTTPStatus.NOT_FOUND:
+                    return None
+
+                if response.status_code != HTTPStatus.NO_CONTENT:
+                    msg = f"Failed to delete ticket: HTTP {response.status_code}"
+                    req = cast("httpx.Request", response)
+                    resp = cast("httpx.Response", response)
+                    raise httpx.HTTPStatusError(msg, request=req, response=resp)
+                return response
+
+            response_result = await self._retry_with_backoff(_make_request, correlation_id)
+
+            if response_result is None:
+                logger.info(
+                    "Ticket not found for correlation_id=%s, ticket_id=%s",
+                    correlation_id,
+                    ticket_id,
+                )
+                return False
+
+            logger.info(
+                "Successfully deleted ticket with correlation_id=%s, ticket_id=%s",
+                correlation_id,
+                ticket_id,
+            )
+            return True
+        finally:
+            self._client.clear_idempotency_key()
+            self._client.clear_correlation_id()
 
     async def add_comment(
         self,
@@ -645,25 +764,45 @@ class RemoteTicketService(TicketServiceAPI):
             self._client.clear_correlation_id()
 
     async def get_ticket_comments(self, ticket_id: UUID) -> list[Comment]:
-        """Retrieve all comments for a ticket via the generated client."""
-        response = await get_ticket_comments_api_v1_tickets_ticket_id_comments_get.asyncio_detailed(
-            client=self._client,
-            ticket_id=ticket_id,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
+        """Retrieve all comments for a ticket via the generated client with retry support."""
+        correlation_id = str(uuid4())
+        logger.info(
+            "Getting ticket comments with correlation_id=%s, ticket_id=%s",
+            correlation_id,
+            ticket_id,
         )
 
-        if response.status_code != HTTPStatus.OK:
-            msg = f"Failed to get comments: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+        async def _make_request() -> object:
+            response = await get_ticket_comments_api_v1_tickets_ticket_id_comments_get.asyncio_detailed(
+                client=self._client,
+                ticket_id=ticket_id,
+                x_user_id=self._user_id,
+                x_project_key=self._project_key,
+            )
+
+            if response.status_code != HTTPStatus.OK:
+                msg = f"Failed to get comments: HTTP {response.status_code}"
+                req = cast("httpx.Request", response)
+                resp = cast("httpx.Response", response)
+                raise httpx.HTTPStatusError(msg, request=req, response=resp)
+            return response
+
+        response = cast(
+            "Response[list[CommentResponse]]",
+            await self._retry_with_backoff(_make_request, correlation_id),
+        )
 
         # Response is a list of CommentResponse
         if not isinstance(response.parsed, list):
             msg = f"Unexpected response type: {type(response.parsed)}"
             raise TypeError(msg)
 
+        logger.info(
+            "Successfully retrieved ticket comments with correlation_id=%s, ticket_id=%s, count=%s",
+            correlation_id,
+            ticket_id,
+            len(response.parsed),
+        )
         return [self._to_domain_comment(c) for c in response.parsed]
 
     async def transition_status(
@@ -671,124 +810,279 @@ class RemoteTicketService(TicketServiceAPI):
         ticket_id: UUID,
         new_status: TicketStatus,
     ) -> Ticket | None:
-        """Transition a ticket to a new status via the generated client."""
-        request = TicketUpdateRequest(status=self._to_generated_status(new_status))
+        """Transition a ticket to a new status via the generated client with retry and idempotency support."""
+        correlation_id = str(uuid4())
+        # Generate idempotency key from ticket ID and new status
+        idempotency_key = hashlib.sha256(
+            f"transition_{ticket_id}_{new_status.value}".encode(),
+        ).hexdigest()
 
-        response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
-            client=self._client,
-            ticket_id=ticket_id,
-            body=request,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
+        logger.info(
+            "Transitioning ticket status with correlation_id=%s, idempotency_key=%s, ticket_id=%s, new_status=%s",
+            correlation_id,
+            idempotency_key,
+            ticket_id,
+            new_status,
         )
 
-        if response.status_code == HTTPStatus.NOT_FOUND:
-            return None
+        request = TicketUpdateRequest(status=self._to_generated_status(new_status))
 
-        if response.status_code != HTTPStatus.OK:
-            msg = f"Failed to transition status: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+        self._client.set_idempotency_key(idempotency_key)
+        self._client.set_correlation_id(correlation_id)
 
-        if not isinstance(response.parsed, TicketResponse):
-            msg = f"Unexpected response type: {type(response.parsed)}"
-            raise TypeError(msg)
+        try:
+            async def _make_request() -> object:
+                response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
+                    client=self._client,
+                    ticket_id=ticket_id,
+                    body=request,
+                    x_user_id=self._user_id,
+                    x_project_key=self._project_key,
+                )
 
-        return self._to_domain_ticket(response.parsed)
+                if response.status_code == HTTPStatus.NOT_FOUND:
+                    return None
+
+                if response.status_code != HTTPStatus.OK:
+                    msg = f"Failed to transition status: HTTP {response.status_code}"
+                    req = cast("httpx.Request", response)
+                    resp = cast("httpx.Response", response)
+                    raise httpx.HTTPStatusError(msg, request=req, response=resp)
+                return response
+
+            response_result = await self._retry_with_backoff(_make_request, correlation_id)
+
+            if response_result is None:
+                logger.info(
+                    "Ticket not found for correlation_id=%s, ticket_id=%s",
+                    correlation_id,
+                    ticket_id,
+                )
+                return None
+
+            response = cast("Response[TicketResponse]", response_result)
+            if not isinstance(response.parsed, TicketResponse):
+                msg = f"Unexpected response type: {type(response.parsed)}"
+                raise TypeError(msg)
+
+            logger.info(
+                "Successfully transitioned ticket status with correlation_id=%s, ticket_id=%s",
+                correlation_id,
+                ticket_id,
+            )
+            return self._to_domain_ticket(response.parsed)
+        finally:
+            self._client.clear_idempotency_key()
+            self._client.clear_correlation_id()
 
     async def reassign_ticket(
         self,
         ticket_id: UUID,
         new_assignee: str,
     ) -> Ticket | None:
-        """Reassign a ticket to a different person via the generated client."""
-        request = TicketUpdateRequest(assignee=new_assignee)
+        """Reassign a ticket to a different person via the generated client with retry and idempotency support."""
+        correlation_id = str(uuid4())
+        # Generate idempotency key from ticket ID and new assignee
+        idempotency_key = hashlib.sha256(
+            f"reassign_{ticket_id}_{new_assignee}".encode(),
+        ).hexdigest()
 
-        response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
-            client=self._client,
-            ticket_id=ticket_id,
-            body=request,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
+        logger.info(
+            "Reassigning ticket with correlation_id=%s, idempotency_key=%s, ticket_id=%s, new_assignee=%s",
+            correlation_id,
+            idempotency_key,
+            ticket_id,
+            new_assignee,
         )
 
-        if response.status_code == HTTPStatus.NOT_FOUND:
-            return None
+        request = TicketUpdateRequest(assignee=new_assignee)
 
-        if response.status_code != HTTPStatus.OK:
-            msg = f"Failed to reassign ticket: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+        self._client.set_idempotency_key(idempotency_key)
+        self._client.set_correlation_id(correlation_id)
 
-        if not isinstance(response.parsed, TicketResponse):
-            msg = f"Unexpected response type: {type(response.parsed)}"
-            raise TypeError(msg)
+        try:
+            async def _make_request() -> object:
+                response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
+                    client=self._client,
+                    ticket_id=ticket_id,
+                    body=request,
+                    x_user_id=self._user_id,
+                    x_project_key=self._project_key,
+                )
 
-        return self._to_domain_ticket(response.parsed)
+                if response.status_code == HTTPStatus.NOT_FOUND:
+                    return None
+
+                if response.status_code != HTTPStatus.OK:
+                    msg = f"Failed to reassign ticket: HTTP {response.status_code}"
+                    req = cast("httpx.Request", response)
+                    resp = cast("httpx.Response", response)
+                    raise httpx.HTTPStatusError(msg, request=req, response=resp)
+                return response
+
+            response_result = await self._retry_with_backoff(_make_request, correlation_id)
+
+            if response_result is None:
+                logger.info(
+                    "Ticket not found for correlation_id=%s, ticket_id=%s",
+                    correlation_id,
+                    ticket_id,
+                )
+                return None
+
+            response = cast("Response[TicketResponse]", response_result)
+            if not isinstance(response.parsed, TicketResponse):
+                msg = f"Unexpected response type: {type(response.parsed)}"
+                raise TypeError(msg)
+
+            logger.info(
+                "Successfully reassigned ticket with correlation_id=%s, ticket_id=%s",
+                correlation_id,
+                ticket_id,
+            )
+            return self._to_domain_ticket(response.parsed)
+        finally:
+            self._client.clear_idempotency_key()
+            self._client.clear_correlation_id()
 
     async def update_priority(
         self,
         ticket_id: UUID,
         new_priority: TicketPriority,
     ) -> Ticket | None:
-        """Update a ticket's priority level via the generated client."""
-        request = TicketUpdateRequest(priority=self._to_generated_priority(new_priority))
+        """Update a ticket's priority level via the generated client with retry and idempotency support."""
+        correlation_id = str(uuid4())
+        # Generate idempotency key from ticket ID and new priority
+        idempotency_key = hashlib.sha256(
+            f"priority_{ticket_id}_{new_priority.value}".encode(),
+        ).hexdigest()
 
-        response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
-            client=self._client,
-            ticket_id=ticket_id,
-            body=request,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
+        logger.info(
+            "Updating ticket priority with correlation_id=%s, idempotency_key=%s, ticket_id=%s, new_priority=%s",
+            correlation_id,
+            idempotency_key,
+            ticket_id,
+            new_priority,
         )
 
-        if response.status_code == HTTPStatus.NOT_FOUND:
-            return None
+        request = TicketUpdateRequest(priority=self._to_generated_priority(new_priority))
 
-        if response.status_code != HTTPStatus.OK:
-            msg = f"Failed to update priority: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+        self._client.set_idempotency_key(idempotency_key)
+        self._client.set_correlation_id(correlation_id)
 
-        if not isinstance(response.parsed, TicketResponse):
-            msg = f"Unexpected response type: {type(response.parsed)}"
-            raise TypeError(msg)
+        try:
+            async def _make_request() -> object:
+                response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
+                    client=self._client,
+                    ticket_id=ticket_id,
+                    body=request,
+                    x_user_id=self._user_id,
+                    x_project_key=self._project_key,
+                )
 
-        return self._to_domain_ticket(response.parsed)
+                if response.status_code == HTTPStatus.NOT_FOUND:
+                    return None
+
+                if response.status_code != HTTPStatus.OK:
+                    msg = f"Failed to update priority: HTTP {response.status_code}"
+                    req = cast("httpx.Request", response)
+                    resp = cast("httpx.Response", response)
+                    raise httpx.HTTPStatusError(msg, request=req, response=resp)
+                return response
+
+            response_result = await self._retry_with_backoff(_make_request, correlation_id)
+
+            if response_result is None:
+                logger.info(
+                    "Ticket not found for correlation_id=%s, ticket_id=%s",
+                    correlation_id,
+                    ticket_id,
+                )
+                return None
+
+            response = cast("Response[TicketResponse]", response_result)
+            if not isinstance(response.parsed, TicketResponse):
+                msg = f"Unexpected response type: {type(response.parsed)}"
+                raise TypeError(msg)
+
+            logger.info(
+                "Successfully updated ticket priority with correlation_id=%s, ticket_id=%s",
+                correlation_id,
+                ticket_id,
+            )
+            return self._to_domain_ticket(response.parsed)
+        finally:
+            self._client.clear_idempotency_key()
+            self._client.clear_correlation_id()
 
     async def update_description(
         self,
         ticket_id: UUID,
         new_description: str,
     ) -> Ticket | None:
-        """Update a ticket's description via the generated client."""
-        request = TicketUpdateRequest(description=new_description)
+        """Update a ticket's description via the generated client with retry and idempotency support."""
+        correlation_id = str(uuid4())
+        # Generate idempotency key from ticket ID and new description
+        idempotency_key = hashlib.sha256(
+            f"description_{ticket_id}_{new_description}".encode(),
+        ).hexdigest()
 
-        response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
-            client=self._client,
-            ticket_id=ticket_id,
-            body=request,
-            x_user_id=self._user_id,
-            x_project_key=self._project_key,
+        logger.info(
+            "Updating ticket description with correlation_id=%s, idempotency_key=%s, ticket_id=%s",
+            correlation_id,
+            idempotency_key,
+            ticket_id,
         )
 
-        if response.status_code == HTTPStatus.NOT_FOUND:
-            return None
+        request = TicketUpdateRequest(description=new_description)
 
-        if response.status_code != HTTPStatus.OK:
-            msg = f"Failed to update description: HTTP {response.status_code}"
-            req = cast("httpx.Request", response)
-            resp = cast("httpx.Response", response)
-            raise httpx.HTTPStatusError(msg, request=req, response=resp)
+        self._client.set_idempotency_key(idempotency_key)
+        self._client.set_correlation_id(correlation_id)
 
-        if not isinstance(response.parsed, TicketResponse):
-            msg = f"Unexpected response type: {type(response.parsed)}"
-            raise TypeError(msg)
+        try:
+            async def _make_request() -> object:
+                response = await update_ticket_api_v1_tickets_ticket_id_patch.asyncio_detailed(
+                    client=self._client,
+                    ticket_id=ticket_id,
+                    body=request,
+                    x_user_id=self._user_id,
+                    x_project_key=self._project_key,
+                )
 
-        return self._to_domain_ticket(response.parsed)
+                if response.status_code == HTTPStatus.NOT_FOUND:
+                    return None
+
+                if response.status_code != HTTPStatus.OK:
+                    msg = f"Failed to update description: HTTP {response.status_code}"
+                    req = cast("httpx.Request", response)
+                    resp = cast("httpx.Response", response)
+                    raise httpx.HTTPStatusError(msg, request=req, response=resp)
+                return response
+
+            response_result = await self._retry_with_backoff(_make_request, correlation_id)
+
+            if response_result is None:
+                logger.info(
+                    "Ticket not found for correlation_id=%s, ticket_id=%s",
+                    correlation_id,
+                    ticket_id,
+                )
+                return None
+
+            response = cast("Response[TicketResponse]", response_result)
+            if not isinstance(response.parsed, TicketResponse):
+                msg = f"Unexpected response type: {type(response.parsed)}"
+                raise TypeError(msg)
+
+            logger.info(
+                "Successfully updated ticket description with correlation_id=%s, ticket_id=%s",
+                correlation_id,
+                ticket_id,
+            )
+            return self._to_domain_ticket(response.parsed)
+        finally:
+            self._client.clear_idempotency_key()
+            self._client.clear_correlation_id()
 
     # Helper methods to convert between generated and domain models
 
