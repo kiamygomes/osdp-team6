@@ -148,15 +148,31 @@ async def get_ticket_service(
     "/api/v1/auth/login",
     tags=["authentication"],
     summary="Initiate OAuth 2.0 flow",
-    response_class=RedirectResponse,
+    status_code=HTTPStatus.OK,
+    description="Get the OAuth 2.0 authorization URL for Jira.",
 )
-async def oauth_login() -> RedirectResponse:
-    """Start the OAuth 2.0 authorization flow with Jira."""
-    user_id = str(uuid4())
-    state = secrets.token_urlsafe(32)
-    _oauth_state_store[state] = user_id
-    auth_url = build_authorize_url(state=state)
-    return RedirectResponse(url=auth_url, status_code=status.HTTP_302_FOUND)
+async def oauth_login() -> dict[str, str | int]:
+    """Get the OAuth 2.0 authorization URL for Jira."""
+    try:
+        user_id = str(uuid4())
+        state = secrets.token_urlsafe(32)
+        _oauth_state_store[state] = user_id
+        auth_url = build_authorize_url(state=state)
+    except Exception as e:
+        logger.exception("Failed to build OAuth authorization URL")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail=f"Failed to initiate OAuth flow: {e!s}",
+        ) from e
+    else:
+        return {
+            "auth_url": auth_url,
+            "message": "Open the auth_url in your browser to complete authentication",
+            "state": state,
+            "user_id": user_id,
+            "status_code": 302,  # Semantic indicator
+            "redirect_to": auth_url,
+        }
 
 
 @app.get(
