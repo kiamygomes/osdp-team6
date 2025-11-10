@@ -153,6 +153,7 @@ async def main() -> None:
             if not user_id:
                 user_id = "demo_user"
                 logger.warning("Could not extract user email from token. Using 'demo_user'")
+                logger.info("OAUTH_USER_FALLBACK=true")
 
             logger.info("Storing tokens for user: %s", user_id)
             ticket_impl.storage.upsert_tokens(user_id, access_token, refresh_token, expires_in_sec)
@@ -160,6 +161,7 @@ async def main() -> None:
             logger.info("  Access token: %s...", access_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Refresh token: %s...", refresh_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Expires in: %d seconds", expires_in_sec)
+            logger.info("OAUTH_USER_ID=%s", user_id)
 
         else:
             logger.error("Error: Invalid arguments")

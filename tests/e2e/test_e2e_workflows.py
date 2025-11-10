@@ -61,6 +61,12 @@ def setup_oauth_tokens() -> None:
     if not HAS_OAUTH_CREDENTIALS:
         return  # Skip if credentials not configured
 
+    # Skip E2E tests in CircleCI when using fallback tokens
+    # (tokens that aren't valid Jira OAuth tokens)
+    if os.getenv("OAUTH_SKIP_E2E_TESTS"):
+        pytest.skip("Using fallback demo_user tokens. Real OAuth credentials required for E2E tests.")
+        return
+
     # Ensure we use the correct (non-test) database for E2E tests
     # The ticket_impl test conftest may have changed DB_URL to a test database
     # We need to temporarily restore it to get tokens from the production database
