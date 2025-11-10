@@ -281,7 +281,7 @@ class TestE2EDataConsistency:
         """
         client = TestClient(app)
         test_user_id = "e2e-test-list-tickets"
-        project_key = os.getenv("JIRA_PROJECT_KEY", "TEST")
+        project_key = os.getenv("JIRA_PROJECT_KEY", "SCRUM")
 
         # List all tickets from real Jira
         response = client.get(
