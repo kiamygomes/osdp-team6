@@ -469,8 +469,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to get ticket: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
-
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
         if not isinstance(response.parsed, TicketResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
             raise TypeError(msg)
@@ -499,7 +500,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to list tickets: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
 
         if not isinstance(response.parsed, TicketListResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
@@ -538,7 +541,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to update ticket: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
 
         if not isinstance(response.parsed, TicketResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
@@ -560,7 +565,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.NO_CONTENT:
             msg = f"Failed to delete ticket: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
 
         return True
 
@@ -648,7 +655,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to get comments: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
 
         # Response is a list of CommentResponse
         if not isinstance(response.parsed, list):
@@ -678,7 +687,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to transition status: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
 
         if not isinstance(response.parsed, TicketResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
@@ -707,7 +718,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to reassign ticket: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
 
         if not isinstance(response.parsed, TicketResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
@@ -736,7 +749,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to update priority: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
 
         if not isinstance(response.parsed, TicketResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
@@ -765,7 +780,9 @@ class RemoteTicketService(TicketServiceAPI):
 
         if response.status_code != HTTPStatus.OK:
             msg = f"Failed to update description: HTTP {response.status_code}"
-            raise httpx.HTTPStatusError(msg, request=None, response=None)  # type: ignore[arg-type]
+            req = cast("httpx.Request", response)
+            resp = cast("httpx.Response", response)
+            raise httpx.HTTPStatusError(msg, request=req, response=resp)
 
         if not isinstance(response.parsed, TicketResponse):
             msg = f"Unexpected response type: {type(response.parsed)}"
