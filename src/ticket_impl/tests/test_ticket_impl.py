@@ -1,5 +1,6 @@
 """End-to-end happy-path for TicketImpl using respx mocks."""
 
+import re
 from uuid import UUID
 
 import httpx
@@ -17,8 +18,8 @@ EXPECTED_GET_CALLS = 3  # after create, explicit get, and after status transitio
 @respx.mock
 async def test_create_get_list_transition_comment_delete(seed_token: None) -> None:
     """End-to-end happy-path for TicketImpl using respx mocks."""
-    # user lookup (used for reporter/assignee mapping)
-    respx.get(f"{BASE}/user/search").mock(
+    # user lookup (used for reporter/assignee mapping) - matches any query parameter
+    respx.get(re.compile(f"{re.escape(BASE)}/user/search\\?.*")).mock(
         return_value=httpx.Response(200, json=[{"accountId": "acc-1", "displayName": "Terra"}]),
     )
     # create issue
