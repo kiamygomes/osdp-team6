@@ -1,0 +1,20 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "ticket-client-adapter"
+version = "0.1.0"
+description = "Service adapter wrapping auto-generated client with TicketServiceAPI"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "ticket-api",
+    "ticket-service-client",  # The auto-generated client!
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/ticket_client_adapter"]
+
+[tool.ruff]
+extend = "../../pyproject.toml"

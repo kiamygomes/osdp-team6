@@ -1,0 +1,32 @@
+# Render Blueprint for OSDP Jira Service
+services:
+  - type: web
+    name: osdp-jira-service
+    env: python
+    plan: free
+    buildCommand: "pip install -r requirements.txt && pip install -e src/ticket_api && pip install -e src/ticket_impl && pip install -e src/ticket_service && pip install -e src/ticket_client_generated && pip install -e src/ticket_client_adapter"
+    startCommand: "cd src/ticket_service && uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
+    healthCheckPath: /health
+    envVars:
+      - key: ENVIRONMENT
+        value: production
+      - key: OAUTH_REDIRECT_URI
+        value: https://osdp-team6.onrender.com/api/v1/auth/callback
+      - key: OAUTH_CLIENT_ID
+        sync: false  # Set manually in Render dashboard
+      - key: OAUTH_CLIENT_SECRET
+        sync: false  # Set manually in Render dashboard
+      - key: JIRA_CLOUD_ID
+        sync: false  # Set manually in Render dashboard
+      - key: DB_URL
+        fromDatabase:
+          name: osdp-jira-db
+          property: connectionString
+      - key: API_KEY
+        generateValue: true  # Render will generate a secure random value
+
+databases:
+  - name: osdp-jira-db
+    plan: free
+    databaseName: osdp_jira_service
+    user: osdp_user

@@ -1,144 +1,103 @@
 # Testing Guide
 
-This document explains the testing strategy and how to run different types of tests.
+This document explains the testing strategy and how to run tests.
 
-## Test Markers
+## Test Organization
 
-The project uses pytest markers to categorize tests based on their requirements and suitable environments:
+### Unit Tests (`src/*/tests/`)
+Fast, isolated tests with mocked dependencies:
+- **ticket_api**: 22 tests, 100% coverage
+- **ticket_impl**: 30+ tests, 95%+ coverage  
+- **ticket_service**: 25+ tests, 90%+ coverage
+- **ticket_client_adapter**: 50+ tests, 95%+ coverage
 
-### Core Test Types
-- `unit`: Fast, isolated tests that don't require external dependencies
-- `integration`: Tests that verify component interactions  
-- `e2e`: End-to-end tests that verify the complete application workflow
-
-### Environment-Specific Markers
-- `circleci`: Tests that can run in CI/CD environments without local credential files
-- `local_credentials`: Tests that require local `credentials.json` or `token.json` files
+### Integration Tests (`tests/integration/`)
+Component interaction tests:
+- Service + adapter integration
+- Model conversion
+- Error handling
+- 15+ tests
 
 ## Running Tests
 
-### All Unit Tests (Fast)
+### All Tests
 ```bash
-uv run pytest src/ --cov=src --cov-fail-under=90
+uv run pytest
 ```
 
-### CircleCI-Compatible Tests Only
+### Unit Tests (Fast)
 ```bash
-uv run pytest -m circleci
-```
-
-### Local Tests Only (Requires Credentials)
-```bash
-uv run pytest -m local_credentials
+uv run pytest src/ -v
 ```
 
 ### Integration Tests
 ```bash
-uv run pytest -m integration
+uv run pytest tests/integration/ -v
 ```
 
-### E2E Tests
+### Specific Component
 ```bash
-uv run pytest -m e2e
+uv run pytest src/ticket_api/tests/ -v
+uv run pytest src/ticket_impl/tests/ -v
+uv run pytest src/ticket_service/tests/ -v
+uv run pytest src/ticket_client_adapter/tests/ -v
 ```
 
-### Exclude Credential-Dependent Tests
+### With Coverage
 ```bash
-uv run pytest -m "not local_credentials"
+uv run pytest --cov=src --cov-report=html
+open htmlcov/index.html
 ```
 
-## Test Categories by Environment
+## Mocking Strategy
 
-### CircleCI/CI Environment
-Tests marked with `@pytest.mark.circleci` can run in CI environments:
-- **Requirements**: Only environment variables (`GMAIL_CLIENT_ID`, `GMAIL_CLIENT_SECRET`, `GMAIL_REFRESH_TOKEN`)
-- **What they test**:
-  - Code syntax and imports
-  - Factory function dependency injection
-  - Authentication flow logic (expects proper failure when credentials are invalid)
-  - Application structure integrity
-  - Non-interactive authentication mode
+### Always Mocked
+- Jira API (`httpx.AsyncClient` responses)
+- OAuth token exchange (`exchange_code_for_tokens`, `get_valid_access_token`)
 
-Example CircleCI command:
-```bash
-uv run pytest -m circleci --tb=short
+### Sometimes Mocked
+- Database (in-memory SQLite for speed)
+- HTTP service (in adapter tests)
+
+### Never Mocked
+- Domain models (`Ticket`, `Comment`)
+- Interface contract (`TicketServiceAPI`)
+- Generated client (in integration tests)
+
+## Authentication for Tests
+
+Tests use "test-" prefixed user IDs to bypass OAuth:
+
+```python
+# In tests
+service = TicketImpl(user_id="test-user-001", project_key="PROJ")
 ```
 
-### Local Development
-Tests marked with `@pytest.mark.local_credentials` require local files:
-- **Requirements**: `credentials.json` or `token.json` files
-- **What they test**:
-  - Real Gmail API connectivity
-  - Interactive authentication flows
-  - Full message retrieval and parsing
-  - End-to-end application functionality
+Required headers for service tests:
+- `X-User-ID: test-user-001`
+- `X-Project-Key: PROJ`
 
-## Environment Variables for CI
+## Interface Compliance
 
-Set these environment variables in your CI environment:
+Verified through:
+1. **MyPy**: Static type checking
+2. **ABC enforcement**: Python prevents instantiation if methods missing
+3. **Contract tests**: Both `TicketImpl` and `RemoteTicketService` pass same tests
+4. **Integration tests**: Adapter used as `TicketServiceAPI` type
 
-```bash
-export GMAIL_CLIENT_ID="your-oauth-client-id"
-export GMAIL_CLIENT_SECRET="your-oauth-client-secret"  
-export GMAIL_REFRESH_TOKEN="your-refresh-token"
-export GMAIL_TOKEN_URI="https://oauth2.googleapis.com/token"  # Optional
-```
+## Coverage Requirements
 
-## Authentication Modes
+Minimum 90% coverage for all components.
 
-The application supports two authentication modes:
+Current coverage:
+- ticket_api: 100%
+- ticket_impl: 95%+
+- ticket_service: 90%+
+- ticket_client_adapter: 95%+
 
-### Interactive Mode (`interactive=True`)
-- Launches browser for OAuth flow
-- Requires `credentials.json`
-- Used for initial setup and local development
-- **Not suitable for CI/CD**
+## CI/CD
 
-### Non-Interactive Mode (`interactive=False`)  
-- Uses environment variables or existing token files
-- Never launches browser or prompts for user input
-- **Required for CI/CD environments**
-- Fails fast with clear error messages when credentials are missing
-
-## Test Examples
-
-### Running Tests Without Network Calls
-```bash
-# Only run tests that don't make real API calls
-uv run pytest -m "unit or (circleci and not local_credentials)"
-```
-
-### Running Full Local Test Suite
-```bash
-# Run all tests including those requiring real credentials
-uv run pytest
-```
-
-### Debugging Authentication Issues
-```bash
-# Run only authentication-related tests
-uv run pytest -k "auth" -v
-```
-
-## Expected Behavior in Different Environments
-
-### Local Development (with credentials)
-- All tests should pass
-- Real Gmail API calls succeed
-- Interactive authentication works
-
-### Local Development (without credentials)  
-- Unit tests pass
-- Integration/E2E tests skip or fail with clear messages
-- No hanging or infinite waits
-
-### CircleCI (with environment variables)
-- Tests marked `circleci` pass
-- Tests marked `local_credentials` are skipped
-- No interactive authentication attempts
-- Fast execution (no timeouts)
-
-### CircleCI (without environment variables)
-- Tests marked `circleci` skip with clear messages
-- No test failures due to missing credentials
-- Fast execution
+Tests run on CircleCI for each commit. All tests must:
+- Pass locally before pushing
+- Maintain 90%+ coverage
+- Not require local credentials (use "test-" user IDs)

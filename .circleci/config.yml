@@ -66,13 +66,14 @@ jobs:
             source .venv/bin/activate
             mkdir -p test-results/unit # Create directory for JUnit XML
       - run:
-          name: "Execute Unit Test Suite (src/ tests only)"
+          name: "Execute Unit Test Suite (all tests)"
           command: |
             source .venv/bin/activate
-            # Run only unit tests from src/ directories (fast, isolated tests)
-            pytest src/ --cov=src --cov-report=xml --cov-report=term \
+            # Run all tests (unit + integration + e2e workflow tests)
+            # Deployed e2e tests are skipped in CI (require browser OAuth)
+            pytest --cov=src --cov-report=xml --cov-report=term \
                      --junitxml=test-results/unit/junit.xml \
-                     --cov-fail-under=85
+                     --cov-fail-under=90
       - run:
           name: "Run Static Analysis (mypy)"
           command: |
@@ -91,7 +92,7 @@ jobs:
   circleci_test:
     docker:
       - image: cimg/python:3.11
-    # Environment variables from the 'gmail-client' context will be available here
+    # Environment variables from the 'jira-oauth' context will be available here
     steps:
       - attach_workspace:
           at: . # Attach the workspace persisted from 'build'
@@ -100,6 +101,31 @@ jobs:
           command: |
             source .venv/bin/activate
             mkdir -p test-results/circleci # Separate directory for results
+      - run:
+          name: "Generate E2E Test Tokens (OAuth)"
+          command: |
+            source .venv/bin/activate
+            # Generate OAuth tokens for demo_user using stored credentials
+            # This allows e2e tests to run against real Jira Cloud
+            if [ -n "$OAUTH_CLIENT_ID" ] && [ -n "$OAUTH_CLIENT_SECRET" ]; then
+              echo "Generating e2e test tokens..."
+              OUTPUT=$(python scripts/generate_e2e_tokens.py --tokens "$OAUTH_ACCESS_TOKEN" "$OAUTH_REFRESH_TOKEN" 3600 2>&1)
+              echo "$OUTPUT"
+              # Extract OAUTH_USER_ID from output
+              USER_ID=$(echo "$OUTPUT" | grep "OAUTH_USER_ID=" | cut -d'=' -f2)
+              if [ -n "$USER_ID" ]; then
+                echo "export OAUTH_USER_ID=$USER_ID" >> "$BASH_ENV"
+              fi
+              # Check if we had to fall back to demo_user
+              if echo "$OUTPUT" | grep -q "OAUTH_USER_FALLBACK=true"; then
+                echo "export OAUTH_SKIP_E2E_TESTS=true" >> "$BASH_ENV"
+                echo "E2E tests will be skipped (using fallback demo_user tokens)"
+              else
+                echo "E2E tokens generated successfully"
+              fi
+            else
+              echo "OAuth credentials not found. E2E tests will be skipped."
+            fi
       - run:
           name: "Execute All Tests Except Local Credentials"
           command: |
@@ -246,6 +272,7 @@ workflows:
       - circleci_test:
           requires:
             - unit_test # Run after unit tests pass
+          context: jira-oauth # Context containing OAuth credentials
           filters:
             branches:
               ignore:
@@ -304,6 +331,7 @@ workflows:
       - circleci_test:
           requires:
             - unit_test
+          context: jira-oauth # Context containing OAuth credentials
           filters:
             branches:
               only:

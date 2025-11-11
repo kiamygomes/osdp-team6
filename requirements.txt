@@ -1,0 +1,20 @@
+# Core dependencies for Render deployment
+# These must match the workspace dependencies for proper deployment
+
+# FastAPI and server
+fastapi>=0.111.0
+uvicorn>=0.30.1
+
+# Core dependencies from pyproject.toml
+pydantic>=2 # remove
+httpx>=0.27
+sqlalchemy>=2.0
+
+# Additional production dependencies
+requests>=2.32.3
+psycopg2-binary>=2.9.9
+requests-oauthlib>=2.0.0
+python-dotenv>=1.0.0
+
+# Workspace packages (will be installed from source)
+# ticket-api, ticket-impl, ticket-service, ticket-client-adapter

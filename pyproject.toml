@@ -1,14 +1,23 @@
 [project]
-name = "ta-assignment"
+name = "osdp-jira-service"
 version = "0.1.0"
-description = "Template repository for a mail client"
+description = "Microservice adapter for Jira/Ticketing with OAuth 2.0"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "pydantic>=2",
+  "httpx>=0.27",
+  "sqlalchemy>=2.0",
+]
 
 [project.optional-dependencies]
 dev = [
-    "google-api-python-client-stubs>=1.30.0",
+    #New Dependencies for Jira/FastAPI/OAuth
+    "fastapi>=0.111.0",
+    "uvicorn>=0.30.1",
+    "requests>=2.32.3",
+    "psycopg2-binary>=2.9.9", #DB driver for token storage
+    "requests-oauthlib>=2.0.0", #OAuth 2.0 implementation
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.15",
     "mkdocstrings-python>=1.16.12",
@@ -16,15 +25,28 @@ dev = [
     "pymdown-extensions>=10.16.1",
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
+    "pytest-asyncio>=0.23",
     "ruff>=0.12.7",
-    "types-requests>=2.32.4.20250611",
+    "respx>=0.21",
+    "anyio>=4",
+    "types-python-dateutil>=2.9.0",
+    "python-dotenv>=1.0.0"
 ]
 
 [tool.uv.workspace]
 members = [
-  "src/mail_client_api",
-  "src/gmail_client_impl",
+  "src/ticket_api",
+  "src/ticket_impl",
+  "src/ticket_service",
+  "src/ticket_client_generated",
+  "src/ticket_client_adapter",
 ]
+
+[tool.uv.sources]
+ticket-api = { workspace = true }
+ticket-impl = { workspace = true }
+ticket-service-client = { workspace = true }
+ticket-client-adapter = { workspace = true }
 
 [tool.ruff]
 line-length = 130 # high for top level due to tests
@@ -37,30 +59,66 @@ ignore = [
   "D213", # `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
   "S101", # Use of `assert` detected --> Asserts are good in our opinion. Tests use asserts profusely.
 ]
-per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415"] }
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415"]
+"scripts/*.py" = ["T201", "TRY300"]  # Allow print statements and try-else in scripts
+
+[tool.ruff.lint.pylint]
+max-args = 6  # Increase to 6 to allow update_ticket method with flexible parameters
 
 [tool.mypy]
 strict = true
 explicit_package_bases = true # Required for src layout
-mypy_path = ["src/mail_client_api/src", "src/gmail_client_impl/src"]
+mypy_path = [
+    ".",
+    "src",
+    "src/ticket_api/src",
+    "src/ticket_impl/src",
+    "src/ticket_service/src",
+    "src/ticket_client_adapter/src",
+]
 ignore_missing_imports = false
 warn_unused_ignores = false
+namespace_packages = true
+exclude = [
+    "src/ticket_client_generated/",  # Exclude auto-generated code from strict checking
+]
 
 # Allow untyped imports for specific modules
 [[tool.mypy.overrides]]
 module = [
     "google.*",
     "googleapiclient.*",
+    "ticket_service_client",
+    "ticket_service_client.*",
 ]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 pythonpath = [
     ".", 
-    "src"
+    "src",
+    "src/ticket_api/src",
+    "src/ticket_impl/src",
+    "src/ticket_service/src",
+    "src/ticket_client_adapter/src",
+    "src/ticket_client_generated",
 ]
-testpaths = ["tests", "src/*/tests"]
-addopts = ["--cov", "--cov-report=term-missing", "--import-mode=importlib"]
+testpaths = [
+    "tests",
+    "src/*/tests",
+    "src/ticket_client_adapter/tests",
+    "src/ticket_client_generated/tests",
+]
+addopts = [
+    "--cov",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=90",
+    "--import-mode=importlib",
+    "-v",
+]
 markers = [
     "unit: marks tests as unit tests (fast, isolated)",
     "integration: marks tests as integration tests (medium speed, real dependencies)",
@@ -71,12 +129,25 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["*/tests/*", "*/__main__.py"]
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+    "*/ticket_client_generated/*",  # Exclude auto-generated client from coverage
+]
 
 [tool.coverage.report]
-fail_under = 85 # Justification: A high threshold ensures most code is tested.
+fail_under = 90 # Require 90% test coverage
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+    "@abc.abstractmethod",
+]
+show_missing = true
+
+[dependency-groups]
+dev = [
+    "types-python-dateutil>=2.9.0.20251008",
 ]
