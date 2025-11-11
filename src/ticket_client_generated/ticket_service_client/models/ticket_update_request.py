@@ -116,7 +116,7 @@ class TicketUpdateRequest:
                 status_type_0 = TicketStatus(data)
 
                 return status_type_0
-            except:  # noqa: E722
+            except:
                 pass
             return cast(None | TicketStatus | Unset, data)
 
@@ -133,7 +133,7 @@ class TicketUpdateRequest:
                 priority_type_0 = TicketPriority(data)
 
                 return priority_type_0
-            except:  # noqa: E722
+            except:
                 pass
             return cast(None | TicketPriority | Unset, data)
 

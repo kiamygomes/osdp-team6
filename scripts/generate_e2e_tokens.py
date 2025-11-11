@@ -70,11 +70,12 @@ def extract_user_email_from_token(access_token: str) -> str | None:
         claims = json.loads(decoded)
 
         # Try multiple possible email field names
-        return (
+        email: str | None = (
             claims.get("email")
             or claims.get("preferred_username")
             or claims.get("sub")
         )
+        return email
     except (ValueError, KeyError, json.JSONDecodeError):
         return None
 

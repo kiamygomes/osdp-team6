@@ -42,13 +42,13 @@ HAS_OAUTH_CREDENTIALS = all(
 
 @pytest.fixture
 def oauth_user_id() -> str:
-    """Get the OAuth user ID for E2E tests.
+    """Get the OAuth user ID for E2E workflow tests.
 
-    This is either set by OAUTH_USER_ID environment variable
-    (when tokens are generated via generate_e2e_tokens.py),
-    or defaults to 'demo_user' for backward compatibility.
+    Workflow tests always use 'demo_user' with locally stored tokens.
+    This is independent of the OAUTH_USER_ID environment variable which
+    is used for deployed tests.
     """
-    return os.getenv("OAUTH_USER_ID", "demo_user")
+    return "demo_user"
 
 
 @pytest.fixture(autouse=True)
@@ -84,10 +84,8 @@ def setup_oauth_tokens() -> None:
     else:
         get_tokens_fn = get_tokens
 
-    # Get the real OAuth user from generate_e2e_tokens.py
-    # This user is determined by extract_user_email_from_token() during setup
-    # Try both 'demo_user' (fallback) and the environment variable
-    oauth_user = os.getenv("OAUTH_USER_ID", "demo_user")
+    # Workflow tests always use 'demo_user' with locally stored tokens
+    oauth_user = "demo_user"
     tokens = get_tokens_fn(oauth_user)
 
     if not tokens:

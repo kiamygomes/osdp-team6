@@ -11,11 +11,10 @@ os.environ.setdefault("DB_URL", "sqlite:///./test_tokens.db")
 
 # (keep the rest of your conftest; e.g., seed_token fixture)
 import pytest
+from ticket_impl.storage import upsert_tokens
 
 
 @pytest.fixture
 def seed_token() -> None:
     """Insert a valid token row for user u1."""
-    from ticket_impl.storage import upsert_tokens  # noqa: PLC0415
-
     upsert_tokens("u1", "ACCESS_TOKEN", "REFRESH_TOKEN", 3600)

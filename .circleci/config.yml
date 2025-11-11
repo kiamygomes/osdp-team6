@@ -66,11 +66,12 @@ jobs:
             source .venv/bin/activate
             mkdir -p test-results/unit # Create directory for JUnit XML
       - run:
-          name: "Execute Unit Test Suite (src/ tests only)"
+          name: "Execute Unit Test Suite (all tests)"
           command: |
             source .venv/bin/activate
-            # Run only unit tests from src/ directories (fast, isolated tests)
-            pytest src/ --cov=src --cov-report=xml --cov-report=term \
+            # Run all tests (unit + integration + e2e workflow tests)
+            # Deployed e2e tests are skipped in CI (require browser OAuth)
+            pytest --cov=src --cov-report=xml --cov-report=term \
                      --junitxml=test-results/unit/junit.xml \
                      --cov-fail-under=90
       - run:
