@@ -342,7 +342,12 @@ class TestGetTicketComments:
             assert "session expired" in response.json()["detail"].lower()
 
     @pytest.mark.asyncio
-    async def test_create_ticket_value_error(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+    async def test_create_ticket_value_error(
+        self,
+        async_client: AsyncClient,
+        mock_user_id: str,
+        mock_project_key: str,
+    ) -> None:
         """Test create ticket with invalid input."""
         with (
             patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
@@ -359,7 +364,12 @@ class TestGetTicketComments:
             assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     @pytest.mark.asyncio
-    async def test_get_ticket_not_found(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+    async def test_get_ticket_not_found(
+        self,
+        async_client: AsyncClient,
+        mock_user_id: str,
+        mock_project_key: str,
+    ) -> None:
         """Test get ticket when ticket is not found."""
         with (
             patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
@@ -376,7 +386,12 @@ class TestGetTicketComments:
             assert resp.status_code == HTTPStatus.NOT_FOUND
 
     @pytest.mark.asyncio
-    async def test_get_ticket_comments_exception(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+    async def test_get_ticket_comments_exception(
+        self,
+        async_client: AsyncClient,
+        mock_user_id: str,
+        mock_project_key: str,
+    ) -> None:
         """Test get ticket comments when an exception occurs."""
         with (
             patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
@@ -394,7 +409,12 @@ class TestGetTicketComments:
             assert resp.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
 
     @pytest.mark.asyncio
-    async def test_list_tickets_value_error(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+    async def test_list_tickets_value_error(
+        self,
+        async_client: AsyncClient,
+        mock_user_id: str,
+        mock_project_key: str,
+    ) -> None:
         """Test list tickets with invalid input."""
         with (
             patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
@@ -410,7 +430,12 @@ class TestGetTicketComments:
             assert resp.status_code == HTTPStatus.BAD_REQUEST
 
     @pytest.mark.asyncio
-    async def test_list_tickets_exception(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+    async def test_list_tickets_exception(
+        self,
+        async_client: AsyncClient,
+        mock_user_id: str,
+        mock_project_key: str,
+    ) -> None:
         """Test list tickets when an exception occurs."""
         with (
             patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
@@ -426,7 +451,12 @@ class TestGetTicketComments:
             assert resp.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
 
     @pytest.mark.asyncio
-    async def test_update_ticket_exception(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+    async def test_update_ticket_exception(
+        self,
+        async_client: AsyncClient,
+        mock_user_id: str,
+        mock_project_key: str,
+    ) -> None:
         """Test update ticket when an exception occurs."""
         with (
             patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),
@@ -444,7 +474,12 @@ class TestGetTicketComments:
             assert resp.status_code == HTTPStatus.INTERNAL_SERVER_ERROR
 
     @pytest.mark.asyncio
-    async def test_update_ticket_not_found(self, async_client: AsyncClient, mock_user_id: str, mock_project_key: str) -> None:
+    async def test_update_ticket_not_found(
+        self,
+        async_client: AsyncClient,
+        mock_user_id: str,
+        mock_project_key: str,
+    ) -> None:
         """Test update ticket when ticket is not found."""
         with (
             patch("ticket_service.main.get_user_tokens", return_value={"access_token": "fake"}),

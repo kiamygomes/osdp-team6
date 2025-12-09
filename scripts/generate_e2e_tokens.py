@@ -70,11 +70,7 @@ def extract_user_email_from_token(access_token: str) -> str | None:
         claims = json.loads(decoded)
 
         # Try multiple possible email field names
-        email: str | None = (
-            claims.get("email")
-            or claims.get("preferred_username")
-            or claims.get("sub")
-        )
+        email: str | None = claims.get("email") or claims.get("preferred_username") or claims.get("sub")
         return email
     except (ValueError, KeyError, json.JSONDecodeError):
         return None
@@ -138,17 +134,11 @@ async def main() -> None:
             # Directly insert tokens (for CI/CD with existing tokens)
             access_token = sys.argv[2]
             refresh_token = sys.argv[3]
-            expires_in_sec = (
-                int(sys.argv[TOKENS_MAX_ARG_INDEX])
-                if len(sys.argv) > TOKENS_MAX_ARG_INDEX
-                else DEFAULT_EXPIRES_SEC
-            )
+            expires_in_sec = int(sys.argv[TOKENS_MAX_ARG_INDEX]) if len(sys.argv) > TOKENS_MAX_ARG_INDEX else DEFAULT_EXPIRES_SEC
 
             # Optional: allow passing a user_id, otherwise extract from token
             user_id = (
-                sys.argv[USER_ID_ARG_INDEX]
-                if len(sys.argv) > USER_ID_ARG_INDEX
-                else extract_user_email_from_token(access_token)
+                sys.argv[USER_ID_ARG_INDEX] if len(sys.argv) > USER_ID_ARG_INDEX else extract_user_email_from_token(access_token)
             )
 
             if not user_id:

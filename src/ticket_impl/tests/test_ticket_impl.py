@@ -64,6 +64,7 @@ async def test_create_get_list_transition_comment_delete(seed_token: None) -> No
         ],
     )
 
+
 @pytest.mark.asyncio
 async def test_create_ticket_with_service_error(seed_token: None) -> None:
     """Test that create_ticket raises ServiceError on HTTP errors."""
@@ -448,6 +449,7 @@ async def test_transition_status_all_states(seed_token: None) -> None:
         ticket = await svc.transition_status(ticket_id, status)
         assert ticket.status == status
 
+
 @pytest.mark.asyncio
 @respx.mock
 async def test_status_name_to_domain_various_formats(seed_token: None) -> None:
@@ -547,6 +549,7 @@ async def test_create_ticket_reporter_lookup_fails(seed_token: None) -> None:
     )
     assert ticket.title == "Test"
 
+
 @pytest.mark.asyncio
 @respx.mock
 async def test_jira_comment_to_domain_empty_body(seed_token: None) -> None:
@@ -612,3 +615,107 @@ async def test_get_ticket_comments_service_error(seed_token: None) -> None:
 
     with pytest.raises(httpx.HTTPError):  # Will raise httpx exception
         await svc.get_ticket_comments(ticket_id)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_reassign_ticket_not_found_user(seed_token: None) -> None:
+    """Test reassigning ticket when user is not found."""
+    respx.get(re.compile(f"{re.escape(BASE)}/user/search\\?.*")).mock(
+        return_value=httpx.Response(200, json=[]),
+    )
+
+    svc = TicketImpl(user_id="u1", project_key="OSDP")
+
+    with pytest.raises(ServiceError, match=r"Assignee .* was not found"):
+        await svc.reassign_ticket(uuid4(), "nonexistent@example.com")
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_update_priority_not_found(seed_token: None) -> None:
+    """Test updating priority for non-existent ticket."""
+    ticket_id = uuid4()
+    key = str(ticket_id)
+    respx.put(f"{BASE}/issue/{key}").mock(
+        return_value=httpx.Response(404, json={"error": "Not found"}),
+    )
+    respx.get(f"{BASE}/issue/{key}").mock(
+        return_value=httpx.Response(404, json={"error": "Not found"}),
+    )
+
+    svc = TicketImpl(user_id="u1", project_key="OSDP")
+
+    with pytest.raises(ServiceError, match="Failed to update priority"):
+        await svc.update_priority(ticket_id, TicketPriority.HIGH)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_delete_ticket_service_error_exception(seed_token: None) -> None:
+    """Test delete ticket raises ServiceError on exception."""
+    ticket_id = uuid4()
+    key = str(ticket_id)
+    respx.delete(f"{BASE}/issue/{key}").mock(
+        return_value=httpx.Response(500, json={"error": "Internal error"}),
+    )
+
+    svc = TicketImpl(user_id="u1", project_key="OSDP")
+
+    with pytest.raises(ServiceError, match="Failed to delete ticket"):
+        await svc.delete_ticket(ticket_id)
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_add_comment_not_found_exception(seed_token: None) -> None:
+    """Test add comment raises TicketNotFoundError on exception."""
+    ticket_id = uuid4()
+    key = str(ticket_id)
+    respx.post(f"{BASE}/issue/{key}/comment").mock(
+        return_value=httpx.Response(404, json={"error": "Not found"}),
+    )
+
+    svc = TicketImpl(user_id="u1", project_key="OSDP")
+
+    with pytest.raises(TicketNotFoundError):
+        await svc.add_comment(ticket_id, "author@example.com", "Test comment")
+
+
+@pytest.mark.asyncio
+@respx.mock
+async def test_transition_status_delegates_to_update(seed_token: None) -> None:
+    """Test that transition_status delegates to update_ticket."""
+    respx.get(f"{BASE}/issue/OSDP-101/transitions").mock(
+        return_value=httpx.Response(200, json={
+            "transitions": [{"id": "11", "name": "In Progress"}],
+        }),
+    )
+    respx.post(f"{BASE}/issue/OSDP-101/transitions").mock(
+        return_value=httpx.Response(204),
+    )
+    respx.get(f"{BASE}/issue/OSDP-101").mock(
+        return_value=httpx.Response(200, json={
+            "key": "OSDP-101",
+            "fields": {
+                "summary": "Test",
+                "status": {"name": "In Progress"},
+                "priority": {"name": "Medium"},
+                "description": "Test",
+                "assignee": None,
+                "reporter": {"displayName": "Test"},
+                "created": "2025-10-29T00:00:00.000+0000",
+                "updated": "2025-10-29T00:00:00.000+0000",
+            },
+        }),
+    )
+
+    svc = TicketImpl(user_id="u1", project_key="OSDP")
+    ticket_id = uuid4()
+
+    # Map the UUID to the key
+    from ticket_impl.storage import map_uuid_to_key
+    map_uuid_to_key("u1", ticket_id, "OSDP-101")
+
+    ticket = await svc.transition_status(ticket_id, TicketStatus.IN_PROGRESS)
+    assert ticket.status == TicketStatus.IN_PROGRESS

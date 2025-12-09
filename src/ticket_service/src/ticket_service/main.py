@@ -193,6 +193,7 @@ async def oauth_login(
             "redirect_to": auth_url,
         }
 
+
 @app.get(
     "/api/v1/auth/callback",
     tags=["authentication"],

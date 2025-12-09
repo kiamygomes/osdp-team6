@@ -90,8 +90,7 @@ def setup_oauth_tokens() -> None:
 
     if not tokens:
         pytest.skip(
-            f"No valid OAuth tokens found for user '{oauth_user}'. "
-            "Run generate_e2e_tokens.py to set up tokens first.",
+            f"No valid OAuth tokens found for user '{oauth_user}'. Run generate_e2e_tokens.py to set up tokens first.",
         )
         return
 
