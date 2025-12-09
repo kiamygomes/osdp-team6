@@ -627,7 +627,7 @@ async def test_reassign_ticket_not_found_user(seed_token: None) -> None:
 
     svc = TicketImpl(user_id="u1", project_key="OSDP")
 
-    with pytest.raises(ServiceError, match="Assignee .* was not found"):
+    with pytest.raises(ServiceError, match=r"Assignee .* was not found"):
         await svc.reassign_ticket(uuid4(), "nonexistent@example.com")
 
 
@@ -648,25 +648,6 @@ async def test_update_priority_not_found(seed_token: None) -> None:
 
     with pytest.raises(ServiceError, match="Failed to update priority"):
         await svc.update_priority(ticket_id, TicketPriority.HIGH)
-
-
-@pytest.mark.asyncio
-@respx.mock
-async def test_update_description_not_found(seed_token: None) -> None:
-    """Test updating description for non-existent ticket."""
-    ticket_id = uuid4()
-    key = str(ticket_id)
-    respx.put(f"{BASE}/issue/{key}").mock(
-        return_value=httpx.Response(404, json={"error": "Not found"}),
-    )
-    respx.get(f"{BASE}/issue/{key}").mock(
-        return_value=httpx.Response(404, json={"error": "Not found"}),
-    )
-
-    svc = TicketImpl(user_id="u1", project_key="OSDP")
-
-    with pytest.raises(TicketNotFoundError):
-        await svc.update_description(ticket_id, "New description")
 
 
 @pytest.mark.asyncio

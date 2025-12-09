@@ -212,11 +212,13 @@ async def test_update_description_not_found() -> None:
 async def test_retry_with_backoff_calculation() -> None:
     """Test that retry backoff is calculated correctly."""
     call_count = 0
+    max_failures = 2
+    expected_total_calls = 3
 
     def response_handler(request: httpx.Request) -> httpx.Response:
         nonlocal call_count
         call_count += 1
-        if call_count <= 2:
+        if call_count <= max_failures:
             return httpx.Response(503, json={"detail": "Service unavailable"})
         return httpx.Response(201, json={
             "id": str(uuid4()),
@@ -246,7 +248,7 @@ async def test_retry_with_backoff_calculation() -> None:
             reporter="test@example.com",
         )
         assert ticket.title == "Test"
-        assert call_count == 3  # Initial + 2 retries
+        assert call_count == expected_total_calls  # Initial + 2 retries
 
 
 
@@ -312,6 +314,7 @@ async def test_add_comment_success() -> None:
             author="test@example.com",
             content="Test comment",
         )
+        assert comment is not None
         assert comment.content == "Test comment"
         assert comment.author == "test@example.com"
 
