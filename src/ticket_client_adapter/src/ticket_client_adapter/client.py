@@ -150,7 +150,7 @@ class CircuitBreaker:
             return result
 
 
-class IdempotentClient(Client):
+class IdempotentClient(Client):  # type: ignore[misc]
     """Extended Client that supports idempotency headers.
 
     Wraps the auto-generated Client to add Idempotency-Key header support
