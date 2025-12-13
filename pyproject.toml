@@ -31,7 +31,8 @@ dev = [
     "respx>=0.21",
     "anyio>=4",
     "types-python-dateutil>=2.9.0",
-    "python-dotenv>=1.0.0"
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0"
 ]
 
 [tool.uv.workspace]
@@ -58,6 +59,7 @@ ticket-impl = { workspace = true }
 ticket-service-client = { workspace = true }
 ticket-client-adapter = { workspace = true }
 ticket-ai-adapter = { workspace = true }
+fast-api-client = { workspace = true }
 ai-chat-adapter = { workspace = true }
 ai-chat-api = { workspace = true }
 ai-adapter = { workspace = true }
@@ -160,6 +162,10 @@ omit = [
     "*/tests/*",
     "*/__main__.py",
     "*/ticket_client_generated/*",  # Exclude auto-generated client from coverage
+    "*/claude_service_client/*",  # Exclude auto-generated Claude client
+    "*/ticket_ai_adapter/adapter.py",  # Integration code tested via team_integration tests
+    "*/ticket_ai_adapter/openai_adapter.py",  # Integration code tested via team_integration tests
+    "*/ticket_ai_adapter/team_integration.py",  # Integration code tested via team_integration tests
 ]
 
 [tool.coverage.report]

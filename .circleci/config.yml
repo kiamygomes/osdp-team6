@@ -11,6 +11,10 @@ jobs:
     steps:
       - checkout
       - run:
+          name: "Initialize Git Submodules"
+          command: |
+            git submodule update --init --recursive
+      - run:
           name: "Install UV and Add to Path"
           command: |
             curl -LsSf https://astral.sh/uv/install.sh | sh

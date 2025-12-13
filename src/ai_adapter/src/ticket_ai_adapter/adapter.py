@@ -3,7 +3,6 @@
 
 import json
 import logging
-from typing import Any
 from uuid import UUID
 
 from ticket_api import (
@@ -31,7 +30,7 @@ class AITicketAdapter:
     def __init__(
         self,
         ticket_service: TicketServiceAPI,
-        claude_client: Any,
+        claude_client: object,
         user_id: str,
         project_key: str | None = None,
     ) -> None:
@@ -52,38 +51,51 @@ class AITicketAdapter:
 
     def _build_system_prompt(self) -> str:
         """Build the system prompt that defines available tools."""
-        return """You are a helpful assistant that helps users manage their tickets.
+        return """You are a helpful assistant that helps users manage tickets.
 
 You have access to the following tools for ticket management:
 
 1. create_ticket: Create a new ticket
-   - Parameters: title (required), description (required), priority (optional: low/medium/high/critical), assignee (optional)
-   - Example: {"tool": "create_ticket", "parameters": {"title": "Fix login bug", "description": "Users cannot log in", "priority": "high"}}
+   - Parameters: title (required), description (required),
+     priority (optional: low/medium/high/critical), assignee (optional)
+   - Example: {"tool": "create_ticket", "parameters":
+     {"title": "Fix login bug", "description": "Users cannot log in",
+      "priority": "high"}}
 
 2. get_ticket: Retrieve a specific ticket
    - Parameters: ticket_id (required)
-   - Example: {"tool": "get_ticket", "parameters": {"ticket_id": "uuid-string"}}
+   - Example: {"tool": "get_ticket",
+     "parameters": {"ticket_id": "uuid-string"}}
 
 3. list_tickets: List tickets with optional filters
    - Parameters: status (optional), assignee (optional), limit (optional)
-   - Example: {"tool": "list_tickets", "parameters": {"status": "open", "limit": 10}}
+   - Example: {"tool": "list_tickets",
+     "parameters": {"status": "open", "limit": 10}}
 
 4. update_ticket: Update an existing ticket
-   - Parameters: ticket_id (required), title (optional), description (optional), status (optional), priority (optional), assignee (optional)
-   - Example: {"tool": "update_ticket", "parameters": {"ticket_id": "uuid", "status": "in_progress"}}
+   - Parameters: ticket_id (required), title (optional),
+     description (optional), status (optional), priority (optional),
+     assignee (optional)
+   - Example: {"tool": "update_ticket",
+     "parameters": {"ticket_id": "uuid", "status": "in_progress"}}
 
 5. add_comment: Add a comment to a ticket
    - Parameters: ticket_id (required), content (required)
-   - Example: {"tool": "add_comment", "parameters": {"ticket_id": "uuid", "content": "Working on this issue"}}
+   - Example: {"tool": "add_comment",
+     "parameters": {"ticket_id": "uuid", "content": "Working on this"}}
 
 6. transition_status: Change ticket status
-   - Parameters: ticket_id (required), new_status (required: open/in_progress/resolved/closed)
-   - Example: {"tool": "transition_status", "parameters": {"ticket_id": "uuid", "new_status": "resolved"}}
+   - Parameters: ticket_id (required),
+     new_status (required: open/in_progress/resolved/closed)
+   - Example: {"tool": "transition_status",
+     "parameters": {"ticket_id": "uuid", "new_status": "resolved"}}
 
-When a user requests a ticket operation, analyze their intent and respond with a JSON object containing the tool call.
+When a user requests a ticket operation, analyze their intent and
+respond with a JSON object containing the tool call.
 Your response should be ONLY the JSON object, nothing else.
 
-If the user's request is unclear or missing required information, ask for clarification instead of making a tool call."""
+If the user's request is unclear or missing required information,
+ask for clarification instead of making a tool call."""
 
     async def process_command(self, prompt: str) -> CommandResult:
         """Process a natural language command and execute the corresponding operation.
@@ -105,7 +117,6 @@ If the user's request is unclear or missing required information, ask for clarif
             # Import here to avoid circular dependencies
             from fast_api_client.api.chat import send_chat_message_chat_post
             from fast_api_client.models.chat_request import ChatRequest
-            from fast_api_client.models.chat_response import ChatResponse
             from fast_api_client.models.http_validation_error import HTTPValidationError
 
             # Create the full prompt with system context
@@ -114,7 +125,7 @@ If the user's request is unclear or missing required information, ask for clarif
             # Send to Claude service
             chat_request = ChatRequest(prompt=full_prompt)
             response = await send_chat_message_chat_post.asyncio(
-                client=self.claude_client,
+                client=self.claude_client,  # type: ignore[arg-type]
                 body=chat_request,
             )
 
@@ -145,21 +156,21 @@ If the user's request is unclear or missing required information, ask for clarif
             )
 
         except ServiceError as e:
-            logger.exception(f"Service error processing command: {e}")
+            logger.exception("Service error processing command")
             return CommandResult(
                 success=False,
                 message="Failed to execute ticket operation",
                 error=str(e),
             )
         except Exception as e:
-            logger.exception(f"Unexpected error processing command: {e}")
+            logger.exception("Unexpected error processing command")
             return CommandResult(
                 success=False,
                 message="An unexpected error occurred",
                 error=str(e),
             )
 
-    def _parse_tool_call(self, response: Any) -> ToolCall | None:
+    def _parse_tool_call(self, response: object) -> ToolCall | None:
         """Parse a tool call from the AI response.
 
         Args:
@@ -182,7 +193,7 @@ If the user's request is unclear or missing required information, ask for clarif
                 try:
                     tool_type = ToolCallType(tool_type_str)
                 except ValueError:
-                    logger.warning(f"Unknown tool type: {tool_type_str}")
+                    logger.warning("Unknown tool type: %s", tool_type_str)
                     return None
 
                 return ToolCall(type=tool_type, parameters=parameters)
@@ -213,7 +224,7 @@ If the user's request is unclear or missing required information, ask for clarif
                             try:
                                 tool_type = ToolCallType(tool_type_str)
                             except ValueError:
-                                logger.warning(f"Unknown tool type: {tool_type_str}")
+                                logger.warning("Unknown tool type: %s", tool_type_str)
                                 return None
 
                             return ToolCall(type=tool_type, parameters=parameters)
@@ -222,7 +233,9 @@ If the user's request is unclear or missing required information, ask for clarif
 
         return None
 
-    async def _execute_tool_call(self, tool_call: ToolCall) -> Any:
+    async def _execute_tool_call(
+        self, tool_call: ToolCall
+    ) -> Ticket | Comment | list[Ticket] | None:
         """Execute a parsed tool call against the ticket service.
 
         Args:
@@ -294,7 +307,7 @@ If the user's request is unclear or missing required information, ask for clarif
         msg = f"Unsupported tool call type: {tool_call.type}"
         raise ValueError(msg)
 
-    def _format_success_message(self, tool_type: ToolCallType, result: Any) -> str:
+    def _format_success_message(self, tool_type: ToolCallType, result: object) -> str:
         """Format a user-friendly success message based on the operation and result.
 
         Args:

@@ -4,17 +4,14 @@
 from __future__ import annotations
 
 import json
-from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
-from ticket_ai_adapter import AITicketAdapter, ToolCallType
-from ticket_ai_adapter.models import ToolCall
 from ticket_api import Ticket, TicketPriority, TicketStatus
 
-if TYPE_CHECKING:
-    from ticket_api import TicketServiceAPI
+from ticket_ai_adapter import AITicketAdapter, ToolCallType
+from ticket_ai_adapter.models import ToolCall
 
 
 @pytest.fixture
@@ -71,17 +68,20 @@ def test_parse_tool_call_create_ticket(adapter: AITicketAdapter) -> None:
     assert tool_call.parameters["priority"] == "high"
 
 
-def test_parse_tool_call_no_tool(adapter) -> None:
+def test_parse_tool_call_no_tool(adapter: AITicketAdapter) -> None:
     """Test parsing a response with no tool call."""
     response = Mock()
-    response.content = "I need more information about the bug. Can you describe what happens when users try to log in?"
+    response.content = (
+        "I need more information about the bug. "
+        "Can you describe what happens when users try to log in?"
+    )
 
     tool_call = adapter._parse_tool_call(response)
 
     assert tool_call is None
 
 
-def test_parse_tool_call_invalid_json(adapter) -> None:
+def test_parse_tool_call_invalid_json(adapter: AITicketAdapter) -> None:
     """Test parsing a response with invalid JSON."""
     response = Mock()
     response.content = '{"tool": "create_ticket", invalid json}'
@@ -92,7 +92,9 @@ def test_parse_tool_call_invalid_json(adapter) -> None:
 
 
 @pytest.mark.asyncio
-async def test_execute_tool_call_create_ticket(adapter, mock_ticket_service) -> None:
+async def test_execute_tool_call_create_ticket(
+    adapter: AITicketAdapter, mock_ticket_service: Mock
+) -> None:
     """Test executing a create_ticket tool call."""
     ticket_id = uuid4()
     expected_ticket = Ticket(
@@ -127,7 +129,9 @@ async def test_execute_tool_call_create_ticket(adapter, mock_ticket_service) -> 
 
 
 @pytest.mark.asyncio
-async def test_execute_tool_call_list_tickets(adapter, mock_ticket_service) -> None:
+async def test_execute_tool_call_list_tickets(
+    adapter: AITicketAdapter, mock_ticket_service: Mock
+) -> None:
     """Test executing a list_tickets tool call."""
     expected_tickets = [
         Ticket(
@@ -159,7 +163,7 @@ async def test_execute_tool_call_list_tickets(adapter, mock_ticket_service) -> N
     )
 
 
-def test_format_success_message_create_ticket(adapter) -> None:
+def test_format_success_message_create_ticket(adapter: AITicketAdapter) -> None:
     """Test formatting success message for ticket creation."""
     ticket = Ticket(
         id=uuid4(),
@@ -175,7 +179,7 @@ def test_format_success_message_create_ticket(adapter) -> None:
     assert "Fix login bug" in message
 
 
-def test_format_success_message_list_tickets(adapter) -> None:
+def test_format_success_message_list_tickets(adapter: AITicketAdapter) -> None:
     """Test formatting success message for listing tickets."""
     tickets = [Mock(), Mock(), Mock()]
 

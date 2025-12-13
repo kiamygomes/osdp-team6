@@ -349,12 +349,17 @@ class TestMultiProviderTeamIntegration:
     ) -> None:
         """Parameterized test: Both teams support all ticket operations."""
         # Mock responses for both teams
-        ai_response: dict[str, object] = {
-            "tool": tool_type,
-            "parameters": {"title": "Test", "description": "Test", "priority": "high"}
-            if tool_type == "create_ticket"
-            else {"status": "open", "limit": 10},
-        }
+        ai_response: dict[str, object]
+        if tool_type == "create_ticket":
+            ai_response = {
+                "tool": tool_type,
+                "parameters": {"title": "Test", "description": "Test", "priority": "high"},
+            }
+        else:
+            ai_response = {
+                "tool": tool_type,
+                "parameters": {"status": "open", "limit": 10},
+            }
 
         # Setup appropriate mock response
         mock_response: Ticket | list[Ticket]
