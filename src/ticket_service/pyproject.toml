@@ -28,4 +28,8 @@ target-version = "py311"
 extend = "../../pyproject.toml"
 
 [tool.ruff.lint]
+ignore = []
+
+[tool.ruff.lint.per-file-ignores]
+"src/ticket_service/telemetry.py" = ["TRY300"]  # Return in try block is intentional for middleware
 ignore = ["D100", "D104"]  # Ignore missing docstrings for now

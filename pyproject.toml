@@ -19,6 +19,7 @@ dev = [
     "requests>=2.32.3",
     "psycopg2-binary>=2.9.9", #DB driver for token storage
     "requests-oauthlib>=2.0.0", #OAuth 2.0 implementation
+    "prometheus-client>=0.19.0", #Telemetry and observability
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.15",
     "mkdocstrings-python>=1.16.12",
@@ -147,6 +148,8 @@ addopts = [
     "--cov-fail-under=90",
     "--import-mode=importlib",
     "-v",
+    "--ignore=tests/e2e",  # Exclude e2e tests by default (require deployed service)
+    "-m", "not e2e",  # Skip tests marked with @pytest.mark.e2e
 ]
 markers = [
     "unit: marks tests as unit tests (fast, isolated)",
