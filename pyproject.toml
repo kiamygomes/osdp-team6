@@ -41,7 +41,8 @@ members = [
   "src/ticket_service",
   "src/ticket_client_generated",
   "src/ticket_client_adapter",
-  "src/claude_service_client"
+  "src/claude_service_client",
+  "src/ai_adapter"
 ]
 
 [tool.uv.sources]
@@ -49,6 +50,7 @@ ticket-api = { workspace = true }
 ticket-impl = { workspace = true }
 ticket-service-client = { workspace = true }
 ticket-client-adapter = { workspace = true }
+ai_adapter = { workspace = true }
 
 [tool.ruff]
 line-length = 130 # high for top level due to tests
@@ -107,12 +109,14 @@ pythonpath = [
     "src/ticket_service/src",
     "src/ticket_client_adapter/src",
     "src/ticket_client_generated",
+    "src/ai_adapter/src"
 ]
 testpaths = [
     "tests",
     "src/*/tests",
     "src/ticket_client_adapter/tests",
     "src/ticket_client_generated/tests",
+    "src/ai_adapter/tests"
 ]
 addopts = [
     "--cov",

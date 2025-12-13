@@ -8,6 +8,7 @@ resolution-markers = [
 
 [manifest]
 members = [
+    "ai-adapter",
     "fast-api-client",
     "osdp-jira-service",
     "ticket-api",
@@ -15,6 +16,21 @@ members = [
     "ticket-impl",
     "ticket-service",
     "ticket-service-client",
+]
+
+[[package]]
+name = "ai-adapter"
+version = "0.1.0"
+source = { editable = "src/ai_adapter" }
+dependencies = [
+    { name = "pydantic" },
+    { name = "ticket-api" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "pydantic", specifier = ">=2.0" },
+    { name = "ticket-api", editable = "src/ticket_api" },
 ]
 
 [[package]]
