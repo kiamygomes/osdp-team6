@@ -1,5 +1,4 @@
-# /Users/Mikiyas/Desktop/Open_Source/osdp-team6/src/ai_adapter/src/ai_adapter/adapter.py
-"""Core AI adapter implementation for ticket operations."""
+"""OpenAI-based AI adapter implementation for ticket operations."""
 
 import json
 import logging
@@ -20,35 +19,48 @@ from .models import CommandResult, ToolCall, ToolCallType
 logger = logging.getLogger(__name__)
 
 
-class AITicketAdapter:
-    """Adapter that integrates AI services with ticket operations.
+class OpenAITicketAdapter:
+    """Adapter that integrates OpenAI services with ticket operations.
 
-    This class processes natural language commands, sends them to an AI service
-    (Claude), parses the AI response for structured tool calls, and executes
+    This class processes natural language commands, sends them to OpenAI,
+    parses the AI response for structured tool calls, and executes
     the corresponding ticket operations.
+
+    This is the SECOND AI provider, demonstrating multi-provider support.
     """
 
     def __init__(
         self,
         ticket_service: TicketServiceAPI,
-        claude_client: Any,
+        openai_api_key: str,
         user_id: str,
+        model: str = "gpt-4o-mini",
         project_key: str | None = None,
     ) -> None:
-        """Initialize the AI ticket adapter.
+        """Initialize the OpenAI ticket adapter.
 
         Args:
             ticket_service: Implementation of TicketServiceAPI to execute operations
-            claude_client: Claude service client for natural language processing
+            openai_api_key: OpenAI API key
             user_id: User identifier for ticket operations
+            model: OpenAI model to use (default: gpt-4o-mini for cost efficiency)
             project_key: Optional Jira project key for ticket creation
 
         """
         self.ticket_service = ticket_service
-        self.claude_client = claude_client
         self.user_id = user_id
         self.project_key = project_key
+        self.model = model
         self._system_prompt = self._build_system_prompt()
+
+        # Initialize OpenAI client
+        try:
+            import openai
+
+            self.openai_client = openai.OpenAI(api_key=openai_api_key)
+        except ImportError as e:
+            msg = "openai package not installed. Run: pip install openai"
+            raise ImportError(msg) from e
 
     def _build_system_prompt(self) -> str:
         """Build the system prompt that defines available tools."""
@@ -80,16 +92,14 @@ You have access to the following tools for ticket management:
    - Parameters: ticket_id (required), new_status (required: open/in_progress/resolved/closed)
    - Example: {"tool": "transition_status", "parameters": {"ticket_id": "uuid", "new_status": "resolved"}}
 
-When a user requests a ticket operation, analyze their intent and respond with a JSON object containing the tool call.
-Your response should be ONLY the JSON object, nothing else.
-
+When a user requests a ticket operation, analyze their intent and respond with ONLY a JSON object containing the tool call.
 If the user's request is unclear or missing required information, ask for clarification instead of making a tool call."""
 
     async def process_command(self, prompt: str) -> CommandResult:
         """Process a natural language command and execute the corresponding operation.
 
         This is the main entry point for the adapter. It:
-        1. Sends the prompt to Claude with the system prompt
+        1. Sends the prompt to OpenAI with the system prompt
         2. Parses the response for tool calls
         3. Executes the tool call against the ticket service
         4. Returns a structured result
@@ -102,35 +112,33 @@ If the user's request is unclear or missing required information, ask for clarif
 
         """
         try:
-            # Import here to avoid circular dependencies
-            from fast_api_client.api.chat import send_chat_message_chat_post
-            from fast_api_client.models.chat_request import ChatRequest
-
-            # Create the full prompt with system context
-            full_prompt = f"{self._system_prompt}\n\nUser request: {prompt}"
-
-            # Send to Claude service
-            chat_request = ChatRequest(prompt=full_prompt)
-            response = await send_chat_message_chat_post.asyncio(
-                client=self.claude_client,
-                body=chat_request,
+            # Send to OpenAI
+            response = self.openai_client.chat.completions.create(
+                model=self.model,
+                messages=[
+                    {"role": "system", "content": self._system_prompt},
+                    {"role": "user", "content": prompt},
+                ],
+                response_format={"type": "json_object"},  # Request JSON response
             )
 
-            if not response:
+            if not response.choices or not response.choices[0].message.content:
                 return CommandResult(
                     success=False,
                     message="Failed to get response from AI service",
-                    error="No response from Claude service",
+                    error="No response from OpenAI",
                 )
 
+            content = response.choices[0].message.content
+
             # Parse the tool call from response
-            tool_call = self._parse_tool_call(response)
+            tool_call = self._parse_tool_call(content)
 
             if not tool_call:
-                # No tool call means Claude is asking for clarification or providing info
+                # No tool call means AI is asking for clarification or providing info
                 return CommandResult(
                     success=True,
-                    message=response.content,
+                    message=content,
                 )
 
             # Execute the tool call
@@ -143,7 +151,7 @@ If the user's request is unclear or missing required information, ask for clarif
             )
 
         except ServiceError as e:
-            logger.error(f"Service error processing command: {e}")
+            logger.exception(f"Service error processing command: {e}")
             return CommandResult(
                 success=False,
                 message="Failed to execute ticket operation",
@@ -157,19 +165,16 @@ If the user's request is unclear or missing required information, ask for clarif
                 error=str(e),
             )
 
-    def _parse_tool_call(self, response: Any) -> ToolCall | None:
+    def _parse_tool_call(self, content: str) -> ToolCall | None:
         """Parse a tool call from the AI response.
 
         Args:
-            response: ChatResponse from Claude service
+            content: JSON string from OpenAI
 
         Returns:
             Parsed ToolCall or None if no valid tool call found
 
         """
-        content = response.content if hasattr(response, "content") else str(response)
-
-        # First, try to parse the entire content as JSON
         try:
             tool_data = json.loads(content)
             if isinstance(tool_data, dict) and "tool" in tool_data:
@@ -185,38 +190,8 @@ If the user's request is unclear or missing required information, ask for clarif
 
                 return ToolCall(type=tool_type, parameters=parameters)
         except json.JSONDecodeError:
-            pass
-
-        # If that fails, try to extract JSON with balanced braces
-        brace_count = 0
-        start_idx = -1
-
-        for i, char in enumerate(content):
-            if char == "{":
-                if brace_count == 0:
-                    start_idx = i
-                brace_count += 1
-            elif char == "}":
-                brace_count -= 1
-                if brace_count == 0 and start_idx != -1:
-                    # Found a complete JSON object
-                    try:
-                        potential_json = content[start_idx:i+1]
-                        tool_data = json.loads(potential_json)
-
-                        if isinstance(tool_data, dict) and "tool" in tool_data:
-                            tool_type_str = tool_data.get("tool")
-                            parameters = tool_data.get("parameters", {})
-
-                            try:
-                                tool_type = ToolCallType(tool_type_str)
-                            except ValueError:
-                                logger.warning(f"Unknown tool type: {tool_type_str}")
-                                return None
-
-                            return ToolCall(type=tool_type, parameters=parameters)
-                    except json.JSONDecodeError:
-                        continue
+            logger.warning(f"Failed to parse JSON from OpenAI response: {content}")
+            return None
 
         return None
 
@@ -289,7 +264,8 @@ If the user's request is unclear or missing required information, ask for clarif
                 new_assignee=params["new_assignee"],
             )
 
-        raise ValueError(f"Unsupported tool call type: {tool_call.type}")
+        msg = f"Unsupported tool call type: {tool_call.type}"
+        raise ValueError(msg)
 
     def _format_success_message(self, tool_type: ToolCallType, result: Any) -> str:
         """Format a user-friendly success message based on the operation and result.

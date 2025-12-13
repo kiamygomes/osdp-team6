@@ -42,7 +42,14 @@ members = [
   "src/ticket_client_generated",
   "src/ticket_client_adapter",
   "src/claude_service_client",
-  "src/ai_adapter"
+  "src/ai_adapter",
+  # Claude team's packages
+  "external/claude_team/src/ai_chat_api",
+  "external/claude_team/src/ai_chat_adapter",
+  # OpenAI team's packages
+  "external/openai_team/src/ai_api",
+  "external/openai_team/src/ai_adapter",
+  "external/openai_team/src/ai_service_client",
 ]
 
 [tool.uv.sources]
@@ -50,7 +57,12 @@ ticket-api = { workspace = true }
 ticket-impl = { workspace = true }
 ticket-service-client = { workspace = true }
 ticket-client-adapter = { workspace = true }
-ai_adapter = { workspace = true }
+ticket-ai-adapter = { workspace = true }
+ai-chat-adapter = { workspace = true }
+ai-chat-api = { workspace = true }
+ai-adapter = { workspace = true }
+ai-api = { workspace = true }
+ai-service-client = { workspace = true }
 
 [tool.ruff]
 line-length = 130 # high for top level due to tests
@@ -81,12 +93,14 @@ mypy_path = [
     "src/ticket_impl/src",
     "src/ticket_service/src",
     "src/ticket_client_adapter/src",
+    "src/ai_adapter/src",
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
 namespace_packages = true
 exclude = [
     "src/ticket_client_generated/",  # Exclude auto-generated code from strict checking
+    "src/claude_service_client/",  # Exclude auto-generated Claude service client
 ]
 
 # Allow untyped imports for specific modules
@@ -96,6 +110,12 @@ module = [
     "googleapiclient.*",
     "ticket_service_client",
     "ticket_service_client.*",
+    "ai_api",
+    "ai_api.*",
+    "ai_chat_api",
+    "ai_chat_api.*",
+    "openai",
+    "openai.*",
 ]
 ignore_missing_imports = true
 

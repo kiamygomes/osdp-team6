@@ -3,7 +3,7 @@ requires = ["hatchling"]
 build-backend = "hatchling.build"
 
 [project]
-name = "ai-adapter"
+name = "ticket-ai-adapter"
 version = "0.1.0"
 description = "AI service adapter for ticket operations with natural language processing"
 readme = "README.md"
@@ -14,10 +14,10 @@ dependencies = [
 ]
 
 [tool.hatch.build.targets.wheel]
-packages = ["src/ai_adapter"]
+packages = ["src/ticket_ai_adapter"]
 
 [tool.hatch.build.targets.wheel.force-include]
-"src/ai_adapter/py.typed" = "ai_adapter/py.typed"
+"src/ticket_ai_adapter/py.typed" = "ticket_ai_adapter/py.typed"
 
 [tool.ruff]
 line-length = 100

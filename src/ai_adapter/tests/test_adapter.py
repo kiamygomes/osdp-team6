@@ -1,19 +1,24 @@
 # /Users/Mikiyas/Desktop/Open_Source/osdp-team6/src/ai_adapter/tests/test_adapter.py
 """Tests for the AITicketAdapter class."""
 
+from __future__ import annotations
+
 import json
+from typing import TYPE_CHECKING
 from unittest.mock import AsyncMock, Mock
 from uuid import uuid4
 
 import pytest
+from ticket_ai_adapter import AITicketAdapter, ToolCallType
+from ticket_ai_adapter.models import ToolCall
 from ticket_api import Ticket, TicketPriority, TicketStatus
 
-from ai_adapter import AITicketAdapter, ToolCallType
-from ai_adapter.models import ToolCall
+if TYPE_CHECKING:
+    from ticket_api import TicketServiceAPI
 
 
 @pytest.fixture
-def mock_ticket_service():
+def mock_ticket_service() -> Mock:
     """Create a mock ticket service."""
     service = Mock()
     service.create_ticket = AsyncMock()
@@ -27,13 +32,13 @@ def mock_ticket_service():
 
 
 @pytest.fixture
-def mock_claude_client():
+def mock_claude_client() -> Mock:
     """Create a mock Claude client."""
     return Mock()
 
 
 @pytest.fixture
-def adapter(mock_ticket_service, mock_claude_client):
+def adapter(mock_ticket_service: Mock, mock_claude_client: Mock) -> AITicketAdapter:
     """Create an AITicketAdapter instance."""
     return AITicketAdapter(
         ticket_service=mock_ticket_service,
@@ -43,17 +48,19 @@ def adapter(mock_ticket_service, mock_claude_client):
     )
 
 
-def test_parse_tool_call_create_ticket(adapter):
+def test_parse_tool_call_create_ticket(adapter: AITicketAdapter) -> None:
     """Test parsing a create_ticket tool call from AI response."""
     response = Mock()
-    response.content = json.dumps({
-        "tool": "create_ticket",
-        "parameters": {
-            "title": "Fix login bug",
-            "description": "Users cannot log in",
-            "priority": "high"
+    response.content = json.dumps(
+        {
+            "tool": "create_ticket",
+            "parameters": {
+                "title": "Fix login bug",
+                "description": "Users cannot log in",
+                "priority": "high",
+            },
         }
-    })
+    )
 
     tool_call = adapter._parse_tool_call(response)
 
@@ -64,7 +71,7 @@ def test_parse_tool_call_create_ticket(adapter):
     assert tool_call.parameters["priority"] == "high"
 
 
-def test_parse_tool_call_no_tool(adapter):
+def test_parse_tool_call_no_tool(adapter) -> None:
     """Test parsing a response with no tool call."""
     response = Mock()
     response.content = "I need more information about the bug. Can you describe what happens when users try to log in?"
@@ -74,7 +81,7 @@ def test_parse_tool_call_no_tool(adapter):
     assert tool_call is None
 
 
-def test_parse_tool_call_invalid_json(adapter):
+def test_parse_tool_call_invalid_json(adapter) -> None:
     """Test parsing a response with invalid JSON."""
     response = Mock()
     response.content = '{"tool": "create_ticket", invalid json}'
@@ -85,7 +92,7 @@ def test_parse_tool_call_invalid_json(adapter):
 
 
 @pytest.mark.asyncio
-async def test_execute_tool_call_create_ticket(adapter, mock_ticket_service):
+async def test_execute_tool_call_create_ticket(adapter, mock_ticket_service) -> None:
     """Test executing a create_ticket tool call."""
     ticket_id = uuid4()
     expected_ticket = Ticket(
@@ -104,7 +111,7 @@ async def test_execute_tool_call_create_ticket(adapter, mock_ticket_service):
             "title": "Fix login bug",
             "description": "Users cannot log in",
             "priority": "high",
-        }
+        },
     )
 
     result = await adapter._execute_tool_call(tool_call)
@@ -120,7 +127,7 @@ async def test_execute_tool_call_create_ticket(adapter, mock_ticket_service):
 
 
 @pytest.mark.asyncio
-async def test_execute_tool_call_list_tickets(adapter, mock_ticket_service):
+async def test_execute_tool_call_list_tickets(adapter, mock_ticket_service) -> None:
     """Test executing a list_tickets tool call."""
     expected_tickets = [
         Ticket(
@@ -140,10 +147,7 @@ async def test_execute_tool_call_list_tickets(adapter, mock_ticket_service):
     ]
     mock_ticket_service.list_tickets.return_value = expected_tickets
 
-    tool_call = ToolCall(
-        type=ToolCallType.LIST_TICKETS,
-        parameters={"status": "open", "limit": 10}
-    )
+    tool_call = ToolCall(type=ToolCallType.LIST_TICKETS, parameters={"status": "open", "limit": 10})
 
     result = await adapter._execute_tool_call(tool_call)
 
@@ -155,7 +159,7 @@ async def test_execute_tool_call_list_tickets(adapter, mock_ticket_service):
     )
 
 
-def test_format_success_message_create_ticket(adapter):
+def test_format_success_message_create_ticket(adapter) -> None:
     """Test formatting success message for ticket creation."""
     ticket = Ticket(
         id=uuid4(),
@@ -171,7 +175,7 @@ def test_format_success_message_create_ticket(adapter):
     assert "Fix login bug" in message
 
 
-def test_format_success_message_list_tickets(adapter):
+def test_format_success_message_list_tickets(adapter) -> None:
     """Test formatting success message for listing tickets."""
     tickets = [Mock(), Mock(), Mock()]
 

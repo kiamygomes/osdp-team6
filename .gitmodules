@@ -1,0 +1,8 @@
+[submodule "external/claude_team"]
+	path = external/claude_team
+	url = https://github.com/shichenz1999/oss-taapp.git
+	branch = hw3
+[submodule "external/openai_team"]
+	path = external/openai_team
+	url = https://github.com/natashagit/oss-nml.git
+	branch = hw_3_working
