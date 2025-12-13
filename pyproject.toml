@@ -119,6 +119,10 @@ module = [
     "ai_chat_api.*",
     "openai",
     "openai.*",
+    "prometheus_client",
+    "prometheus_client.*",
+    "fast_api_client",
+    "fast_api_client.*",
 ]
 ignore_missing_imports = true
 
