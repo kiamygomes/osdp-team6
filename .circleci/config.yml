@@ -15,26 +15,11 @@ jobs:
           command: |
             git submodule update --init --recursive
       - run:
-          name: "Install UV and Add to Path"
+          name: "Install UV via pip (more reliable than curl)"
           command: |
-            # Retry UV installation up to 3 times with exponential backoff
-            for i in 1 2 3; do
-              echo "Attempt $i: Installing UV..."
-              if curl -LsSf https://astral.sh/uv/install.sh | sh; then
-                echo "UV installation successful"
-                break
-              else
-                if [ $i -lt 3 ]; then
-                  echo "Installation failed, retrying in $((i * 5)) seconds..."
-                  sleep $((i * 5))
-                else
-                  echo "UV installation failed after 3 attempts"
-                  exit 1
-                fi
-              fi
-            done
-            echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> $BASH_ENV
-            source $BASH_ENV
+            # Install UV using pip instead of the install script
+            # This avoids issues with astral.sh server timeouts
+            pip install uv
             uv --version # Verify installation
       - run:
           name: "Create Virtual Env & Install All Dependencies via UV Sync"
