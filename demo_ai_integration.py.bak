@@ -43,29 +43,29 @@ async def demo_openai_integration():
     # Check for API key
     api_key = os.getenv("OPENAI_API_KEY")
     if not api_key:
-        print("❌ OPENAI_API_KEY not set. Skipping OpenAI demo.")
+        print("[X] OPENAI_API_KEY not set. Skipping OpenAI demo.")
         print("   Set it with: export OPENAI_API_KEY='sk-...'")
         return
 
     try:
         # Initialize Jira ticket service
-        print("\n1️⃣  Initializing Jira Ticket Service...")
+        print("\n[1] Initializing Jira Ticket Service...")
         oauth_config = OAuthConfig.from_env()
         ticket_service = TicketImpl(oauth_config=oauth_config)
-        print("   ✅ Jira service initialized")
+        print("   [OK] Jira service initialized")
 
         # Initialize OpenAI adapter
-        print("\n2️⃣  Initializing OpenAI Adapter...")
+        print("\n[2] Initializing OpenAI Adapter...")
         openai_adapter = OpenAITicketAdapter(
             ticket_service=ticket_service,
             openai_api_key=api_key,
             user_id="demo_user",  # Your OAuth user
             model="gpt-4o-mini",  # Cost-efficient model
         )
-        print("   ✅ OpenAI adapter initialized")
+        print("   [OK] OpenAI adapter initialized")
 
         # Test 1: Create a ticket with natural language
-        print("\n3️⃣  Testing: Create ticket via natural language")
+        print("\n[3] Testing: Create ticket via natural language")
         print('   User says: "Create a high priority ticket for fixing the login timeout issue"')
 
         result = await openai_adapter.process_command(
@@ -73,16 +73,16 @@ async def demo_openai_integration():
         )
 
         if result.success:
-            print(f"   ✅ {result.message}")
+            print(f"   [OK] {result.message}")
             if result.data:
-                print(f"   📋 Ticket ID: {result.data.id}")
-                print(f"   📝 Title: {result.data.title}")
-                print(f"   🔴 Priority: {result.data.priority.value}")
+                print(f"   Ticket ID: {result.data.id}")
+                print(f"   Title: {result.data.title}")
+                print(f"   Priority: {result.data.priority.value}")
         else:
-            print(f"   ❌ Failed: {result.error}")
+            print(f"   [X] Failed: {result.error}")
 
         # Test 2: List tickets
-        print("\n4️⃣  Testing: List tickets via natural language")
+        print("\n[4] Testing: List tickets via natural language")
         print('   User says: "Show me my 5 latest open tickets"')
 
         result = await openai_adapter.process_command(
@@ -90,19 +90,19 @@ async def demo_openai_integration():
         )
 
         if result.success:
-            print(f"   ✅ {result.message}")
+            print(f"   [OK] {result.message}")
             if result.data and isinstance(result.data, list):
                 for idx, ticket in enumerate(result.data[:3], 1):
                     print(f"   {idx}. {ticket.title} ({ticket.status.value})")
                 if len(result.data) > 3:
                     print(f"   ... and {len(result.data) - 3} more")
         else:
-            print(f"   ❌ Failed: {result.error}")
+            print(f"   [X] Failed: {result.error}")
 
-        print("\n✅ OpenAI Integration Demo Complete!")
+        print("\n[OK] OpenAI Integration Demo Complete!")
 
     except Exception as e:
-        print(f"\n❌ OpenAI demo failed: {e}")
+        print(f"\n[X] OpenAI demo failed: {e}")
         logger.exception("OpenAI demo error")
 
 
@@ -115,19 +115,19 @@ async def demo_claude_integration():
     # Check for Claude service URL
     claude_url = os.getenv("CLAUDE_SERVICE_URL")
     if not claude_url:
-        print("❌ CLAUDE_SERVICE_URL not set. Skipping Claude demo.")
+        print("[X] CLAUDE_SERVICE_URL not set. Skipping Claude demo.")
         print("   Set it with: export CLAUDE_SERVICE_URL='https://...'")
         return
 
     try:
         # Initialize Jira ticket service
-        print("\n1️⃣  Initializing Jira Ticket Service...")
+        print("\n[1] Initializing Jira Ticket Service...")
         oauth_config = OAuthConfig.from_env()
         ticket_service = TicketImpl(oauth_config=oauth_config)
-        print("   ✅ Jira service initialized")
+        print("   [OK] Jira service initialized")
 
         # Initialize Claude adapter
-        print("\n2️⃣  Initializing Claude Adapter...")
+        print("\n[2] Initializing Claude Adapter...")
 
         # Import Claude client
         from fast_api_client.client import Client as ClaudeClient
@@ -139,10 +139,10 @@ async def demo_claude_integration():
             claude_client=claude_client,
             user_id="demo_user",
         )
-        print("   ✅ Claude adapter initialized")
+        print("   [OK] Claude adapter initialized")
 
         # Test: Create a ticket
-        print("\n3️⃣  Testing: Create ticket via natural language")
+        print("\n[3] Testing: Create ticket via natural language")
         print('   User says: "Create a medium priority ticket for adding dark mode to the UI"')
 
         result = await claude_adapter.process_command(
@@ -150,17 +150,17 @@ async def demo_claude_integration():
         )
 
         if result.success:
-            print(f"   ✅ {result.message}")
+            print(f"   [OK] {result.message}")
             if result.data:
-                print(f"   📋 Ticket ID: {result.data.id}")
-                print(f"   📝 Title: {result.data.title}")
+                print(f"   Ticket ID: {result.data.id}")
+                print(f"   Title: {result.data.title}")
         else:
-            print(f"   ❌ Failed: {result.error}")
+            print(f"   [X] Failed: {result.error}")
 
-        print("\n✅ Claude Integration Demo Complete!")
+        print("\n[OK] Claude Integration Demo Complete!")
 
     except Exception as e:
-        print(f"\n❌ Claude demo failed: {e}")
+        print(f"\n[X] Claude demo failed: {e}")
         logger.exception("Claude demo error")
 
 
@@ -175,7 +175,7 @@ async def demo_provider_comparison():
     claude_url = os.getenv("CLAUDE_SERVICE_URL")
 
     if not openai_key:
-        print("❌ Need OPENAI_API_KEY for comparison demo")
+        print("[X] Need OPENAI_API_KEY for comparison demo")
         return
 
     try:
@@ -184,7 +184,7 @@ async def demo_provider_comparison():
         ticket_service = TicketImpl(oauth_config=oauth_config)
 
         # Provider 1: OpenAI
-        print("\n📊 Provider 1: OpenAI")
+        print("\n[Provider 1] OpenAI")
         openai_adapter = OpenAITicketAdapter(
             ticket_service=ticket_service,
             openai_api_key=openai_key,
@@ -198,7 +198,7 @@ async def demo_provider_comparison():
 
         # Provider 2: Claude (if available)
         if claude_url:
-            print("\n📊 Provider 2: Claude")
+            print("\n[Provider 2] Claude")
             from fast_api_client.client import Client as ClaudeClient
 
             claude_client = ClaudeClient(base_url=claude_url)
@@ -213,19 +213,19 @@ async def demo_provider_comparison():
             )
             print(f"   Result: {result_claude.message}")
 
-            print("\n✅ Both providers successfully integrated with the same Jira service!")
+            print("\n[OK] Both providers successfully integrated with the same Jira service!")
         else:
-            print("\n⚠️  Claude URL not set - showing OpenAI only")
+            print("\n[WARNING] Claude URL not set - showing OpenAI only")
             print("   Both would work with same ticket service when configured")
 
     except Exception as e:
-        print(f"\n❌ Comparison demo failed: {e}")
+        print(f"\n[X] Comparison demo failed: {e}")
         logger.exception("Comparison demo error")
 
 
 async def main():
     """Run all demos."""
-    print("\n🚀 AI Integration Demo - Second Submission")
+    print("\n[START] AI Integration Demo - Second Submission")
     print("=" * 80)
     print("This demonstrates TWO AI providers integrated with Jira Ticket Service:")
     print("  1. OpenAI (via OpenAI SDK)")
@@ -242,7 +242,7 @@ async def main():
         missing.append("OAUTH_CLIENT_ID (Jira OAuth)")
 
     if missing:
-        print("\n⚠️  Missing environment variables:")
+        print("\n[WARNING] Missing environment variables:")
         for var in missing:
             print(f"   - {var}")
         print("\nSet them and re-run this script.")
@@ -256,14 +256,14 @@ async def main():
     await demo_provider_comparison()
 
     print("\n" + "=" * 80)
-    print("✅ Demo Complete!")
+    print("[OK] Demo Complete!")
     print("=" * 80)
     print("\nKey Achievements:")
-    print("  ✅ Two AI providers (OpenAI + Claude)")
-    print("  ✅ Both integrate with Jira Ticket Service")
-    print("  ✅ Natural language → ticket operations")
-    print("  ✅ Provider swapping (same interface)")
-    print("\n📝 Second Submission Requirement: MET")
+    print("  [OK] Two AI providers (OpenAI + Claude)")
+    print("  [OK] Both integrate with Jira Ticket Service")
+    print("  [OK] Natural language -> ticket operations")
+    print("  [OK] Provider swapping (same interface)")
+    print("\n[NOTE] Second Submission Requirement: MET")
     print("=" * 80)
 
 
@@ -271,9 +271,9 @@ if __name__ == "__main__":
     try:
         asyncio.run(main())
     except KeyboardInterrupt:
-        print("\n\n⚠️  Demo interrupted by user")
+        print("\n\n[WARNING] Demo interrupted by user")
         sys.exit(0)
     except Exception as e:
-        print(f"\n\n❌ Demo failed: {e}")
+        print(f"\n\n[X] Demo failed: {e}")
         logger.exception("Fatal error")
         sys.exit(1)
