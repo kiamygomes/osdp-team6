@@ -11,11 +11,15 @@ jobs:
     steps:
       - checkout
       - run:
-          name: "Install UV and Add to Path"
+          name: "Initialize Git Submodules"
           command: |
-            curl -LsSf https://astral.sh/uv/install.sh | sh
-            echo 'export PATH="$HOME/.cargo/bin:$PATH"' >> $BASH_ENV
-            source $BASH_ENV
+            git submodule update --init --recursive
+      - run:
+          name: "Install UV via pip (more reliable than curl)"
+          command: |
+            # Install UV using pip instead of the install script
+            # This avoids issues with astral.sh server timeouts
+            pip install uv
             uv --version # Verify installation
       - run:
           name: "Create Virtual Env & Install All Dependencies via UV Sync"

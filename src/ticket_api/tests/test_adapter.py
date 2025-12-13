@@ -60,7 +60,10 @@ class TestSimpleTicket:
             _assignee=None,
         )
 
-        with pytest.raises((AttributeError, Exception), match=r"can't set attribute|cannot set|cannot assign"):
+        with pytest.raises(
+            (AttributeError, Exception),
+            match=r"can't set attribute|cannot set|cannot assign",
+        ):
             ticket._title = "Modified"  # type: ignore[misc]
 
 

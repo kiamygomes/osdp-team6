@@ -687,27 +687,33 @@ async def test_add_comment_not_found_exception(seed_token: None) -> None:
 async def test_transition_status_delegates_to_update(seed_token: None) -> None:
     """Test that transition_status delegates to update_ticket."""
     respx.get(f"{BASE}/issue/OSDP-101/transitions").mock(
-        return_value=httpx.Response(200, json={
-            "transitions": [{"id": "11", "name": "In Progress"}],
-        }),
+        return_value=httpx.Response(
+            200,
+            json={
+                "transitions": [{"id": "11", "name": "In Progress"}],
+            },
+        ),
     )
     respx.post(f"{BASE}/issue/OSDP-101/transitions").mock(
         return_value=httpx.Response(204),
     )
     respx.get(f"{BASE}/issue/OSDP-101").mock(
-        return_value=httpx.Response(200, json={
-            "key": "OSDP-101",
-            "fields": {
-                "summary": "Test",
-                "status": {"name": "In Progress"},
-                "priority": {"name": "Medium"},
-                "description": "Test",
-                "assignee": None,
-                "reporter": {"displayName": "Test"},
-                "created": "2025-10-29T00:00:00.000+0000",
-                "updated": "2025-10-29T00:00:00.000+0000",
+        return_value=httpx.Response(
+            200,
+            json={
+                "key": "OSDP-101",
+                "fields": {
+                    "summary": "Test",
+                    "status": {"name": "In Progress"},
+                    "priority": {"name": "Medium"},
+                    "description": "Test",
+                    "assignee": None,
+                    "reporter": {"displayName": "Test"},
+                    "created": "2025-10-29T00:00:00.000+0000",
+                    "updated": "2025-10-29T00:00:00.000+0000",
+                },
             },
-        }),
+        ),
     )
 
     svc = TicketImpl(user_id="u1", project_key="OSDP")
@@ -715,6 +721,7 @@ async def test_transition_status_delegates_to_update(seed_token: None) -> None:
 
     # Map the UUID to the key
     from ticket_impl.storage import map_uuid_to_key
+
     map_uuid_to_key("u1", ticket_id, "OSDP-101")
 
     ticket = await svc.transition_status(ticket_id, TicketStatus.IN_PROGRESS)

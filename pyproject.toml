@@ -8,6 +8,7 @@ dependencies = [
   "pydantic>=2",
   "httpx>=0.27",
   "sqlalchemy>=2.0",
+  "openapi-python-client>=0.28.0",
 ]
 
 [project.optional-dependencies]
@@ -18,6 +19,7 @@ dev = [
     "requests>=2.32.3",
     "psycopg2-binary>=2.9.9", #DB driver for token storage
     "requests-oauthlib>=2.0.0", #OAuth 2.0 implementation
+    "prometheus-client>=0.19.0", #Telemetry and observability
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.15",
     "mkdocstrings-python>=1.16.12",
@@ -30,7 +32,8 @@ dev = [
     "respx>=0.21",
     "anyio>=4",
     "types-python-dateutil>=2.9.0",
-    "python-dotenv>=1.0.0"
+    "python-dotenv>=1.0.0",
+    "openai>=1.0.0"
 ]
 
 [tool.uv.workspace]
@@ -40,6 +43,15 @@ members = [
   "src/ticket_service",
   "src/ticket_client_generated",
   "src/ticket_client_adapter",
+  "src/claude_service_client",
+  "src/ai_adapter",
+  # Claude team's packages
+  "external/claude_team/src/ai_chat_api",
+  "external/claude_team/src/ai_chat_adapter",
+  # OpenAI team's packages
+  "external/openai_team/src/ai_api",
+  "external/openai_team/src/ai_adapter",
+  "external/openai_team/src/ai_service_client",
 ]
 
 [tool.uv.sources]
@@ -47,6 +59,13 @@ ticket-api = { workspace = true }
 ticket-impl = { workspace = true }
 ticket-service-client = { workspace = true }
 ticket-client-adapter = { workspace = true }
+ticket-ai-adapter = { workspace = true }
+fast-api-client = { workspace = true }
+ai-chat-adapter = { workspace = true }
+ai-chat-api = { workspace = true }
+ai-adapter = { workspace = true }
+ai-api = { workspace = true }
+ai-service-client = { workspace = true }
 
 [tool.ruff]
 line-length = 130 # high for top level due to tests
@@ -58,6 +77,7 @@ ignore = [
   "D203", # `incorrect-blank-line-before-class` (D203) and `no-blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
   "D213", # `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
   "S101", # Use of `assert` detected --> Asserts are good in our opinion. Tests use asserts profusely.
+  "COM812", # Is conflicting with Ruff auto formatter
 ]
 [tool.ruff.lint.per-file-ignores]
 "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415"]
@@ -76,12 +96,14 @@ mypy_path = [
     "src/ticket_impl/src",
     "src/ticket_service/src",
     "src/ticket_client_adapter/src",
+    "src/ai_adapter/src",
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
 namespace_packages = true
 exclude = [
     "src/ticket_client_generated/",  # Exclude auto-generated code from strict checking
+    "src/claude_service_client/",  # Exclude auto-generated Claude service client
 ]
 
 # Allow untyped imports for specific modules
@@ -91,6 +113,12 @@ module = [
     "googleapiclient.*",
     "ticket_service_client",
     "ticket_service_client.*",
+    "ai_api",
+    "ai_api.*",
+    "ai_chat_api",
+    "ai_chat_api.*",
+    "openai",
+    "openai.*",
 ]
 ignore_missing_imports = true
 
@@ -104,12 +132,14 @@ pythonpath = [
     "src/ticket_service/src",
     "src/ticket_client_adapter/src",
     "src/ticket_client_generated",
+    "src/ai_adapter/src"
 ]
 testpaths = [
     "tests",
     "src/*/tests",
     "src/ticket_client_adapter/tests",
     "src/ticket_client_generated/tests",
+    "src/ai_adapter/tests"
 ]
 addopts = [
     "--cov",
@@ -118,6 +148,8 @@ addopts = [
     "--cov-fail-under=90",
     "--import-mode=importlib",
     "-v",
+    "--ignore=tests/e2e",  # Exclude e2e tests by default (require deployed service)
+    "-m", "not e2e",  # Skip tests marked with @pytest.mark.e2e
 ]
 markers = [
     "unit: marks tests as unit tests (fast, isolated)",
@@ -133,6 +165,10 @@ omit = [
     "*/tests/*",
     "*/__main__.py",
     "*/ticket_client_generated/*",  # Exclude auto-generated client from coverage
+    "*/claude_service_client/*",  # Exclude auto-generated Claude client
+    "*/ticket_ai_adapter/adapter.py",  # Integration code tested via team_integration tests
+    "*/ticket_ai_adapter/openai_adapter.py",  # Integration code tested via team_integration tests
+    "*/ticket_ai_adapter/team_integration.py",  # Integration code tested via team_integration tests
 ]
 
 [tool.coverage.report]
