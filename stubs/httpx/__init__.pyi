@@ -20,6 +20,7 @@ class Client:
     def __init__(self, **kwargs: Any) -> None: ...
     def __enter__(self) -> Client: ...
     def __exit__(self, *args: Any) -> None: ...
+    def close(self) -> None: ...
     def get(self, url: str, **kwargs: Any) -> Response: ...
     def post(self, url: str, **kwargs: Any) -> Response: ...
 
@@ -78,14 +79,7 @@ class AsyncClient:
 class ASGITransport:
     def __init__(
         self,
-        app: Callable[
-            [
-                MutableMapping[str, Any],
-                Callable[[], Awaitable[MutableMapping[str, Any]]],
-                Callable[[MutableMapping[str, Any]], Awaitable[None]],
-            ],
-            Awaitable[None],
-        ],
+        app: Any,
         **kwargs: Any,
     ) -> None: ...
 
@@ -109,8 +103,32 @@ class Response:
     def raise_for_status(self) -> None: ...
 
 class HTTPError(Exception): ...
+
 class RequestError(Exception): ...
-class HTTPStatusError(HTTPError): ...
+
+class HTTPStatusError(HTTPError):
+    request: Request
+    response: Response
+
+    def __init__(
+        self,
+        message: str,
+        *,
+        request: Request,
+        response: Response,
+    ) -> None: ...
+
 class ConnectError(RequestError): ...
+
 class TimeoutException(RequestError): ...
-class Timeout: ...
+
+class Timeout:
+    def __init__(
+        self,
+        timeout: float | None = None,
+        *,
+        connect: float | None = None,
+        read: float | None = None,
+        write: float | None = None,
+        pool: float | None = None,
+    ) -> None: ...

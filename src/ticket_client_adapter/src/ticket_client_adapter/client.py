@@ -165,7 +165,7 @@ class IdempotentClient(Client):  # type: ignore[misc]
             timeout: Request timeout in seconds
 
         """
-        super().__init__(base_url=base_url, timeout=httpx.Timeout(timeout))
+        super().__init__(base_url=base_url, timeout=timeout)
         self._idempotency_key: str | None = None
         self._correlation_id: str | None = None
         self._httpx_client: httpx.AsyncClient | None = None

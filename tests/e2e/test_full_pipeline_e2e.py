@@ -13,6 +13,7 @@ Prerequisites:
 """
 
 import os
+from typing import Any
 from uuid import uuid4
 
 import pytest
@@ -207,7 +208,7 @@ async def test_e2e_with_real_chat_client() -> None:
             )
             return True
 
-        def get_messages(self, channel_id: str, limit: int = 10) -> list[dict[str, str]]:
+        def get_messages(self, channel_id: str, limit: int = 10) -> list[Any]:
             """Get messages - would fetch from real Slack in production."""
             # Simulate user sending a command
             return [
