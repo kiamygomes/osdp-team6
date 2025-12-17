@@ -6,3 +6,7 @@
 	path = external/openai_team
 	url = https://github.com/natashagit/oss-nml.git
 	branch = hw_3_working
+[submodule "external/slack_team"]
+	path = external/slack_team
+	url = https://github.com/raunak-choudhary/ospsd-team4-fall2025.git
+	branch = hw3

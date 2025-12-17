@@ -6,7 +6,11 @@ from typing import Any
 
 
 class ToolCallType(str, Enum):
-    """Types of tool calls supported by the AI adapter."""
+    """Types of tool calls supported by the AI adapter.
+
+    IMPORTANT: The string values must exactly match the tool names
+    defined in the system prompt to ensure correct parsing.
+    """
 
     CREATE_TICKET = "create_ticket"
     GET_TICKET = "get_ticket"
@@ -14,7 +18,7 @@ class ToolCallType(str, Enum):
     UPDATE_TICKET = "update_ticket"
     DELETE_TICKET = "delete_ticket"
     ADD_COMMENT = "add_comment"
-    UPDATE_STATUS = "transition_status"
+    TRANSITION_STATUS = "transition_status"  # Matches prompt tool name
     REASSIGN_TICKET = "reassign_ticket"
 
 

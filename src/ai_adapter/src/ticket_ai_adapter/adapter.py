@@ -233,6 +233,26 @@ ask for clarification instead of making a tool call."""
 
         return None
 
+    def _validate_required_params(self, tool_call: ToolCall, required_params: list[str]) -> None:
+        """Validate that required parameters are present in the tool call.
+
+        Args:
+            tool_call: The tool call to validate
+            required_params: List of required parameter names
+
+        Raises:
+            ValueError: If any required parameter is missing
+
+        """
+        missing_params = [
+            param
+            for param in required_params
+            if param not in tool_call.parameters or not tool_call.parameters[param]
+        ]
+        if missing_params:
+            msg = f"Missing required parameters for {tool_call.type}: {', '.join(missing_params)}"
+            raise ValueError(msg)
+
     async def _execute_tool_call(
         self, tool_call: ToolCall
     ) -> Ticket | Comment | list[Ticket] | None:
@@ -246,11 +266,13 @@ ask for clarification instead of making a tool call."""
 
         Raises:
             ServiceError: If the operation fails
+            ValueError: If required parameters are missing
 
         """
         params = tool_call.parameters
 
         if tool_call.type == ToolCallType.CREATE_TICKET:
+            self._validate_required_params(tool_call, ["title", "description"])
             return await self.ticket_service.create_ticket(
                 title=params["title"],
                 description=params["description"],
@@ -260,6 +282,7 @@ ask for clarification instead of making a tool call."""
             )
 
         if tool_call.type == ToolCallType.GET_TICKET:
+            self._validate_required_params(tool_call, ["ticket_id"])
             ticket_id = UUID(params["ticket_id"])
             return await self.ticket_service.get_ticket(ticket_id)
 
@@ -272,6 +295,7 @@ ask for clarification instead of making a tool call."""
             )
 
         if tool_call.type == ToolCallType.UPDATE_TICKET:
+            self._validate_required_params(tool_call, ["ticket_id"])
             ticket_id = UUID(params["ticket_id"])
             return await self.ticket_service.update_ticket(
                 ticket_id=ticket_id,
@@ -283,6 +307,7 @@ ask for clarification instead of making a tool call."""
             )
 
         if tool_call.type == ToolCallType.ADD_COMMENT:
+            self._validate_required_params(tool_call, ["ticket_id", "content"])
             ticket_id = UUID(params["ticket_id"])
             return await self.ticket_service.add_comment(
                 ticket_id=ticket_id,
@@ -290,7 +315,8 @@ ask for clarification instead of making a tool call."""
                 content=params["content"],
             )
 
-        if tool_call.type == ToolCallType.UPDATE_STATUS:
+        if tool_call.type == ToolCallType.TRANSITION_STATUS:
+            self._validate_required_params(tool_call, ["ticket_id", "new_status"])
             ticket_id = UUID(params["ticket_id"])
             return await self.ticket_service.transition_status(
                 ticket_id=ticket_id,
@@ -298,6 +324,7 @@ ask for clarification instead of making a tool call."""
             )
 
         if tool_call.type == ToolCallType.REASSIGN_TICKET:
+            self._validate_required_params(tool_call, ["ticket_id", "new_assignee"])
             ticket_id = UUID(params["ticket_id"])
             return await self.ticket_service.reassign_ticket(
                 ticket_id=ticket_id,
@@ -333,9 +360,10 @@ ask for clarification instead of making a tool call."""
         if tool_type == ToolCallType.ADD_COMMENT and isinstance(result, Comment):
             return "Successfully added comment to ticket"
 
-        if tool_type in (ToolCallType.UPDATE_STATUS, ToolCallType.REASSIGN_TICKET) and isinstance(
-            result, Ticket
-        ):
+        if tool_type in (
+            ToolCallType.TRANSITION_STATUS,
+            ToolCallType.REASSIGN_TICKET,
+        ) and isinstance(result, Ticket):
             return f"Successfully updated ticket: {result.title}"
 
         return "Operation completed successfully"

@@ -52,6 +52,11 @@ members = [
   "external/openai_team/src/ai_api",
   "external/openai_team/src/ai_adapter",
   "external/openai_team/src/ai_service_client",
+  # Slack team's packages (Chat vertical)
+  "external/slack_team/src/chat_api",
+  "external/slack_team/src/slack_api",
+  "external/slack_team/src/slack_impl",
+  "external/slack_team/src/slack_adapter",
 ]
 
 [tool.uv.sources]
@@ -82,6 +87,8 @@ ignore = [
 [tool.ruff.lint.per-file-ignores]
 "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415"]
 "scripts/*.py" = ["T201", "TRY300"]  # Allow print statements and try-else in scripts
+"**/conftest.py" = ["ANN401"]  # Allow Any in test fixtures
+"stubs/**/*.pyi" = ["ANN401", "N818", "N801", "PYI034", "PYI036", "F401", "I001"]  # Stub files have different standards
 
 [tool.ruff.lint.pylint]
 max-args = 6  # Increase to 6 to allow update_ticket method with flexible parameters
@@ -97,6 +104,7 @@ mypy_path = [
     "src/ticket_service/src",
     "src/ticket_client_adapter/src",
     "src/ai_adapter/src",
+    "stubs",  # Custom type stubs for third-party libraries
 ]
 ignore_missing_imports = false
 warn_unused_ignores = false
@@ -189,5 +197,6 @@ show_missing = true
 
 [dependency-groups]
 dev = [
+    "mypy>=1.18.2",
     "types-python-dateutil>=2.9.0.20251008",
 ]

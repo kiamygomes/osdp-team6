@@ -264,7 +264,7 @@ ask for clarification instead of making a tool call."""
                 content=params["content"],
             )
 
-        if tool_call.type == ToolCallType.UPDATE_STATUS:
+        if tool_call.type == ToolCallType.TRANSITION_STATUS:
             ticket_id = UUID(params["ticket_id"])
             return await self.ticket_service.transition_status(
                 ticket_id=ticket_id,
@@ -307,9 +307,8 @@ ask for clarification instead of making a tool call."""
         if tool_type == ToolCallType.ADD_COMMENT and isinstance(result, Comment):
             return "Successfully added comment to ticket"
 
-        if tool_type in (ToolCallType.UPDATE_STATUS, ToolCallType.REASSIGN_TICKET) and isinstance(
-            result, Ticket
-        ):
+        update_types = (ToolCallType.TRANSITION_STATUS, ToolCallType.REASSIGN_TICKET)
+        if tool_type in update_types and isinstance(result, Ticket):
             return f"Successfully updated ticket: {result.title}"
 
         return "Operation completed successfully"
