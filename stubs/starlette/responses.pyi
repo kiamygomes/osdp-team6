@@ -1,4 +1,3 @@
-
 class Response:
     status_code: int
     headers: dict[str, str]

@@ -35,3 +35,4 @@ jira_tokens.db
 
 .coverage*
 TESTING_STATUS.md
+terraform/.terraform/

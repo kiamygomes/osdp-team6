@@ -175,4 +175,6 @@ def track_ticket_operation(operation: str, status: str = "success") -> None:
 
 def get_metrics() -> bytes:
     """Get Prometheus metrics in text format."""
-    return generate_latest()
+    result = generate_latest()
+    assert isinstance(result, bytes)
+    return result
