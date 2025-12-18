@@ -15,6 +15,11 @@ jobs:
           command: |
             git submodule update --init --recursive
       - run:
+          name: "Fix Slack Team Package Configurations"
+          command: |
+            # Fix incorrect pyproject.toml configurations in slack_team packages
+            bash scripts/fix_slack_packages.sh
+      - run:
           name: "Install UV via pip (more reliable than curl)"
           command: |
             # Install UV using pip instead of the install script
