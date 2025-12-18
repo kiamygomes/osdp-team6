@@ -45,12 +45,15 @@ members = [
   "src/ticket_client_adapter",
   "src/claude_service_client",
   "src/ai_adapter",
+  "src/ai_implementations",
+
   # Claude team's packages
   "external/claude_team/src/ai_chat_api",
   "external/claude_team/src/ai_chat_adapter",
   # OpenAI team's packages
   "external/openai_team/src/ai_api",
   "external/openai_team/src/ai_adapter",
+  # AI implementations package
   "external/openai_team/src/ai_service_client",
   # Slack team's packages (Chat vertical)
   "external/slack_team/src/chat_api",
@@ -104,6 +107,7 @@ mypy_path = [
     "src/ticket_service/src",
     "src/ticket_client_adapter/src",
     "src/ai_adapter/src",
+
     "stubs",  # Custom type stubs for third-party libraries
 ]
 ignore_missing_imports = false
@@ -112,6 +116,8 @@ namespace_packages = true
 exclude = [
     "src/ticket_client_generated/",  # Exclude auto-generated code from strict checking
     "src/claude_service_client/",  # Exclude auto-generated Claude service client
+    "src/claude_implementation_pkg/",  # Backup implementations - actual ones are in external packages
+    "src/openai_implementation_pkg/",  # Backup implementations - actual ones are in external packages
 ]
 
 # Allow untyped imports for specific modules
@@ -144,14 +150,15 @@ pythonpath = [
     "src/ticket_service/src",
     "src/ticket_client_adapter/src",
     "src/ticket_client_generated",
-    "src/ai_adapter/src"
+    "src/ai_adapter/src",
+
 ]
 testpaths = [
     "tests",
     "src/*/tests",
     "src/ticket_client_adapter/tests",
     "src/ticket_client_generated/tests",
-    "src/ai_adapter/tests"
+    "src/ai_adapter/tests",
 ]
 addopts = [
     "--cov",

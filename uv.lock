@@ -8,6 +8,7 @@ members = [
     "ai-api",
     "ai-chat-adapter",
     "ai-chat-api",
+    "ai-implementations",
     "ai-service-client",
     "chat-api",
     "fast-api-client",
@@ -69,6 +70,11 @@ provides-extras = ["test"]
 name = "ai-chat-api"
 version = "0.1.0"
 source = { editable = "external/claude_team/src/ai_chat_api" }
+
+[[package]]
+name = "ai-implementations"
+version = "0.1.0"
+source = { editable = "src/ai_implementations" }
 
 [[package]]
 name = "ai-service-client"
