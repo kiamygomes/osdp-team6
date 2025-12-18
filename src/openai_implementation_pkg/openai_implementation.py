@@ -12,13 +12,16 @@ import os
 import re
 from typing import Any
 
-from ai_api import AIInterface
-
 logger = logging.getLogger(__name__)
 
 
-class OpenAIClient(AIInterface):
-    """Concrete implementation using OpenAI's API."""
+class OpenAIClient:
+    """Concrete implementation using OpenAI's API.
+
+    This class duck-types the AIInterface from ai_api without inheriting from it,
+    allowing it to work even when the external package is not available or hasn't
+    been modified.
+    """
 
     def __init__(self) -> None:
         """Initialize OpenAI client."""

@@ -12,13 +12,16 @@ import os
 import re
 from typing import Any, cast
 
-from ai_chat_api.client import AIInterface
-
 logger = logging.getLogger(__name__)
 
 
-class ClaudeAIClient(AIInterface):
-    """Concrete implementation using Anthropic's Claude API."""
+class ClaudeAIClient:
+    """Concrete implementation using Anthropic's Claude API.
+
+    This class duck-types the AIInterface from ai_chat_api without inheriting from it,
+    allowing it to work even when the external package is not available or hasn't
+    been modified.
+    """
 
     def __init__(self) -> None:
         """Initialize Claude AI client."""
