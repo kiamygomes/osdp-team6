@@ -127,6 +127,8 @@ class TestLifespan:
     @pytest.mark.asyncio
     async def test_lifespan_with_both_providers_available(self) -> None:
         """Test lifespan logs when both AI providers available."""
+        from fastapi import FastAPI
+
         mock_ai_chat = MagicMock()
         mock_ai_chat.get_ai_interface.return_value = MagicMock()
         mock_ai_api = MagicMock()
@@ -136,18 +138,22 @@ class TestLifespan:
             patch("orchestrator.orchestrator_service.ai_chat_api", mock_ai_chat),
             patch("orchestrator.orchestrator_service.ai_api", mock_ai_api),
         ):
-            async with lifespan(None):
+            app_instance = FastAPI()
+            async with lifespan(app_instance):
                 # Inside lifespan context
                 pass
 
     @pytest.mark.asyncio
     async def test_lifespan_with_no_providers_available(self) -> None:
         """Test lifespan logs when no AI providers available."""
+        from fastapi import FastAPI
+
         with (
             patch("orchestrator.orchestrator_service.ai_chat_api", None),
             patch("orchestrator.orchestrator_service.ai_api", None),
         ):
-            async with lifespan(None):
+            app_instance = FastAPI()
+            async with lifespan(app_instance):
                 # Inside lifespan context
                 pass
 
