@@ -7,7 +7,7 @@ services:
     name: osdp-jira-service
     env: python
     plan: free
-    buildCommand: "pip install uv && uv sync --frozen && echo '=== Checking uvicorn installation ===' && .venv/bin/python -c 'import uvicorn; print(f\"uvicorn found at: {uvicorn.__file__}\")' && ls -la .venv/bin/ | grep uvicorn"
+    buildCommand: "pip install uv && uv sync --frozen && uv pip install -e src/ticket_service && echo '=== Installed packages ===' && uv pip list | grep -E '(uvicorn|fastapi|ticket)'"
     startCommand: ".venv/bin/python -m uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
     envVars:
