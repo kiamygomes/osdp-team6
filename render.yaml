@@ -7,8 +7,8 @@ services:
     name: osdp-jira-service
     env: python
     plan: free
-    buildCommand: "pip install uv && uv sync --frozen"
-    startCommand: "uv run python -m uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "pip install uv && uv sync --frozen && uv pip list"
+    startCommand: ".venv/bin/python -m uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
