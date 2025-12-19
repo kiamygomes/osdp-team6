@@ -193,8 +193,9 @@ class TestSetupAIImplementations:
                             raise ImportError(error_message)
                         return MagicMock()
 
-                    with patch("builtins.__import__", side_effect=raise_import_error), pytest.raises(
-                        ImportError, match=error_message
+                    with (
+                        patch("builtins.__import__", side_effect=raise_import_error),
+                        pytest.raises(ImportError, match=error_message),
                     ):
                         setup_ai_implementations()
 

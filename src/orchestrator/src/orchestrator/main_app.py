@@ -35,6 +35,7 @@ from ticket_impl import TicketImpl
 
 load_dotenv()
 
+
 # Chat integration protocol - defines the interface we expect from chat clients
 class ChatClientProtocol(Protocol):
     """Protocol defining the chat client interface."""
@@ -104,10 +105,7 @@ class TicketBotOrchestrator:
         logger.info("Verifying authentication for user=%s", user_id)
         tokens = get_tokens(user_id)
         if not tokens or is_expired(tokens):
-            msg = (
-                f"User '{user_id}' has no valid authentication tokens. "
-                f"Please run the OAuth flow first using main.py"
-            )
+            msg = f"User '{user_id}' has no valid authentication tokens. Please run the OAuth flow first using main.py"
             logger.error(msg)
             raise RuntimeError(msg)
         logger.info("Authentication verified - valid tokens found for user=%s", user_id)
@@ -356,9 +354,9 @@ async def demo_cli() -> None:
     3. Ticket operations
     4. Response messages
     """
-    logger.info("="*60)
+    logger.info("=" * 60)
     logger.info("Starting Demo: Chat -> AI -> Tickets Pipeline")
-    logger.info("="*60)
+    logger.info("=" * 60)
     project_key = os.getenv("JIRA_PROJECT_KEY", "DEMO")
     logger.info("Using project key: %s", project_key)
 
@@ -395,9 +393,9 @@ async def demo_cli() -> None:
     logger.info("User message: %s", user_message)
     await orchestrator_openai.process_chat_message(user_message)
 
-    logger.info("\n%s", "="*60)
+    logger.info("\n%s", "=" * 60)
     logger.info("Demo Complete")
-    logger.info("="*60)
+    logger.info("=" * 60)
 
 
 def main() -> None:

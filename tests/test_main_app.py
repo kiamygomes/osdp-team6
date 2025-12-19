@@ -11,6 +11,7 @@ from orchestrator.main_app import TicketBotOrchestrator, demo_cli, main
 
 load_dotenv()
 
+
 class MockChatClient:
     """Mock chat client for testing."""
 

@@ -26,6 +26,7 @@ from ticket_api import Ticket, TicketPriority, TicketStatus
 load_dotenv()
 project_key = os.getenv("TEST_PROJECT_KEY", "TEST")
 
+
 @pytest.fixture
 def mock_ticket() -> MagicMock:
     """Create a mock ticket for testing."""
