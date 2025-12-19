@@ -1,11 +1,14 @@
 # Render Blueprint for OSDP Jira Service
+# Uses uv for fast, reliable dependency management
+# Build: Installs uv and syncs all workspace dependencies
+# Start: Runs the FastAPI service with uvicorn
 services:
   - type: web
     name: osdp-jira-service
     env: python
     plan: free
-    buildCommand: "pip install -r requirements.txt && pip install -e src/ticket_api && pip install -e src/ticket_impl && pip install -e src/ticket_service && pip install -e src/ticket_client_generated && pip install -e src/ticket_client_adapter"
-    startCommand: "cd src/ticket_service && uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
+    buildCommand: "pip install uv && uv sync --frozen"
+    startCommand: "uv run python -m uvicorn ticket_service.main:app --host 0.0.0.0 --port $PORT"
     healthCheckPath: /health
     envVars:
       - key: ENVIRONMENT
@@ -24,6 +27,12 @@ services:
           property: connectionString
       - key: API_KEY
         generateValue: true  # Render will generate a secure random value
+      - key: GRAFANA_CLOUD_URL
+        sync: false  # Set manually - your Grafana Cloud Prometheus endpoint
+      - key: GRAFANA_CLOUD_USER
+        sync: false  # Set manually - your Grafana Cloud instance ID
+      - key: GRAFANA_CLOUD_API_KEY
+        sync: false  # Set manually - your Grafana Cloud API key
 
 databases:
   - name: osdp-jira-db

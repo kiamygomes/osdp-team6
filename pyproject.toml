@@ -13,13 +13,14 @@ dependencies = [
 
 [project.optional-dependencies]
 dev = [
-    #New Dependencies for Jira/FastAPI/OAuth
+    # Development and testing tools
     "fastapi>=0.111.0",
     "uvicorn>=0.30.1",
     "requests>=2.32.3",
-    "psycopg2-binary>=2.9.9", #DB driver for token storage
-    "requests-oauthlib>=2.0.0", #OAuth 2.0 implementation
-    "prometheus-client>=0.19.0", #Telemetry and observability
+    "psycopg2-binary>=2.9.9",
+    "requests-oauthlib>=2.0.0",
+    "prometheus-client>=0.19.0",
+    "python-dotenv>=1.0.0",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.15",
     "mkdocstrings-python>=1.16.12",
@@ -32,8 +33,7 @@ dev = [
     "respx>=0.21",
     "anyio>=4",
     "types-python-dateutil>=2.9.0",
-    "python-dotenv>=1.0.0",
-    "openai>=1.0.0"
+    "openai>=1.0.0",
 ]
 
 [tool.uv.workspace]
