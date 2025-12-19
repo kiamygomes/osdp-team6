@@ -16,7 +16,7 @@ from uuid import uuid4
 
 import pytest
 
-from main_app import TicketBotOrchestrator
+from orchestrator.main_app import TicketBotOrchestrator
 
 
 class E2ETestContext:

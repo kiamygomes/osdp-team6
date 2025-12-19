@@ -35,9 +35,13 @@ def setup_ai_implementations() -> None:
             if path_str not in sys.path:
                 sys.path.insert(0, path_str)
 
-        # Now import our implementations
-        from claude_implementation_pkg.claude_implementation import ClaudeAIClient
-        from openai_implementation_pkg.openai_implementation import OpenAIClient
+        # Now import our implementations (dynamically added to sys.path above)
+        from claude_implementation_pkg.claude_implementation import (
+            ClaudeAIClient,  # type: ignore[import-not-found]
+        )
+        from openai_implementation_pkg.openai_implementation import (
+            OpenAIClient,  # type: ignore[import-not-found]
+        )
 
         # Monkey-patch the external packages
         try:

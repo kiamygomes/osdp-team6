@@ -3,13 +3,14 @@
 from __future__ import annotations
 
 import json
+from typing import Any
 from unittest.mock import AsyncMock, MagicMock
 from uuid import uuid4
 
 import pytest
+from ticket_ai_adapter.base_adapter import BaseTicketAIAdapter
+from ticket_ai_adapter.models import ToolCall, ToolCallType
 
-from src.ai_adapter.src.ticket_ai_adapter.base_adapter import BaseTicketAIAdapter
-from src.ai_adapter.src.ticket_ai_adapter.models import ToolCall, ToolCallType
 from ticket_api import Ticket, TicketPriority, TicketStatus
 
 
@@ -82,7 +83,7 @@ class TestBaseTicketAIAdapterExtended:
         mock_service = MagicMock()
         adapter = BaseTicketAIAdapter(ticket_service=mock_service, user_id="test-user")
 
-        tool_data = {"tool": "create_ticket", "parameters": {"title": "Test ticket"}}
+        tool_data: dict[str, Any] = {"tool": "create_ticket", "parameters": {"title": "Test ticket"}}
 
         result = adapter._parse_tool_call_from_dict(tool_data)
 
@@ -95,7 +96,7 @@ class TestBaseTicketAIAdapterExtended:
         mock_service = MagicMock()
         adapter = BaseTicketAIAdapter(ticket_service=mock_service, user_id="test-user")
 
-        tool_data = {"parameters": {"title": "Test ticket"}}
+        tool_data: dict[str, Any] = {"parameters": {"title": "Test ticket"}}
 
         result = adapter._parse_tool_call_from_dict(tool_data)
 
@@ -106,7 +107,7 @@ class TestBaseTicketAIAdapterExtended:
         mock_service = MagicMock()
         adapter = BaseTicketAIAdapter(ticket_service=mock_service, user_id="test-user")
 
-        tool_data = {
+        tool_data: dict[str, Any] = {
             "tool": 123,  # Invalid type
             "parameters": {"title": "Test ticket"},
         }
@@ -120,7 +121,7 @@ class TestBaseTicketAIAdapterExtended:
         mock_service = MagicMock()
         adapter = BaseTicketAIAdapter(ticket_service=mock_service, user_id="test-user")
 
-        tool_data = {
+        tool_data: dict[str, Any] = {
             "tool": "create_ticket",
             "parameters": "invalid",  # Should be dict
         }
@@ -134,7 +135,7 @@ class TestBaseTicketAIAdapterExtended:
         mock_service = MagicMock()
         adapter = BaseTicketAIAdapter(ticket_service=mock_service, user_id="test-user")
 
-        tool_data = {"tool": "unknown_tool", "parameters": {"title": "Test ticket"}}
+        tool_data: dict[str, Any] = {"tool": "unknown_tool", "parameters": {"title": "Test ticket"}}
 
         result = adapter._parse_tool_call_from_dict(tool_data)
 
@@ -145,7 +146,7 @@ class TestBaseTicketAIAdapterExtended:
         mock_service = MagicMock()
         adapter = BaseTicketAIAdapter(ticket_service=mock_service, user_id="test-user")
 
-        tool_data = {"tool": "create_ticket"}
+        tool_data: dict[str, Any] = {"tool": "create_ticket"}
 
         result = adapter._parse_tool_call_from_dict(tool_data)
 
@@ -235,7 +236,7 @@ class TestBaseTicketAIAdapterExtended:
     async def test_execute_tool_call_list_tickets_no_status(self) -> None:
         """Test executing list tickets without status filter."""
         mock_service = AsyncMock()
-        mock_tickets = []
+        mock_tickets: list[Ticket] = []
         mock_service.list_tickets.return_value = mock_tickets
 
         adapter = BaseTicketAIAdapter(ticket_service=mock_service, user_id="test-user")
@@ -307,7 +308,7 @@ class TestBaseTicketAIAdapterExtended:
         mock_service = MagicMock()
         adapter = BaseTicketAIAdapter(ticket_service=mock_service, user_id="test-user")
 
-        mock_tickets = [MagicMock(), MagicMock()]
+        mock_tickets: list[Ticket] = [MagicMock(), MagicMock()]  # type: ignore[list-item]
 
         message = adapter._format_success_message(ToolCallType.LIST_TICKETS, mock_tickets)
 

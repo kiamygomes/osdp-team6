@@ -5,8 +5,7 @@ from __future__ import annotations
 from unittest.mock import MagicMock, patch
 
 import pytest
-
-from src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup import setup_ai_implementations
+from ticket_ai_adapter.ai_implementation_setup import setup_ai_implementations
 
 
 class TestSetupAIImplementations:
@@ -23,14 +22,13 @@ class TestSetupAIImplementations:
             mock_root = MagicMock()
             mock_path_instance.parent.parent.parent.parent.parent = mock_root
 
-            # Mock the / operator to return Path objects
+            # Mock the / operator to return Path objects with __str__ configured
             claude_path = MagicMock()
+            claude_path.configure_mock(**{"__str__.return_value": "/root/claude_implementation_pkg"})
             openai_path = MagicMock()
-            mock_root.__truediv__ = MagicMock(side_effect=[claude_path, openai_path])
+            openai_path.configure_mock(**{"__str__.return_value": "/root/openai_implementation_pkg"})
 
-            # Mock str() calls
-            claude_path.__str__ = MagicMock(return_value="/root/claude_implementation_pkg")
-            openai_path.__str__ = MagicMock(return_value="/root/openai_implementation_pkg")
+            mock_root.configure_mock(**{"__truediv__.side_effect": [claude_path, openai_path]})
 
             with patch("src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup.sys") as mock_sys:
                 mock_sys.path = []
@@ -62,14 +60,13 @@ class TestSetupAIImplementations:
             mock_root = MagicMock()
             mock_path_instance.parent.parent.parent.parent.parent = mock_root
 
-            # Mock the / operator to return Path objects
+            # Mock the / operator to return Path objects with __str__ configured
             claude_path = MagicMock()
+            claude_path.configure_mock(**{"__str__.return_value": "/root/claude_implementation_pkg"})
             openai_path = MagicMock()
-            mock_root.__truediv__ = MagicMock(side_effect=[claude_path, openai_path])
+            openai_path.configure_mock(**{"__str__.return_value": "/root/openai_implementation_pkg"})
 
-            # Mock str() calls
-            claude_path.__str__ = MagicMock(return_value="/root/claude_implementation_pkg")
-            openai_path.__str__ = MagicMock(return_value="/root/openai_implementation_pkg")
+            mock_root.configure_mock(**{"__truediv__.side_effect": [claude_path, openai_path]})
 
             with patch("src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup.sys") as mock_sys:
                 # Mock sys.path with existing paths
@@ -102,14 +99,13 @@ class TestSetupAIImplementations:
             mock_root = MagicMock()
             mock_path_instance.parent.parent.parent.parent.parent = mock_root
 
-            # Mock the / operator to return Path objects
+            # Mock the / operator to return Path objects with __str__ configured
             claude_path = MagicMock()
+            claude_path.configure_mock(**{"__str__.return_value": "/root/claude_implementation_pkg"})
             openai_path = MagicMock()
-            mock_root.__truediv__ = MagicMock(side_effect=[claude_path, openai_path])
+            openai_path.configure_mock(**{"__str__.return_value": "/root/openai_implementation_pkg"})
 
-            # Mock str() calls
-            claude_path.__str__ = MagicMock(return_value="/root/claude_implementation_pkg")
-            openai_path.__str__ = MagicMock(return_value="/root/openai_implementation_pkg")
+            mock_root.configure_mock(**{"__truediv__.side_effect": [claude_path, openai_path]})
 
             with patch("src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup.sys") as mock_sys:
                 mock_sys.path = []
@@ -137,14 +133,13 @@ class TestSetupAIImplementations:
             mock_root = MagicMock()
             mock_path_instance.parent.parent.parent.parent.parent = mock_root
 
-            # Mock the / operator to return Path objects
+            # Mock the / operator to return Path objects with __str__ configured
             claude_path = MagicMock()
+            claude_path.configure_mock(**{"__str__.return_value": "/root/claude_implementation_pkg"})
             openai_path = MagicMock()
-            mock_root.__truediv__ = MagicMock(side_effect=[claude_path, openai_path])
+            openai_path.configure_mock(**{"__str__.return_value": "/root/openai_implementation_pkg"})
 
-            # Mock str() calls
-            claude_path.__str__ = MagicMock(return_value="/root/claude_implementation_pkg")
-            openai_path.__str__ = MagicMock(return_value="/root/openai_implementation_pkg")
+            mock_root.configure_mock(**{"__truediv__.side_effect": [claude_path, openai_path]})
 
             with patch("src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup.sys") as mock_sys:
                 mock_sys.path = []
@@ -183,7 +178,7 @@ class TestSetupAIImplementations:
             },
         ):
             # Import and call the setup
-            from src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup import setup_ai_implementations
+            from ticket_ai_adapter.ai_implementation_setup import setup_ai_implementations
 
             # Mock path operations
             with patch("src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup.Path") as mock_path_class:
@@ -194,14 +189,13 @@ class TestSetupAIImplementations:
                 mock_root = MagicMock()
                 mock_path_instance.parent.parent.parent.parent.parent = mock_root
 
-                # Mock the / operator to return Path objects
+                # Mock the / operator to return Path objects with __str__ configured
                 claude_path = MagicMock()
+                claude_path.configure_mock(**{"__str__.return_value": "/root/claude_implementation_pkg"})
                 openai_path = MagicMock()
-                mock_root.__truediv__ = MagicMock(side_effect=[claude_path, openai_path])
+                openai_path.configure_mock(**{"__str__.return_value": "/root/openai_implementation_pkg"})
 
-                # Mock str() calls
-                claude_path.__str__ = MagicMock(return_value="/root/claude_implementation_pkg")
-                openai_path.__str__ = MagicMock(return_value="/root/openai_implementation_pkg")
+                mock_root.configure_mock(**{"__truediv__.side_effect": [claude_path, openai_path]})
 
                 with patch("src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup.sys") as mock_sys:
                     mock_sys.path = []
@@ -228,7 +222,7 @@ class TestSetupAIImplementations:
             },
         ):
             # Import and call the setup
-            from src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup import setup_ai_implementations
+            from ticket_ai_adapter.ai_implementation_setup import setup_ai_implementations
 
             # Mock path operations
             with patch("src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup.Path") as mock_path_class:
@@ -239,14 +233,13 @@ class TestSetupAIImplementations:
                 mock_root = MagicMock()
                 mock_path_instance.parent.parent.parent.parent.parent = mock_root
 
-                # Mock the / operator to return Path objects
+                # Mock the / operator to return Path objects with __str__ configured
                 claude_path = MagicMock()
+                claude_path.configure_mock(**{"__str__.return_value": "/root/claude_implementation_pkg"})
                 openai_path = MagicMock()
-                mock_root.__truediv__ = MagicMock(side_effect=[claude_path, openai_path])
+                openai_path.configure_mock(**{"__str__.return_value": "/root/openai_implementation_pkg"})
 
-                # Mock str() calls
-                claude_path.__str__ = MagicMock(return_value="/root/claude_implementation_pkg")
-                openai_path.__str__ = MagicMock(return_value="/root/openai_implementation_pkg")
+                mock_root.configure_mock(**{"__truediv__.side_effect": [claude_path, openai_path]})
 
                 with patch("src.ai_adapter.src.ticket_ai_adapter.ai_implementation_setup.sys") as mock_sys:
                     mock_sys.path = []

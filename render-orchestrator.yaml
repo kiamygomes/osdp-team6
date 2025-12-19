@@ -1,0 +1,65 @@
+# Render Blueprint for OSDP Ticket Bot Orchestrator (3-Vertical Integration)
+# This deploys the main application that integrates Chat → AI → Tickets
+
+services:
+  - type: web
+    name: osdp-ticket-bot-orchestrator
+    env: docker
+    plan: free
+    dockerfilePath: ./Dockerfile.orchestrator
+    healthCheckPath: /health
+    envVars:
+      # Environment configuration
+      - key: ENVIRONMENT
+        value: production
+
+      # Port configuration (Render provides this)
+      - key: PORT
+        value: 8080
+
+      # Jira OAuth Configuration (set manually in Render dashboard)
+      - key: OAUTH_CLIENT_ID
+        sync: false  # Set manually - your Jira OAuth client ID
+
+      - key: OAUTH_CLIENT_SECRET
+        sync: false  # Set manually - your Jira OAuth client secret
+
+      - key: JIRA_CLOUD_ID
+        sync: false  # Set manually - your Jira Cloud ID
+
+      - key: OAUTH_REDIRECT_URI
+        value: https://osdp-ticket-bot-orchestrator.onrender.com/api/v1/auth/callback
+
+      # Jira Project Configuration
+      - key: JIRA_PROJECT_KEY
+        value: DEMO  # Update with your actual project key
+
+      # AI Provider API Keys (set manually in Render dashboard)
+      - key: ANTHROPIC_API_KEY
+        sync: false  # Set manually - Claude API key
+
+      - key: OPENAI_API_KEY
+        sync: false  # Set manually - OpenAI API key
+
+      # Database URL for token storage
+      - key: DB_URL
+        value: sqlite:///./jira_tokens.db  # SQLite for simplicity; use Postgres for production
+
+      # Default AI provider
+      - key: DEFAULT_AI_PROVIDER
+        value: claude  # or "openai"
+
+      # Logging
+      - key: LOG_LEVEL
+        value: INFO
+
+      # Python settings
+      - key: PYTHONUNBUFFERED
+        value: 1
+
+# Note: For production, consider adding a PostgreSQL database
+# databases:
+#   - name: osdp-orchestrator-db
+#     plan: free
+#     databaseName: osdp_orchestrator
+#     user: osdp_user

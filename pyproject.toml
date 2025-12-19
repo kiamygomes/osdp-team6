@@ -38,6 +38,7 @@ dev = [
 
 [tool.uv.workspace]
 members = [
+  "src/orchestrator",
   "src/ticket_api",
   "src/ticket_impl",
   "src/ticket_service",
@@ -100,14 +101,13 @@ max-args = 6  # Increase to 6 to allow update_ticket method with flexible parame
 strict = true
 explicit_package_bases = true # Required for src layout
 mypy_path = [
-    ".",
     "src",
     "src/ticket_api/src",
     "src/ticket_impl/src",
     "src/ticket_service/src",
     "src/ticket_client_adapter/src",
     "src/ai_adapter/src",
-
+    "src/orchestrator/src",
     "stubs",  # Custom type stubs for third-party libraries
 ]
 ignore_missing_imports = false
@@ -116,8 +116,8 @@ namespace_packages = true
 exclude = [
     "src/ticket_client_generated/",  # Exclude auto-generated code from strict checking
     "src/claude_service_client/",  # Exclude auto-generated Claude service client
-    "src/claude_implementation_pkg/",  # Backup implementations - actual ones are in external packages
-    "src/openai_implementation_pkg/",  # Backup implementations - actual ones are in external packages
+    "claude_implementation_pkg/",  # Backup implementations - moved out of src/
+    "openai_implementation_pkg/",  # Backup implementations - moved out of src/
 ]
 
 # Allow untyped imports for specific modules
@@ -143,15 +143,7 @@ ignore_missing_imports = true
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 pythonpath = [
-    ".", 
-    "src",
-    "src/ticket_api/src",
-    "src/ticket_impl/src",
-    "src/ticket_service/src",
-    "src/ticket_client_adapter/src",
-    "src/ticket_client_generated",
-    "src/ai_adapter/src",
-
+    ".",
 ]
 testpaths = [
     "tests",

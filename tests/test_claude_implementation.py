@@ -2,10 +2,12 @@
 
 from __future__ import annotations
 
+import builtins
 import os
+from typing import Any
 from unittest.mock import MagicMock, patch
 
-from src.claude_implementation_pkg.claude_implementation import ClaudeAIClient
+from claude_implementation_pkg.claude_implementation import ClaudeAIClient  # type: ignore[import-not-found]
 
 
 class TestClaudeAIClient:
@@ -91,10 +93,10 @@ class TestClaudeAIClient:
             mock_response.content[0].text = '{"tool": "create_ticket", "parameters": {}}'
             mock_client.messages.create.return_value = mock_response
 
-            def import_side_effect(name: str, *args: object, **kwargs: object) -> object:
+            def import_side_effect(name: str, *args: Any, **kwargs: Any) -> Any:
                 if name == "anthropic":
                     return mock_anthropic
-                return __import__(name, *args, **kwargs)
+                return builtins.__import__(name, *args, **kwargs)
 
             mock_import.side_effect = import_side_effect
 
@@ -123,11 +125,11 @@ class TestClaudeAIClient:
         """Test handling of API error."""
         with patch("builtins.__import__") as mock_import:
             # Mock the anthropic module to raise an exception
-            def import_side_effect(name: str, *args: object, **kwargs: object) -> object:
+            def import_side_effect(name: str, *args: Any, **kwargs: Any) -> Any:
                 if name == "anthropic":
                     error_msg = "API Error"
                     raise ImportError(error_msg)
-                return __import__(name, *args, **kwargs)
+                return builtins.__import__(name, *args, **kwargs)
 
             mock_import.side_effect = import_side_effect
 

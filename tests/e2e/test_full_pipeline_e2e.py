@@ -19,7 +19,7 @@ from uuid import uuid4
 import pytest
 
 # Real implementations - no mocks!
-from main_app import CHAT_AVAILABLE, TicketBotOrchestrator
+from orchestrator.main_app import CHAT_AVAILABLE, TicketBotOrchestrator
 
 
 @pytest.mark.e2e

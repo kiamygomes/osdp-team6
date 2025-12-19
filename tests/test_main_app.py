@@ -5,8 +5,7 @@ from __future__ import annotations
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
-
-from src.main_app import TicketBotOrchestrator, demo_cli, main
+from orchestrator.main_app import TicketBotOrchestrator, demo_cli, main
 
 
 class MockChatClient:
@@ -93,18 +92,17 @@ class TestTicketBotOrchestrator:
         mock_result.data = {"ticket_id": "TEST-123"}
         mock_result.error = None
 
-        orchestrator.ai_adapter.process_command = AsyncMock(return_value=mock_result)
+        with patch.object(orchestrator.ai_adapter, "process_command", AsyncMock(return_value=mock_result)):
+            result = await orchestrator.process_chat_message(
+                "Create a ticket for testing",
+                channel_id="test-channel",
+            )
 
-        result = await orchestrator.process_chat_message(
-            "Create a ticket for testing",
-            channel_id="test-channel",
-        )
-
-        assert result["success"] is True
-        assert result["message"] == "Ticket created successfully"
-        assert result["data"] == {"ticket_id": "TEST-123"}
-        assert result["error"] is None
-        assert result["channel_id"] == "test-channel"
+            assert result["success"] is True
+            assert result["message"] == "Ticket created successfully"
+            assert result["data"] == {"ticket_id": "TEST-123"}
+            assert result["error"] is None
+            assert result["channel_id"] == "test-channel"
 
     @pytest.mark.asyncio
     async def test_process_chat_message_failure(self) -> None:
@@ -122,17 +120,16 @@ class TestTicketBotOrchestrator:
         mock_result.data = None
         mock_result.error = "Invalid input"
 
-        orchestrator.ai_adapter.process_command = AsyncMock(return_value=mock_result)
+        with patch.object(orchestrator.ai_adapter, "process_command", AsyncMock(return_value=mock_result)):
+            result = await orchestrator.process_chat_message(
+                "Invalid command",
+                channel_id="test-channel",
+            )
 
-        result = await orchestrator.process_chat_message(
-            "Invalid command",
-            channel_id="test-channel",
-        )
-
-        assert result["success"] is False
-        assert result["message"] == "Failed to create ticket"
-        assert result["data"] is None
-        assert result["error"] == "Invalid input"
+            assert result["success"] is False
+            assert result["message"] == "Failed to create ticket"
+            assert result["data"] is None
+            assert result["error"] == "Invalid input"
 
     @pytest.mark.asyncio
     async def test_process_chat_message_exception(self) -> None:
@@ -144,13 +141,12 @@ class TestTicketBotOrchestrator:
         )
 
         # Mock the AI adapter to raise exception
-        orchestrator.ai_adapter.process_command = AsyncMock(side_effect=Exception("Test error"))
+        with patch.object(orchestrator.ai_adapter, "process_command", AsyncMock(side_effect=Exception("Test error"))):
+            result = await orchestrator.process_chat_message("Test message")
 
-        result = await orchestrator.process_chat_message("Test message")
-
-        assert result["success"] is False
-        assert result["message"] == "An unexpected error occurred"
-        assert result["error"] == "Test error"
+            assert result["success"] is False
+            assert result["message"] == "An unexpected error occurred"
+            assert result["error"] == "Test error"
 
     @pytest.mark.asyncio
     async def test_send_to_chat_with_client(self) -> None:
@@ -186,7 +182,6 @@ class TestTicketBotOrchestrator:
     async def test_send_to_chat_client_error(self) -> None:
         """Test error handling when chat client fails."""
         chat_client = MockChatClient()
-        chat_client.send_message = MagicMock(side_effect=Exception("Chat error"))
 
         orchestrator = TicketBotOrchestrator(
             user_id="test-user",
@@ -195,9 +190,10 @@ class TestTicketBotOrchestrator:
             chat_client=chat_client,
         )
 
-        result = await orchestrator.send_to_chat("test-channel", "Test message")
+        with patch.object(chat_client, "send_message", MagicMock(side_effect=Exception("Chat error"))):
+            result = await orchestrator.send_to_chat("test-channel", "Test message")
 
-        assert result is False
+            assert result is False
 
     @pytest.mark.asyncio
     async def test_process_incoming_chat_no_client(self) -> None:
@@ -240,19 +236,17 @@ class TestTicketBotOrchestrator:
         )
 
         # Mock the process_chat_message method
-        orchestrator.process_chat_message = AsyncMock(return_value={"message": "Success"})
+        with patch.object(orchestrator, "process_chat_message", AsyncMock(return_value={"message": "Success"})):
+            result = await orchestrator.process_incoming_chat("test-channel")
 
-        result = await orchestrator.process_incoming_chat("test-channel")
-
-        expected_processed_count = 2  # Only 2 messages with !ticket prefix
-        assert result == expected_processed_count
-        assert len(chat_client.sent_messages) == expected_processed_count
+            expected_processed_count = 2  # Only 2 messages with !ticket prefix
+            assert result == expected_processed_count
+            assert len(chat_client.sent_messages) == expected_processed_count
 
     @pytest.mark.asyncio
     async def test_process_incoming_chat_exception(self) -> None:
         """Test exception handling in process_incoming_chat."""
         chat_client = MockChatClient()
-        chat_client.get_messages = MagicMock(side_effect=Exception("Chat error"))
 
         orchestrator = TicketBotOrchestrator(
             user_id="test-user",
@@ -261,9 +255,10 @@ class TestTicketBotOrchestrator:
             chat_client=chat_client,
         )
 
-        result = await orchestrator.process_incoming_chat("test-channel")
+        with patch.object(chat_client, "get_messages", MagicMock(side_effect=Exception("Chat error"))):
+            result = await orchestrator.process_incoming_chat("test-channel")
 
-        assert result == 0
+            assert result == 0
 
 
 @pytest.mark.asyncio

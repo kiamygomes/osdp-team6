@@ -16,7 +16,7 @@ from uuid import uuid4
 import pytest
 
 # Our orchestrator
-from main_app import TicketBotOrchestrator
+from orchestrator.main_app import TicketBotOrchestrator
 
 # For mocking
 from ticket_api import Ticket, TicketPriority, TicketStatus

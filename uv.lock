@@ -12,6 +12,7 @@ members = [
     "ai-service-client",
     "chat-api",
     "fast-api-client",
+    "orchestrator",
     "osdp-jira-service",
     "slack-adapter",
     "slack-api",
@@ -657,6 +658,29 @@ dependencies = [
 sdist = { url = "https://files.pythonhosted.org/packages/f8/5f/78cf6f3aa1015b27ae725593eb04f98caa934d4ab3681efbe596437f3edd/openapi_python_client-0.28.0.tar.gz", hash = "sha256:e0162b17bfee9b990d4dc38b256af129e0035e551a33dac8e4d5d4abfdb7c3d2", size = 125884, upload-time = "2025-12-03T20:54:20.57Z" }
 wheels = [
     { url = "https://files.pythonhosted.org/packages/f0/a3/f5ca1ddefc1e9ffd04fea2fadc070235e1fc83188053aaa0d1b215484943/openapi_python_client-0.28.0-py3-none-any.whl", hash = "sha256:d2c2f4dabb7fe12377cb0f0f6c50ad5ade3922cae7940510422ca844cae4dca4", size = 183131, upload-time = "2025-12-03T20:54:18.747Z" },
+]
+
+[[package]]
+name = "orchestrator"
+version = "0.1.0"
+source = { editable = "src/orchestrator" }
+dependencies = [
+    { name = "fastapi" },
+    { name = "ticket-ai-adapter" },
+    { name = "ticket-api" },
+    { name = "ticket-client-adapter" },
+    { name = "ticket-impl" },
+    { name = "uvicorn" },
+]
+
+[package.metadata]
+requires-dist = [
+    { name = "fastapi", specifier = ">=0.111.0" },
+    { name = "ticket-ai-adapter", editable = "src/ai_adapter" },
+    { name = "ticket-api", editable = "src/ticket_api" },
+    { name = "ticket-client-adapter", editable = "src/ticket_client_adapter" },
+    { name = "ticket-impl", editable = "src/ticket_impl" },
+    { name = "uvicorn", specifier = ">=0.30.1" },
 ]
 
 [[package]]
