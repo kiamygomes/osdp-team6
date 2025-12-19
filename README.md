@@ -1,28 +1,33 @@
-# OSDP Jira Service: Component-Based Ticketing Microservice
+# OSDP Team Integration: AI-Powered Ticket Management System
 
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue)](https://mypy-lang.org/)
 [![Coverage](https://img.shields.io/badge/coverage-90%2B%25-brightgreen)](https://pytest-cov.readthedocs.io/)
 
-This repository implements a professional-grade microservice for Jira/ticketing integration using component-based architecture. The system demonstrates modern Python development practices through a distributed ticketing service with OAuth 2.0 authentication, clean abstractions, and comprehensive testing.
+This repository implements a multi-team integration system that combines **Chat**, **AI**, and **Ticketing** services into a unified workflow. The system demonstrates modern Python development practices through a distributed architecture with OAuth 2.0 authentication, AI-powered natural language processing, and comprehensive testing.
 
-The project emphasizes strict separation of concerns, interface-implementation patterns, dependency injection, and automated quality assurance to create maintainable, scalable ticketing infrastructure.
+The project emphasizes strict separation of concerns, interface-implementation patterns, dependency injection, and team collaboration to create a maintainable, scalable AI-powered ticket management system.
 
 ## Architectural Philosophy
 
-This project implements a microservice architecture for ticketing systems, built on the principle of "programming integrated over time." The architecture combats complexity through clear boundaries and ensures the system remains maintainable and evolvable.
+This project implements a **multi-team integration architecture** that orchestrates three distinct verticals: **Chat**, **AI**, and **Ticketing**. Built on the principle of "programming integrated over time," the architecture combats complexity through clear boundaries and team collaboration patterns.
 
-- **Component-Based Design:** The system is decomposed into distinct, self-contained components. Each component has a single responsibility and can be extracted for use in other projects with minimal effort.
-- **Interface-Implementation Separation:** All functionality is defined by abstract contracts (ABCs) that specify "what" operations are available, fulfilled by concrete implementations that define "how" those operations work. This decouples business logic from specific technologies (like Jira, Linear, or GitHub Issues).
+- **Multi-Team Integration:** The system integrates components developed by three separate teams (Claude AI team, OpenAI team, Slack team, and our Ticketing team) into a unified workflow.
+- **AI-Powered Orchestration:** Natural language commands from chat are processed by AI services (Claude/OpenAI) to generate structured ticket operations.
+- **Interface-Implementation Separation:** All functionality is defined by abstract contracts (ABCs) that specify "what" operations are available, fulfilled by concrete implementations that define "how" those operations work.
 - **Dependency Injection:** Implementations are injected into abstract contracts at runtime, ensuring consumers depend only on stable interfaces rather than volatile implementation details.
-- **OAuth 2.0 Integration:** Secure authentication and authorization for external ticketing services with token management and refresh capabilities.
+- **OAuth 2.0 Integration:** Secure authentication and authorization for external services (Jira, Slack) with token management and refresh capabilities.
 
 ## Core Components
 
-The project is a `uv` workspace containing five primary packages that implement a complete ticketing microservice:
+The project is a `uv` workspace containing multiple packages that implement a complete AI-powered ticket management system:
 
-1. **`ticket_api`**: Defines the abstract `TicketServiceAPI` base class (ABC) and core data models (`Ticket`, `Comment`). This is the contract for what actions a ticketing service can perform (e.g., `create_ticket`, `add_comment`, `update_status`).
+###  **Main Orchestrator**
+- **`orchestrator`**: Main application that coordinates the Chat → AI → Tickets pipeline, implementing the complete user workflow from natural language commands to ticket operations.
+
+###  **Ticketing Components (Our Team)**
+1. **`ticket_api`**: Defines the abstract `TicketServiceAPI` base class (ABC) and core data models (`Ticket`, `Comment`). This is the contract for what actions a ticketing service can perform.
 
 2. **`ticket_impl`**: Provides concrete implementations that integrate with external ticketing services like Jira, using OAuth 2.0 authentication to perform operations defined in the `TicketServiceAPI` abstraction.
 
@@ -32,11 +37,23 @@ The project is a `uv` workspace containing five primary packages that implement 
 
 5. **`ticket_client_adapter`**: HTTP client adapter that implements the `TicketServiceAPI` interface for remote service access, enabling distributed ticketing functionality.
 
+###  **AI Integration Components**
+- **`ai_adapter`**: Integration layer that connects with external AI teams' services (Claude and OpenAI teams)
+- **`ai_implementations`**: AI service implementations and adapters for processing natural language commands
+
+###  **External Team Integration**
+- **`external/claude_team/`**: Claude AI team's packages for natural language processing
+- **`external/openai_team/`**: OpenAI team's packages for alternative AI processing
+- **`external/slack_team/`**: Slack team's packages for chat interface and communication
+
 ## Project Structure
 
 ```
-osdp-jira-service/
+osdp-team6/
 ├── src/                          # Source packages (uv workspace members)
+│   ├── orchestrator/             # Main application orchestrator
+│   │   └── src/orchestrator/
+│   │       └── main_app.py       # TicketBotOrchestrator - main entry point
 │   ├── ticket_api/               # Abstract ticketing interface and data models
 │   │   ├── src/ticket_api/       # Package source code
 │   │   │   ├── __init__.py       # Package exports
@@ -49,11 +66,38 @@ osdp-jira-service/
 │   ├── ticket_impl/              # Jira/external service implementations
 │   ├── ticket_service/           # FastAPI web service
 │   ├── ticket_client_generated/  # Auto-generated HTTP client
-│   └── ticket_client_adapter/    # HTTP client adapter
+│   ├── ticket_client_adapter/    # HTTP client adapter
+│   ├── ai_adapter/               # AI integration layer
+│   ├── ai_implementations/       # AI service implementations
+│   └── claude_service_client/    # Claude service client
+├── external/                     # External team packages (git submodules)
+│   ├── claude_team/              # Claude AI team's packages
+│   │   └── src/
+│   │       ├── ai_chat_api/      # Claude AI interface
+│   │       └── ai_chat_adapter/  # Claude AI adapter
+│   ├── openai_team/              # OpenAI team's packages
+│   │   └── src/
+│   │       ├── ai_api/           # OpenAI interface
+│   │       ├── ai_adapter/       # OpenAI adapter
+│   │       └── ai_service_client/ # OpenAI service client
+│   └── slack_team/               # Slack team's packages
+│       └── src/
+│           ├── chat_api/         # Chat interface
+│           ├── slack_api/        # Slack API
+│           ├── slack_impl/       # Slack implementation
+│           └── slack_adapter/    # Slack adapter
 ├── tests/                        # Integration and E2E tests
-│   └── integration/              # Component integration tests
+│   ├── integration/              # Component integration tests
+│   ├── e2e/                      # End-to-end workflow tests
+│   ├── test_main_app.py          # Main orchestrator tests
+│   ├── test_claude_implementation.py  # Claude AI tests
+│   ├── test_openai_implementation.py  # OpenAI tests
+│   ├── test_base_adapter_extended.py  # Adapter tests
+│   └── test_ai_implementation_setup.py # Setup tests
 ├── docs/                         # Documentation source files
 ├── .circleci/                    # CircleCI configuration
+├── main.py                       # Demo script for Jira OAuth and operations
+├── demo_full_workflow.py         # Full workflow demonstration
 ├── pyproject.toml               # Workspace configuration
 ├── uv.lock                      # Locked dependency versions
 ├── DESIGN.md                    # Architecture and design documentation
@@ -123,12 +167,27 @@ All commands should be run from the project root with the virtual environment ac
 
 ### Running the Application
 
-To start the FastAPI ticketing service:
+**Main AI-Powered Orchestrator:**
+```bash
+# Run the main orchestrator demo
+uv run python src/orchestrator/src/orchestrator/main_app.py
+
+# Or run the full workflow demo
+uv run python demo_full_workflow.py
+```
+
+**FastAPI Ticketing Service (for HTTP access):**
 ```bash
 uv run uvicorn ticket_service.main:app --reload
 ```
 
 The service will be available at `http://localhost:8000` with interactive API documentation at `http://localhost:8000/docs`.
+
+**Jira OAuth Demo:**
+```bash
+# Set up Jira OAuth and test ticket operations
+uv run python main.py
+```
 
 ### Running the Toolchain
 
@@ -191,22 +250,36 @@ The project implements a comprehensive testing strategy with different test cate
 - Run in milliseconds for rapid feedback
 
 **Integration Tests** (`tests/integration/`)
-- Component interaction testing
+- Multi-team component interaction testing
+- AI → Ticket pipeline validation
+- Chat → AI → Ticket workflow testing
 - OAuth authentication flow validation
 - Real HTTP client behavior with mocked responses
-- Database and storage layer testing
 
 **End-to-End Tests** (`tests/e2e/`)
-- Complete application workflow validation
-- Service startup and API interaction testing
+- Complete Chat → AI → Tickets workflow validation
+- AI provider switching (Claude ↔ OpenAI) testing
 - Full OAuth flow with real external services
 - Performance and reliability testing
+
+**Main Application Tests** (`tests/test_main_app.py`, etc.)
+- Orchestrator functionality testing
+- AI implementation testing (Claude and OpenAI)
+- Base adapter and setup testing
+- 90%+ test coverage achieved
 
 ### Test Execution
 
 ```bash
 # Fast unit tests (recommended for development)
 uv run pytest src/ -v
+
+# Main application tests (orchestrator and AI integration)
+uv run pytest tests/test_main_app.py -v                    # Main orchestrator tests
+uv run pytest tests/test_claude_implementation.py -v       # Claude AI tests
+uv run pytest tests/test_openai_implementation.py -v       # OpenAI tests
+uv run pytest tests/test_base_adapter_extended.py -v       # Adapter tests
+uv run pytest tests/test_ai_implementation_setup.py -v     # Setup tests
 
 # Component-specific tests
 uv run pytest src/ticket_api/tests/ -v          # API contract tests
@@ -217,7 +290,10 @@ uv run pytest src/ticket_client_adapter/tests/ -v  # HTTP client adapter tests
 # Integration tests (requires OAuth setup)
 uv run pytest tests/integration/ -v
 
-# All tests with coverage
+# End-to-end workflow tests
+uv run pytest tests/e2e/ -v
+
+# All tests with coverage (90%+ achieved)
 uv run pytest --cov=src --cov-report=term-missing
 
 # CI/CD compatible tests only
@@ -268,7 +344,40 @@ See `docs/circleci-setup.md` for detailed CI/CD setup instructions.
 
 ## Component Overview
 
-### 📦 ticket_api - Foundation Layer
+###  **orchestrator - Main Application Controller**
+**AI-powered orchestrator that coordinates the complete Chat → AI → Tickets pipeline**
+
+The heart of the system that implements the HW3 user workflow, coordinating three team verticals.
+
+**Key Features:**
+- `TicketBotOrchestrator` class that processes natural language commands
+- AI provider switching (Claude ↔ OpenAI) with seamless fallback
+- Chat integration protocol for bidirectional communication
+- Complete pipeline: Chat → AI → Tickets → Response
+- Comprehensive error handling and logging
+- 15+ test methods covering all orchestration scenarios
+
+**Quick Example:**
+```python
+from orchestrator.main_app import TicketBotOrchestrator
+
+# Initialize with Claude AI
+orchestrator = TicketBotOrchestrator(
+    user_id="user123", 
+    project_key="PROJ",
+    ai_provider="claude"
+)
+
+# Process natural language command
+result = await orchestrator.process_chat_message(
+    "Create a high priority ticket for fixing the login bug"
+)
+print(result["message"])  # "Successfully created ticket: Fix login bug"
+```
+
+---
+
+###  **ticket_api - Foundation Layer**
 **Abstract interface and data models defining the ticketing contract**
 
 The foundation of the entire system, providing clean abstractions and type-safe models.
@@ -297,7 +406,7 @@ ticket = Ticket(
 
 ---
 
-### 🔌 ticket_impl - Jira Cloud Integration
+###  ticket_impl - Jira Cloud Integration
 **Production-ready Jira Cloud implementation with OAuth 2.0**
 
 Complete implementation of `TicketServiceAPI` that integrates directly with Jira Cloud REST API v3.
@@ -333,7 +442,7 @@ ticket = await service.create_ticket(
 
 ---
 
-### 🌐 ticket_service - FastAPI Web Service
+###  ticket_service - FastAPI Web Service
 **Production-ready REST API with cookie-based authentication**
 
 FastAPI-based HTTP service exposing ticket operations through REST endpoints.
@@ -366,7 +475,7 @@ open http://localhost:8000/docs
 
 ---
 
-### 🤖 ticket_client_generated - Auto-Generated HTTP Client
+###  ticket_client_generated - Auto-Generated HTTP Client
 **Type-safe HTTP client generated from OpenAPI specification**
 
 Auto-generated client code providing type-safe API interactions with the ticket service.
@@ -394,7 +503,7 @@ response = await create_ticket_api_v1_tickets_post.asyncio_detailed(
 
 ---
 
-### 🔄 ticket_client_adapter - Remote Service Adapter
+###  ticket_client_adapter - Remote Service Adapter
 **Enterprise-grade HTTP client with reliability features**
 
 Adapter wrapping the generated client with the clean `TicketServiceAPI` interface, adding production-critical reliability features.
@@ -432,23 +541,62 @@ async with RemoteTicketService(
     )
 ```
 
+###  **AI Integration Components**
+**Multi-team AI integration layer supporting Claude and OpenAI providers**
+
+**Key Features:**
+- `ai_adapter` - Integration layer connecting with external AI teams
+- `ai_implementations` - AI service implementations and natural language processing
+- Provider switching between Claude and OpenAI teams' services
+- Structured tool call generation from natural language
+- Comprehensive error handling for AI service failures
+
+**External Team Integration:**
+- **Claude Team** (`external/claude_team/`) - Natural language processing via Claude AI
+- **OpenAI Team** (`external/openai_team/`) - Alternative AI processing via OpenAI
+- **Slack Team** (`external/slack_team/`) - Chat interface and communication layer
+
 ---
 
-## 📊 Test Coverage Summary
+##  Test Coverage Summary
 
 | Package | Tests | Coverage | Key Features Tested |
 |---------|-------|----------|---------------------|
+| **orchestrator** | 15 | 95%+ | Main app, AI integration, chat processing |
 | **ticket_api** | 22 | 100% | Models, interface, exceptions, enums |
 | **ticket_impl** | 30+ | 95%+ | Jira integration, OAuth, storage, UUID mapping |
 | **ticket_service** | 25+ | 90%+ | REST endpoints, auth flow, validation |
 | **ticket_client_adapter** | 50+ | 95%+ | HTTP client, retries, circuit breaker, idempotency |
-| **Integration** | 15+ | N/A | Component interaction, end-to-end workflows |
+| **AI Integration** | 62+ | 90%+ | Claude/OpenAI adapters, tool calls, error handling |
+| **Integration** | 15+ | N/A | Multi-team workflows, end-to-end pipelines |
 
-**Total:** 140+ tests ensuring production-ready quality
+**Total:** 200+ tests ensuring production-ready quality with **90.97% coverage**
 
 ---
 
-## 🏗️ Architecture Patterns
+##  Architecture Patterns
+
+### Multi-Team Integration Pattern
+```python
+# Main orchestrator coordinates all teams
+class TicketBotOrchestrator:
+    def __init__(self, user_id: str, project_key: str, ai_provider: str = "claude"):
+        # Our team's ticket service
+        self.ticket_service = TicketImpl(user_id, project_key)
+        
+        # AI team integration (Claude or OpenAI)
+        if ai_provider == "claude":
+            self.ai_adapter = ClaudeTeamAdapter(self.ticket_service, user_id, project_key)
+        else:
+            self.ai_adapter = OpenAITeamAdapter(self.ticket_service, user_id, project_key)
+        
+        # Chat team integration (optional)
+        self.chat_client = chat_client
+
+    async def process_chat_message(self, message: str) -> dict:
+        # Complete pipeline: Chat → AI → Tickets → Response
+        return await self.ai_adapter.process_command(message)
+```
 
 ### Interface-Implementation Separation
 ```python
@@ -462,40 +610,35 @@ class TicketImpl(TicketServiceAPI):
     async def create_ticket(...) -> Ticket:
         # Jira-specific implementation
 
-# Implement for remote HTTP (ticket_client_adapter)
-class RemoteTicketService(TicketServiceAPI):
-    async def create_ticket(...) -> Ticket:
-        # HTTP client implementation
+# AI adapters use the same interface
+class ClaudeTeamAdapter:
+    def __init__(self, ticket_service: TicketServiceAPI, ...):
+        self.ticket_service = ticket_service  # Works with any implementation
 ```
 
-### Location Transparency
+### AI Provider Switching
 ```python
-# Same code works with local or remote implementation
-def get_service() -> TicketServiceAPI:
-    if USE_REMOTE:
-        return RemoteTicketService(...)  # HTTP client
-    else:
-        return TicketImpl(...)  # Direct Jira
+# Seamless switching between AI providers
+orchestrator_claude = TicketBotOrchestrator(
+    user_id="user123", 
+    project_key="PROJ", 
+    ai_provider="claude"
+)
 
-# Business logic doesn't care which implementation
-service = get_service()
-ticket = await service.create_ticket(...)
-```
+orchestrator_openai = TicketBotOrchestrator(
+    user_id="user123", 
+    project_key="PROJ", 
+    ai_provider="openai"
+)
 
-### Dependency Injection
-```python
-# FastAPI automatically injects the right implementation
-@app.post("/api/v1/tickets")
-async def create_ticket(
-    request: TicketCreateRequest,
-    service: Annotated[TicketServiceAPI, Depends(get_ticket_service)]
-):
-    return await service.create_ticket(...)
+# Same interface, different AI processing
+result1 = await orchestrator_claude.process_chat_message("Create a ticket")
+result2 = await orchestrator_openai.process_chat_message("Create a ticket")
 ```
 
 ---
 
-## 🚀 Production Deployment
+##  Production Deployment
 
 ### Render Deployment
 The project includes `render.yaml` for one-click deployment to Render:
@@ -535,7 +678,7 @@ LOG_LEVEL="INFO"
 
 ---
 
-## 📊 Telemetry and Observability
+##  Telemetry and Observability
 
 The service includes comprehensive Prometheus metrics for monitoring application health and performance.
 
@@ -573,7 +716,7 @@ See **[docs/telemetry.md](docs/telemetry.md)** for detailed monitoring setup and
 
 ---
 
-## 📚 Additional Documentation
+##  Additional Documentation
 
 - **[DESIGN.md](DESIGN.md)** - Architecture decisions and design patterns
 - **[docs/testing.md](docs/testing.md)** - Comprehensive testing guide
@@ -583,7 +726,7 @@ See **[docs/telemetry.md](docs/telemetry.md)** for detailed monitoring setup and
 
 ---
 
-## 🤝 Contributing
+##  Contributing
 
 1. **Code Quality:** All code must pass `ruff check`, `ruff format`, and `mypy`
 2. **Testing:** Maintain 90%+ test coverage
@@ -593,6 +736,6 @@ See **[docs/telemetry.md](docs/telemetry.md)** for detailed monitoring setup and
 
 ---
 
-## 📄 License
+##  License
 
 This project is part of the OSDP coursework and follows university guidelines.
