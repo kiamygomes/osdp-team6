@@ -2,11 +2,14 @@
 
 from __future__ import annotations
 
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 
 import pytest
+from dotenv import load_dotenv
 from orchestrator.main_app import TicketBotOrchestrator, demo_cli, main
 
+load_dotenv()
 
 class MockChatClient:
     """Mock chat client for testing."""
@@ -29,16 +32,18 @@ class MockChatClient:
 class TestTicketBotOrchestrator:
     """Test the main orchestrator class."""
 
+    project_key = os.getenv("PROJECT_KEY", "TEST")
+
     def test_init_claude_provider(self) -> None:
         """Test initialization with Claude provider."""
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
         )
 
-        assert orchestrator.user_id == "test-user"
-        assert orchestrator.project_key == "TEST"
+        assert orchestrator.user_id == "demo_user"
+        assert orchestrator.project_key == self.project_key
         assert orchestrator.chat_client is None
         assert orchestrator.ticket_service is not None
         assert orchestrator.ai_adapter is not None
@@ -46,21 +51,21 @@ class TestTicketBotOrchestrator:
     def test_init_openai_provider(self) -> None:
         """Test initialization with OpenAI provider."""
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="openai",
         )
 
-        assert orchestrator.user_id == "test-user"
-        assert orchestrator.project_key == "TEST"
+        assert orchestrator.user_id == "demo_user"
+        assert orchestrator.project_key == self.project_key
         assert orchestrator.ai_adapter is not None
 
     def test_init_invalid_provider(self) -> None:
         """Test initialization with invalid provider."""
         with pytest.raises(ValueError, match="Unknown AI provider: invalid"):
             TicketBotOrchestrator(
-                user_id="test-user",
-                project_key="TEST",
+                user_id="demo_user",
+                project_key=self.project_key,
                 ai_provider="invalid",
             )
 
@@ -68,8 +73,8 @@ class TestTicketBotOrchestrator:
         """Test initialization with chat client."""
         chat_client = MockChatClient()
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
             chat_client=chat_client,
         )
@@ -80,8 +85,8 @@ class TestTicketBotOrchestrator:
     async def test_process_chat_message_success(self) -> None:
         """Test successful message processing."""
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
         )
 
@@ -108,8 +113,8 @@ class TestTicketBotOrchestrator:
     async def test_process_chat_message_failure(self) -> None:
         """Test failed message processing."""
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
         )
 
@@ -135,8 +140,8 @@ class TestTicketBotOrchestrator:
     async def test_process_chat_message_exception(self) -> None:
         """Test exception handling in message processing."""
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
         )
 
@@ -153,8 +158,8 @@ class TestTicketBotOrchestrator:
         """Test sending message with chat client."""
         chat_client = MockChatClient()
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
             chat_client=chat_client,
         )
@@ -169,8 +174,8 @@ class TestTicketBotOrchestrator:
     async def test_send_to_chat_without_client(self) -> None:
         """Test sending message without chat client (simulation mode)."""
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
         )
 
@@ -184,8 +189,8 @@ class TestTicketBotOrchestrator:
         chat_client = MockChatClient()
 
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
             chat_client=chat_client,
         )
@@ -199,8 +204,8 @@ class TestTicketBotOrchestrator:
     async def test_process_incoming_chat_no_client(self) -> None:
         """Test processing incoming chat without client."""
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
         )
 
@@ -229,8 +234,8 @@ class TestTicketBotOrchestrator:
         chat_client.messages = [msg1, msg2, msg3]
 
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
             chat_client=chat_client,
         )
@@ -249,8 +254,8 @@ class TestTicketBotOrchestrator:
         chat_client = MockChatClient()
 
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=self.project_key,
             ai_provider="claude",
             chat_client=chat_client,
         )
@@ -264,7 +269,7 @@ class TestTicketBotOrchestrator:
 @pytest.mark.asyncio
 async def test_demo_cli() -> None:
     """Test the demo CLI function."""
-    with patch("src.main_app.TicketBotOrchestrator") as mock_orchestrator_class:
+    with patch("orchestrator.main_app.TicketBotOrchestrator") as mock_orchestrator_class:
         mock_orchestrator = MagicMock()
         mock_orchestrator.process_chat_message = AsyncMock()
         mock_orchestrator_class.return_value = mock_orchestrator
@@ -282,6 +287,6 @@ async def test_demo_cli() -> None:
 
 def test_main() -> None:
     """Test the main function."""
-    with patch("src.main_app.asyncio.run") as mock_run:
+    with patch("orchestrator.main_app.asyncio.run") as mock_run:
         main()
         mock_run.assert_called_once()

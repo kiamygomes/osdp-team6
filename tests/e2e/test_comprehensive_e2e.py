@@ -12,11 +12,31 @@ All tests use REAL services with actual credentials from environment variables.
 
 import asyncio
 import os
+from collections.abc import Generator
+from unittest.mock import MagicMock, patch
 from uuid import uuid4
 
 import pytest
-
 from orchestrator.main_app import TicketBotOrchestrator
+
+
+@pytest.fixture(autouse=True)
+def mock_e2e_auth() -> Generator[tuple[MagicMock, MagicMock], None, None]:
+    """Mock authentication for e2e tests."""
+    with (
+        patch("orchestrator.main_app.get_tokens") as mock_get_tokens,
+        patch("orchestrator.main_app.is_expired") as mock_is_expired,
+    ):
+        # Create a fake token object
+        fake_token = MagicMock()
+        fake_token.access_token = "e2e-test-token"
+        fake_token.refresh_token = "e2e-test-refresh"
+        fake_token.expires_at = 9999999999  # Far future
+
+        mock_get_tokens.return_value = fake_token
+        mock_is_expired.return_value = False
+
+        yield mock_get_tokens, mock_is_expired
 
 
 class E2ETestContext:

@@ -10,10 +10,12 @@ This test suite verifies the end-to-end workflow:
 Tests use mocked backends but verify the full integration between all three verticals.
 """
 
+import os
 from unittest.mock import AsyncMock, MagicMock, patch
 from uuid import uuid4
 
 import pytest
+from dotenv import load_dotenv
 
 # Our orchestrator
 from orchestrator.main_app import TicketBotOrchestrator
@@ -21,6 +23,8 @@ from orchestrator.main_app import TicketBotOrchestrator
 # For mocking
 from ticket_api import Ticket, TicketPriority, TicketStatus
 
+load_dotenv()
+project_key = os.getenv("TEST_PROJECT_KEY", "TEST")
 
 @pytest.fixture
 def mock_ticket() -> MagicMock:
@@ -48,15 +52,15 @@ async def test_chat_to_tickets_create_workflow(mock_ticket: MagicMock) -> None:
     4. Success message returned
     """
     # Mock the ticket service to return our mock ticket
-    with patch("main_app.TicketImpl") as mock_ticket_impl:
+    with patch("orchestrator.main_app.TicketImpl") as mock_ticket_impl:
         mock_service = AsyncMock()
         mock_service.create_ticket = AsyncMock(return_value=mock_ticket)
         mock_ticket_impl.return_value = mock_service
 
         # Initialize orchestrator
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=project_key,
             ai_provider="claude",
         )
 
@@ -99,14 +103,14 @@ async def test_chat_to_tickets_list_workflow() -> None:
         for i in range(3)
     ]
 
-    with patch("main_app.TicketImpl") as mock_ticket_impl:
+    with patch("orchestrator.main_app.TicketImpl") as mock_ticket_impl:
         mock_service = AsyncMock()
         mock_service.list_tickets = AsyncMock(return_value=mock_tickets)
         mock_ticket_impl.return_value = mock_service
 
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=project_key,
             ai_provider="claude",
         )
 
@@ -135,16 +139,16 @@ async def test_provider_switching() -> None:
     """
     # Test with Claude
     orchestrator_claude = TicketBotOrchestrator(
-        user_id="test-user",
-        project_key="TEST",
+        user_id="demo_user",
+        project_key=project_key,
         ai_provider="claude",
     )
     assert orchestrator_claude.ai_adapter is not None
 
     # Test with OpenAI
     orchestrator_openai = TicketBotOrchestrator(
-        user_id="test-user",
-        project_key="TEST",
+        user_id="demo_user",
+        project_key=project_key,
         ai_provider="openai",
     )
     assert orchestrator_openai.ai_adapter is not None
@@ -161,14 +165,14 @@ async def test_error_handling_in_pipeline() -> None:
 
     Verifies that errors are properly caught and returned as structured responses.
     """
-    with patch("main_app.TicketImpl") as mock_ticket_impl:
+    with patch("orchestrator.main_app.TicketImpl") as mock_ticket_impl:
         mock_service = AsyncMock()
         mock_service.create_ticket = AsyncMock(side_effect=Exception("Database connection failed"))
         mock_ticket_impl.return_value = mock_service
 
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=project_key,
             ai_provider="claude",
         )
 
@@ -195,8 +199,8 @@ async def test_chat_interface_integration() -> None:
     - Proper logging occurs
     """
     orchestrator = TicketBotOrchestrator(
-        user_id="test-user",
-        project_key="TEST",
+        user_id="demo_user",
+        project_key=project_key,
         ai_provider="claude",
     )
 
@@ -226,7 +230,7 @@ async def test_multi_step_conversation() -> None:
     mock_ticket.id = uuid4()
     mock_ticket.title = "Test ticket"
 
-    with patch("main_app.TicketImpl") as mock_ticket_impl:
+    with patch("orchestrator.main_app.TicketImpl") as mock_ticket_impl:
         mock_service = AsyncMock()
         mock_service.create_ticket = AsyncMock(return_value=mock_ticket)
         mock_service.list_tickets = AsyncMock(return_value=[mock_ticket])
@@ -234,8 +238,8 @@ async def test_multi_step_conversation() -> None:
         mock_ticket_impl.return_value = mock_service
 
         orchestrator = TicketBotOrchestrator(
-            user_id="test-user",
-            project_key="TEST",
+            user_id="demo_user",
+            project_key=project_key,
             ai_provider="claude",
         )
 
