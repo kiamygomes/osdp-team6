@@ -32,6 +32,7 @@ token.json
 .env
 credentials.json
 jira_tokens.db
+test_tokens.db
 
 .coverage*
 TESTING_STATUS.md

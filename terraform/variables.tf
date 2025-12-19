@@ -1,68 +1,56 @@
-/**
- * Terraform Variables for Ticket Bot Infrastructure
- *
- * Define all configurable parameters for the infrastructure.
- * Values can be provided via terraform.tfvars or environment variables.
- */
+variable "render_api_key" {
+  description = "Render API key from https://dashboard.render.com/account"
+  type        = string
+  sensitive   = true
+}
 
-variable "project_id" {
-  description = "GCP Project ID"
+variable "render_owner_id" {
+  description = "Render owner/team ID from dashboard URL"
   type        = string
 }
 
-variable "region" {
-  description = "GCP region for resources"
-  type        = string
-  default     = "us-central1"
-}
-
-variable "environment" {
-  description = "Environment name (development, staging, production)"
-  type        = string
-  default     = "production"
-
-  validation {
-    condition     = contains(["development", "staging", "production"], var.environment)
-    error_message = "Environment must be one of: development, staging, production."
-  }
-}
-
-variable "container_image" {
-  description = "Container image URL (e.g., gcr.io/PROJECT_ID/ticket-bot:latest)"
+variable "repo_url" {
+  description = "Git repository URL"
   type        = string
 }
 
-variable "jira_project_key" {
-  description = "Default Jira project key"
+variable "repo_branch" {
+  description = "Git branch to deploy"
   type        = string
-  default     = "OSDP"
+  default     = "main"
 }
 
-variable "ai_provider" {
-  description = "AI provider to use (claude or openai)"
+variable "render_plan" {
+  description = "Render plan: free, starter, standard, pro"
   type        = string
-  default     = "claude"
-
-  validation {
-    condition     = contains(["claude", "openai"], var.ai_provider)
-    error_message = "AI provider must be either 'claude' or 'openai'."
-  }
+  default     = "starter"
 }
 
-variable "min_instances" {
-  description = "Minimum number of Cloud Run instances"
-  type        = number
-  default     = 0
+variable "render_region" {
+  description = "Render region: oregon, frankfurt, singapore, ohio, virginia"
+  type        = string
+  default     = "virginia"
 }
 
-variable "max_instances" {
-  description = "Maximum number of Cloud Run instances"
-  type        = number
-  default     = 10
-}
-
-variable "allow_public_access" {
-  description = "Allow unauthenticated public access to the service"
+variable "auto_deploy" {
+  description = "Auto-deploy on git push"
   type        = bool
-  default     = false
+  default     = true
+}
+
+variable "jira_cloud_id" {
+  description = "Jira Cloud ID"
+  type        = string
+}
+
+variable "oauth_client_id" {
+  description = "Jira OAuth Client ID"
+  type        = string
+  sensitive   = true
+}
+
+variable "oauth_client_secret" {
+  description = "Jira OAuth Client Secret"
+  type        = string
+  sensitive   = true
 }
