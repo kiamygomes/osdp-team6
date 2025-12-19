@@ -125,7 +125,7 @@ async def main() -> None:
                 "demo_user",
                 auth_code,
             )
-            logger.info("✓ Successfully generated tokens for demo_user")
+            logger.info("Successfully generated tokens for demo_user")
             logger.info("  Access token: %s...", access_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Refresh token: %s...", refresh_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Expires in: %d seconds", expires_in)
@@ -148,7 +148,7 @@ async def main() -> None:
 
             logger.info("Storing tokens for user: %s", user_id)
             ticket_impl.storage.upsert_tokens(user_id, access_token, refresh_token, expires_in_sec)
-            logger.info("✓ Successfully stored tokens for %s", user_id)
+            logger.info("Successfully stored tokens for %s", user_id)
             logger.info("  Access token: %s...", access_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Refresh token: %s...", refresh_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Expires in: %d seconds", expires_in_sec)

@@ -170,8 +170,8 @@ Once deployment is complete:
    - In Render dashboard → Your service → "Logs" tab
    - Look for:
      ```
-     ✅ Claude AI provider available
-     ✅ OpenAI AI provider available
+     Claude AI provider available
+     OpenAI AI provider available
      Service started successfully
      ```
 

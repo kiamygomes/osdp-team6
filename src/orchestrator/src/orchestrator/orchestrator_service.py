@@ -121,14 +121,14 @@ async def lifespan(_app: FastAPI) -> AsyncIterator[None]:
     # Log available AI providers
     providers = check_ai_providers()
     if providers["claude"]:
-        logger.info("✅ Claude AI provider available")
+        logger.info("Claude AI provider available")
     else:
-        logger.warning("⚠️  Claude AI provider not available")
+        logger.warning("Claude AI provider not available")
 
     if providers["openai"]:
-        logger.info("✅ OpenAI AI provider available")
+        logger.info("OpenAI AI provider available")
     else:
-        logger.warning("⚠️  OpenAI AI provider not available")
+        logger.warning("OpenAI AI provider not available")
 
     logger.info("Service started successfully")
 

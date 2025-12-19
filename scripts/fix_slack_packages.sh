@@ -32,4 +32,4 @@ $SED_INPLACE 's/where = \["src"\]/where = ["."]/' external/slack_team/src/slack_
 $SED_INPLACE 's/package-dir = {"" = "src"}/package-dir = {"" = "."}/' external/slack_team/src/slack_service/pyproject.toml
 $SED_INPLACE 's/where = \["src"\]/where = ["."]/' external/slack_team/src/slack_service/pyproject.toml
 
-echo "✅ Slack package configurations fixed"
+echo "Slack package configurations fixed"

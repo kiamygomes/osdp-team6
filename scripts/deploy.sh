@@ -147,7 +147,7 @@ main() {
         deploy_direct
     fi
 
-    print_info "✅ Deployment completed successfully!"
+    print_info "Deployment completed successfully!"
 }
 
 # Run main function
