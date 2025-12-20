@@ -548,10 +548,20 @@ async def process_command(request: ProcessCommandRequest) -> CommandResponse:
         result = await orchestrator.process_chat_message(request.message)
 
         # Return response
+        # Convert data to dict/list format if it's a Pydantic model
+        data = result.get("data")
+        if data is not None:
+            if isinstance(data, list):
+                # Convert list of models to list of dicts
+                data = [item.model_dump() if hasattr(item, "model_dump") else item for item in data]
+            elif hasattr(data, "model_dump"):
+                # Convert single model to dict
+                data = data.model_dump()
+
         return CommandResponse(
             success=result["success"],
             message=result["message"],
-            data=result.get("data"),
+            data=data,
             error=result.get("error"),
             ai_provider=request.ai_provider,
             user_id=request.user_id,
@@ -621,10 +631,20 @@ async def process_chat_message(request: ProcessChatRequest) -> CommandResponse:
             channel_id=request.channel_id,
         )
 
+        # Convert data to dict/list format if it's a Pydantic model
+        data = result.get("data")
+        if data is not None:
+            if isinstance(data, list):
+                # Convert list of models to list of dicts
+                data = [item.model_dump() if hasattr(item, "model_dump") else item for item in data]
+            elif hasattr(data, "model_dump"):
+                # Convert single model to dict
+                data = data.model_dump()
+
         return CommandResponse(
             success=result["success"],
             message=result["message"],
-            data=result.get("data"),
+            data=data,
             error=result.get("error"),
             ai_provider=request.ai_provider,
             user_id=request.user_id,
