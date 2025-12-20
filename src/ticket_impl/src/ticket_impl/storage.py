@@ -19,10 +19,15 @@ class Base(DeclarativeBase):
 
 
 class Token(Base):
-    """Stored OAuth tokens for a user."""
+    """Stored OAuth tokens for a user and service.
+
+    Supports multiple services (jira, slack, trello, etc.) per user.
+    The service_name defaults to 'jira' for backward compatibility.
+    """
 
     __tablename__ = "jira_oauth_tokens"
     user_id: Mapped[str] = mapped_column(primary_key=True)
+    service_name: Mapped[str] = mapped_column(primary_key=True, default="jira", server_default="jira")
     access_token: Mapped[str]
     refresh_token: Mapped[str]
     expires_at: Mapped[datetime] = mapped_column(DateTime(timezone=True))
@@ -47,34 +52,62 @@ Base.metadata.create_all(engine)
 
 
 # --- tokens ---
-def upsert_tokens(user_id: str, access: str, refresh: str, expires_in_sec: int) -> None:
-    """Insert/update tokens for a user with a fresh expiry."""
+def upsert_tokens(user_id: str, access: str, refresh: str, expires_in_sec: int, service_name: str = "jira") -> None:
+    """Insert/update tokens for a user and service with a fresh expiry.
+
+    Args:
+        user_id: User identifier
+        access: OAuth access token
+        refresh: OAuth refresh token
+        expires_in_sec: Token expiry in seconds
+        service_name: Service identifier (default: 'jira' for backward compatibility)
+
+    """
     now = datetime.now(tz=UTC)
     expires_at = now + timedelta(seconds=expires_in_sec)
     with Session(engine) as s:
-        tok = s.get(Token, user_id)
+        tok = s.get(Token, (user_id, service_name))
         if not tok:
-            tok = Token(user_id=user_id, access_token=access, refresh_token=refresh, expires_at=expires_at)
+            tok = Token(
+                user_id=user_id,
+                service_name=service_name,
+                access_token=access,
+                refresh_token=refresh,
+                expires_at=expires_at,
+            )
         else:
             tok.access_token, tok.refresh_token, tok.expires_at = access, refresh, expires_at
         s.add(tok)
         s.commit()
 
 
-def get_tokens(user_id: str) -> Token | None:
-    """Fetch tokens row for a user, if any."""
+def get_tokens(user_id: str, service_name: str = "jira") -> Token | None:
+    """Fetch tokens row for a user and service.
+
+    Args:
+        user_id: User identifier
+        service_name: Service identifier (default: 'jira')
+
+    Returns:
+        Token object or None if not found
+
+    """
     with Session(engine) as s:
-        return s.get(Token, user_id)
+        return s.get(Token, (user_id, service_name))
 
 
-def get_user_tokens(user_id: str) -> dict[str, str] | None:
+def get_user_tokens(user_id: str, service_name: str = "jira") -> dict[str, str] | None:
     """Get user tokens as a dictionary (for service layer compatibility).
+
+    Args:
+        user_id: User identifier
+        service_name: Service identifier (default: 'jira')
 
     Returns:
         Dictionary with 'access_token' and 'refresh_token' keys, or None if not found.
 
     """
-    tok = get_tokens(user_id)
+    tok = get_tokens(user_id, service_name)
     if not tok:
         return None
     return {
@@ -83,18 +116,19 @@ def get_user_tokens(user_id: str) -> dict[str, str] | None:
     }
 
 
-def clear_user_tokens(user_id: str) -> bool:
-    """Delete all tokens for a user.
+def clear_user_tokens(user_id: str, service_name: str = "jira") -> bool:
+    """Delete tokens for a user and service.
 
     Args:
-        user_id: The user ID whose tokens should be deleted.
+        user_id: The user ID whose tokens should be deleted
+        service_name: Service identifier (default: 'jira')
 
     Returns:
         True if tokens were deleted, False if user had no tokens.
 
     """
     with Session(engine) as s:
-        tok = s.get(Token, user_id)
+        tok = s.get(Token, (user_id, service_name))
         if not tok:
             return False
         s.delete(tok)
@@ -102,11 +136,19 @@ def clear_user_tokens(user_id: str) -> bool:
         return True
 
 
-def update_access(user_id: str, access: str, expires_in_sec: int) -> None:
-    """Update only the access token and expiry."""
+def update_access(user_id: str, access: str, expires_in_sec: int, service_name: str = "jira") -> None:
+    """Update only the access token and expiry.
+
+    Args:
+        user_id: User identifier
+        access: New access token
+        expires_in_sec: Token expiry in seconds
+        service_name: Service identifier (default: 'jira')
+
+    """
     now = datetime.now(tz=UTC)
     with Session(engine) as s:
-        tok = s.get(Token, user_id)
+        tok = s.get(Token, (user_id, service_name))
         if not tok:
             return
         tok.access_token = access

@@ -14,12 +14,15 @@ from __future__ import annotations
 
 import logging
 import os
+import secrets
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel, Field
+from ticket_impl.oauth import build_authorize_url, exchange_code_for_tokens
+from ticket_impl.storage import get_tokens, is_expired
 
 from orchestrator.main_app import TicketBotOrchestrator
 
@@ -48,6 +51,9 @@ logging.basicConfig(
     format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
 )
 logger = logging.getLogger(__name__)
+
+# In-memory OAuth state storage (use Redis in production)
+_oauth_state_store: dict[str, str] = {}
 
 
 # ============================================================================
@@ -219,6 +225,15 @@ class StatusResponse(BaseModel):
     ticket_service_available: bool
 
 
+class AuthStatusResponse(BaseModel):
+    """Authentication status response."""
+
+    authenticated: bool
+    user_id: str
+    has_valid_tokens: bool
+    message: str
+
+
 # ============================================================================
 # ENDPOINTS
 # ============================================================================
@@ -256,6 +271,155 @@ async def service_status() -> StatusResponse:
         chat_available=check_chat_available(),
         ticket_service_available=True,  # Always true if service is running
     )
+
+
+# ============================================================================
+# AUTHENTICATION ENDPOINTS
+# ============================================================================
+
+
+@app.get("/auth/login")
+async def auth_login(user_id: str = "demo_user") -> dict[str, str]:
+    """Initiate OAuth 2.0 flow for Jira authentication.
+
+    This endpoint starts the OAuth flow for users to authenticate with Jira.
+    After visiting the auth_url, users will be redirected to /auth/callback.
+
+    Args:
+        user_id: User identifier (defaults to "demo_user")
+
+    Returns:
+        Dictionary with authorization URL and instructions
+
+    Example:
+        GET /auth/login?user_id=alice
+        Response: {
+            "auth_url": "https://auth.atlassian.com/authorize?...",
+            "message": "Please visit the auth_url to authorize",
+            "user_id": "alice"
+        }
+
+    """
+    logger.info("Starting Jira OAuth flow for user=%s", user_id)
+
+    # Check if user already has valid Jira tokens
+    tokens = get_tokens(user_id, service_name="jira")
+    if tokens and not is_expired(tokens):
+        logger.info("User %s already has valid Jira tokens", user_id)
+        return {
+            "message": "Already authenticated with Jira",
+            "user_id": user_id,
+            "authenticated": "true",
+        }
+
+    # Generate state parameter and store user_id mapping
+    state = secrets.token_urlsafe(32)
+    _oauth_state_store[state] = user_id
+    logger.info("Generated OAuth state for user=%s", user_id)
+
+    # Build Jira authorization URL
+    auth_url = build_authorize_url(state)
+    logger.info("Jira authorization URL: %s", auth_url)
+
+    return {
+        "auth_url": auth_url,
+        "message": "Please visit the auth_url to authorize with Jira",
+        "user_id": user_id,
+        "service": "jira",
+    }
+
+
+@app.get("/auth/callback")
+async def auth_callback(code: str, state: str) -> dict[str, str]:
+    """OAuth 2.0 callback endpoint for Jira.
+
+    This endpoint receives the authorization code from Jira after the user
+    authorizes the application. It exchanges the code for access tokens.
+
+    Args:
+        code: Authorization code from Jira OAuth provider
+        state: State parameter to prevent CSRF attacks
+
+    Returns:
+        Success message with user_id
+
+    Raises:
+        HTTPException: If state is invalid or token exchange fails
+
+    """
+    logger.info("Received Jira OAuth callback with state=%s", state)
+
+    # Validate state parameter
+    if state not in _oauth_state_store:
+        logger.error("Invalid OAuth state: %s", state)
+        raise HTTPException(status_code=400, detail="Invalid state parameter")
+
+    # Get user_id and remove state from store
+    user_id = _oauth_state_store.pop(state)
+    logger.info("Processing Jira OAuth callback for user=%s", user_id)
+
+    try:
+        # Exchange code for tokens (this stores them automatically)
+        _access_token, _refresh_token, _expires_in = await exchange_code_for_tokens(
+            user_id, code
+        )
+    except Exception as e:
+        logger.exception("Failed to exchange code for Jira tokens")
+        raise HTTPException(
+            status_code=500,
+            detail=f"Jira OAuth callback failed: {e!s}",
+        ) from e
+    else:
+        logger.info("Successfully exchanged code for Jira tokens (user=%s)", user_id)
+
+        return {
+            "message": "Jira authentication successful! You can now use the orchestrator.",
+            "user_id": user_id,
+            "service": "jira",
+            "authenticated": "true",
+        }
+
+
+@app.get("/auth/status", response_model=AuthStatusResponse)
+async def auth_status(user_id: str = "demo_user") -> AuthStatusResponse:
+    """Check Jira authentication status for a user.
+
+    Args:
+        user_id: User identifier to check
+
+    Returns:
+        Authentication status information
+
+    """
+    tokens = get_tokens(user_id, service_name="jira")
+
+    if not tokens:
+        return AuthStatusResponse(
+            authenticated=False,
+            user_id=user_id,
+            has_valid_tokens=False,
+            message=f"User '{user_id}' has not authenticated with Jira yet. Visit /auth/login to authenticate.",
+        )
+
+    if is_expired(tokens):
+        return AuthStatusResponse(
+            authenticated=False,
+            user_id=user_id,
+            has_valid_tokens=False,
+            message=f"User '{user_id}' Jira tokens are expired. Visit /auth/login to re-authenticate.",
+        )
+
+    return AuthStatusResponse(
+        authenticated=True,
+        user_id=user_id,
+        has_valid_tokens=True,
+        message=f"User '{user_id}' is authenticated with Jira and ready to use the orchestrator.",
+    )
+
+
+# ============================================================================
+# COMMAND PROCESSING ENDPOINTS
+# ============================================================================
 
 
 @app.post("/process", response_model=CommandResponse)
