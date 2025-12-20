@@ -20,6 +20,7 @@ from typing import TYPE_CHECKING, Any
 
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
 from ticket_impl.oauth import build_authorize_url, exchange_code_for_tokens
 from ticket_impl.storage import get_tokens, is_expired
@@ -329,8 +330,8 @@ async def auth_login(user_id: str = "demo_user") -> dict[str, str]:
     }
 
 
-@app.get("/auth/callback")
-async def auth_callback(code: str, state: str) -> dict[str, str]:
+@app.get("/auth/callback", response_class=HTMLResponse)
+async def auth_callback(code: str, state: str) -> HTMLResponse:
     """OAuth 2.0 callback endpoint for Jira.
 
     This endpoint receives the authorization code from Jira after the user
@@ -341,7 +342,7 @@ async def auth_callback(code: str, state: str) -> dict[str, str]:
         state: State parameter to prevent CSRF attacks
 
     Returns:
-        Success message with user_id
+        HTML page showing success or error message
 
     Raises:
         HTTPException: If state is invalid or token exchange fails
@@ -352,7 +353,29 @@ async def auth_callback(code: str, state: str) -> dict[str, str]:
     # Validate state parameter
     if state not in _oauth_state_store:
         logger.error("Invalid OAuth state: %s", state)
-        raise HTTPException(status_code=400, detail="Invalid state parameter")
+        return HTMLResponse(
+            content="""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Authentication Failed</title>
+                <style>
+                    body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+                    .error { background-color: #fee; border: 1px solid #fcc; border-radius: 5px; padding: 20px; }
+                    h1 { color: #c00; }
+                </style>
+            </head>
+            <body>
+                <div class="error">
+                    <h1>❌ Authentication Failed</h1>
+                    <p>Invalid state parameter. This could be a security issue.</p>
+                    <p>Please try authenticating again by visiting <a href="/auth/login">/auth/login</a></p>
+                </div>
+            </body>
+            </html>
+            """,
+            status_code=400,
+        )
 
     # Get user_id and remove state from store
     user_id = _oauth_state_store.pop(state)
@@ -365,19 +388,70 @@ async def auth_callback(code: str, state: str) -> dict[str, str]:
         )
     except Exception as e:
         logger.exception("Failed to exchange code for Jira tokens")
-        raise HTTPException(
+        return HTMLResponse(
+            content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Authentication Failed</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+                    .error {{ background-color: #fee; border: 1px solid #fcc; border-radius: 5px; padding: 20px; }}
+                    h1 {{ color: #c00; }}
+                    pre {{ background: #f5f5f5; padding: 10px; overflow-x: auto; }}
+                </style>
+            </head>
+            <body>
+                <div class="error">
+                    <h1>❌ Authentication Failed</h1>
+                    <p>Failed to exchange authorization code for tokens.</p>
+                    <p><strong>Error:</strong></p>
+                    <pre>{e!s}</pre>
+                    <p>Please try again by visiting <a href="/auth/login?user_id={user_id}">/auth/login</a></p>
+                </div>
+            </body>
+            </html>
+            """,
             status_code=500,
-            detail=f"Jira OAuth callback failed: {e!s}",
-        ) from e
+        )
     else:
         logger.info("Successfully exchanged code for Jira tokens (user=%s)", user_id)
 
-        return {
-            "message": "Jira authentication successful! You can now use the orchestrator.",
-            "user_id": user_id,
-            "service": "jira",
-            "authenticated": "true",
-        }
+        return HTMLResponse(
+            content=f"""
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Authentication Successful</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }}
+                    .success {{ background-color: #efe; border: 1px solid #cfc; border-radius: 5px; padding: 20px; }}
+                    h1 {{ color: #090; }}
+                    .info {{ background: #f5f5f5; padding: 15px; margin: 15px 0; border-radius: 5px; }}
+                    code {{ background: #e8e8e8; padding: 2px 6px; border-radius: 3px; }}
+                </style>
+            </head>
+            <body>
+                <div class="success">
+                    <h1>✅ Authentication Successful!</h1>
+                    <p>You have successfully authenticated with Jira.</p>
+                    <div class="info">
+                        <p><strong>User ID:</strong> <code>{user_id}</code></p>
+                        <p><strong>Service:</strong> Jira</p>
+                        <p><strong>Status:</strong> Ready to use</p>
+                    </div>
+                    <p>You can now:</p>
+                    <ul>
+                        <li>Use the orchestrator to create and manage tickets</li>
+                        <li>Check your <a href="/auth/status?user_id={user_id}">authentication status</a></li>
+                        <li>View the <a href="/docs">API documentation</a></li>
+                    </ul>
+                    <p style="margin-top: 20px; color: #666;">You can close this window now.</p>
+                </div>
+            </body>
+            </html>
+            """,
+        )
 
 
 @app.get("/auth/status", response_model=AuthStatusResponse)
