@@ -1,6 +1,5 @@
 """Unit tests for AI adapter models."""
 
-
 from ticket_ai_adapter.models import CommandResult, ToolCall, ToolCallType
 
 

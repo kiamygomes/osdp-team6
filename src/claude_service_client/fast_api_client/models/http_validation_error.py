@@ -17,9 +17,20 @@ T = TypeVar("T", bound="HTTPValidationError")
 
 @_attrs_define
 class HTTPValidationError:
-    """
+    """HTTP Validation Error response from FastAPI.
+
     Attributes:
-        detail (list[ValidationError] | Unset):
+        detail (list[ValidationError] | Unset): List of validation errors
+
+    Additional Properties:
+        The additional_properties dict is used for forward compatibility to store
+        any extra fields returned by the API that are not explicitly defined.
+        This allows the client to handle new API fields without breaking, while
+        still providing dict-like access to unknown fields via __getitem__ and
+        __setitem__ methods.
+
+        Note: additional_properties is mutable and can be modified after creation.
+        Use with care to avoid unintended side effects.
     """
 
     detail: list[ValidationError] | Unset = UNSET

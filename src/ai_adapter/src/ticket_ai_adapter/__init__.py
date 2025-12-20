@@ -10,9 +10,13 @@ SECOND SUBMISSION - Team Integration:
 """
 
 from ticket_ai_adapter.adapter import AITicketAdapter
+from ticket_ai_adapter.ai_implementation_setup import setup_ai_implementations
 from ticket_ai_adapter.models import CommandResult, ToolCall, ToolCallType
 from ticket_ai_adapter.openai_adapter import OpenAITicketAdapter
 from ticket_ai_adapter.team_integration import ClaudeTeamAdapter, OpenAITeamAdapter
+
+# Setup AI implementations after imports but before use
+setup_ai_implementations()
 
 __all__ = [
     "AITicketAdapter",

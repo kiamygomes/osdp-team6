@@ -1,0 +1,49 @@
+# Dockerfile for OSDP Ticket Bot Orchestrator
+# Deploys the main 3-vertical integration application (Chat → AI → Tickets)
+
+FROM python:3.12-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    git \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv for dependency management
+RUN pip install --no-cache-dir uv
+
+# Copy all source code and dependencies
+COPY pyproject.toml uv.lock ./
+COPY src/ ./src/
+COPY external/ ./external/
+
+# Initialize git submodules (for external team packages)
+# Note: On Render, submodules should be automatically initialized
+# But we include this as a fallback
+RUN git config --global --add safe.directory /app || true
+
+# Install all workspace dependencies
+RUN uv venv /opt/venv && \
+    . /opt/venv/bin/activate && \
+    uv sync --frozen --all-packages || \
+    uv sync --all-packages
+
+# Set environment variables
+ENV PATH="/opt/venv/bin:$PATH" \
+    PYTHONUNBUFFERED=1 \
+    PYTHONDONTWRITEBYTECODE=1 \
+    PYTHONPATH="/app/src:/app/external/claude_team/src:/app/external/openai_team/src:/app/external/slack_team/src"
+
+# Create directory for SQLite database
+RUN mkdir -p /app/data && chmod 777 /app/data
+
+# Expose port (Render will set PORT env var)
+EXPOSE 8080
+
+# Health check
+HEALTHCHECK --interval=30s --timeout=10s --start-period=40s --retries=3 \
+    CMD python -c "import requests; requests.get('http://localhost:8080/health', timeout=5)" || exit 1
+
+# Run the orchestrator service
+CMD ["/bin/sh", "-c", ". /opt/venv/bin/activate && uvicorn orchestrator.orchestrator_service:app --host 0.0.0.0 --port ${PORT:-8080}"]

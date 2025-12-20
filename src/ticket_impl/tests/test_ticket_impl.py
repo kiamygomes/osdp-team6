@@ -1,4 +1,26 @@
-"""End-to-end happy-path for TicketImpl using respx mocks."""
+"""End-to-end happy-path for TicketImpl using respx mocks.
+
+Exception Model Contract:
+-------------------------
+This test suite verifies two distinct error handling patterns:
+
+1. Domain Exceptions (ServiceError, TicketNotFoundError):
+   - ServiceError: Raised for service-level failures (HTTP errors, API failures)
+   - TicketNotFoundError: Raised when a requested ticket doesn't exist (404)
+   - These are domain-specific exceptions from ticket_api.exceptions
+   - Used for expected error conditions that callers should handle
+
+2. Protocol Exceptions (httpx.HTTPError):
+   - Raw HTTP transport errors (network failures, timeouts, connection errors)
+   - Propagated directly from httpx when they occur at the protocol level
+   - Used for unexpected infrastructure failures
+
+The behavior is intentional:
+- ServiceError wraps expected API failures (400, 500 responses)
+- TicketNotFoundError wraps 404 responses for missing tickets
+- httpx.HTTPError is propagated for transport-level failures
+- This design allows callers to distinguish between API errors and network errors
+"""
 
 import re
 from uuid import uuid4

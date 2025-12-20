@@ -6,6 +6,7 @@ This module provides Prometheus metrics for monitoring:
 - Request counts by endpoint and status
 """
 
+import re
 import time
 from collections.abc import Callable
 from typing import Any
@@ -86,9 +87,24 @@ ticket_operation_duration_seconds = Histogram(
 class PrometheusMiddleware(BaseHTTPMiddleware):
     """Middleware to collect Prometheus metrics for all HTTP requests."""
 
-    async def dispatch(
-        self, request: Request, call_next: Callable[[Request], Any]
-    ) -> Response:
+    def _normalize_endpoint(self, path: str) -> str:
+        """Normalize endpoint path to reduce label cardinality.
+
+        Dynamic path parameters (like UUIDs) are replaced with placeholders
+        to prevent metric explosion. For example:
+        - /api/v1/tickets/550e8400-... -> /api/v1/tickets/{id}
+        - /api/v1/tickets/123/comments/456 -> /api/v1/tickets/{id}/comments/{id}
+
+        This ensures bounded cardinality for Prometheus labels.
+        """
+        # Match UUID patterns (8-4-4-4-12 hex digits)
+        uuid_pattern = r"[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}"
+        normalized = re.sub(uuid_pattern, "{id}", path, flags=re.IGNORECASE)
+
+        # Replace other numeric IDs with {id}
+        return re.sub(r"/\d+(?=/|$)", "/{id}", normalized)
+
+    async def dispatch(self, request: Request, call_next: Callable[[Request], Any]) -> Response:
         """Process request and collect metrics."""
         # Skip metrics endpoint itself
         if request.url.path == "/metrics":
@@ -96,7 +112,8 @@ class PrometheusMiddleware(BaseHTTPMiddleware):
             return metrics_response
 
         method = request.method
-        endpoint = request.url.path
+        # Normalize endpoint to prevent high cardinality from dynamic path parameters
+        endpoint = self._normalize_endpoint(request.url.path)
 
         # Track active requests
         active_requests.labels(method=method, endpoint=endpoint).inc()
@@ -158,4 +175,6 @@ def track_ticket_operation(operation: str, status: str = "success") -> None:
 
 def get_metrics() -> bytes:
     """Get Prometheus metrics in text format."""
-    return generate_latest()
+    result = generate_latest()
+    assert isinstance(result, bytes)
+    return result

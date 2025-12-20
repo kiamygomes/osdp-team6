@@ -1,3 +1,4 @@
+import logging
 from http import HTTPStatus
 from typing import Any
 
@@ -9,6 +10,8 @@ from ...models.chat_request import ChatRequest
 from ...models.chat_response import ChatResponse
 from ...models.http_validation_error import HTTPValidationError
 from ...types import Response
+
+logger = logging.getLogger(__name__)
 
 
 def _get_kwargs(
@@ -33,6 +36,11 @@ def _get_kwargs(
 def _parse_response(
     *, client: AuthenticatedClient | Client, response: httpx.Response
 ) -> ChatResponse | HTTPValidationError | None:
+    """Parse HTTP response into typed response object.
+
+    The ChatResponse.content field contains the AI's text response.
+    Expected structure: ChatResponse(content="response text")
+    """
     if response.status_code == 200:
         response_200 = ChatResponse.from_dict(response.json())
 
@@ -42,6 +50,13 @@ def _parse_response(
         response_422 = HTTPValidationError.from_dict(response.json())
 
         return response_422
+
+    # Log unexpected status codes for debugging
+    logger.warning(
+        "Unexpected response from chat API: status=%d, content_preview=%s",
+        response.status_code,
+        response.content[:200] if response.content else "<empty>",
+    )
 
     if client.raise_on_unexpected_status:
         raise errors.UnexpectedStatus(response.status_code, response.content)

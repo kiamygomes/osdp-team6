@@ -99,10 +99,19 @@ class TicketInterface(ABC):
             ticket_id: Unique identifier of the ticket to retrieve
 
         Returns:
-            The Ticket instance if found, None otherwise
+            The Ticket instance if found, None otherwise.
+
+            Error Semantics:
+            - Returns None if the ticket does not exist (NOT_FOUND case)
+            - This design allows callers to distinguish between "ticket not found"
+              and "operation failed" without relying on exception handling for
+              the common case of missing tickets.
+            - For consistent behavior across teams, implementations should return
+              None for missing tickets rather than raising exceptions.
 
         Raises:
-            Exception: If retrieval operation fails
+            Exception: If retrieval operation fails due to service errors
+                      (network issues, authentication, etc.), not for missing tickets
 
         """
         raise NotImplementedError

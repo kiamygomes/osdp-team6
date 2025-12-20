@@ -164,13 +164,17 @@ class TicketImpl(TicketServiceAPI):
 
         clauses: list[str] = [f'project = "{self.project_key}"']
         if status:
-            name = {
-                TicketStatus.OPEN: "Open",
-                TicketStatus.IN_PROGRESS: "In Progress",
-                TicketStatus.RESOLVED: "Done",
-                TicketStatus.CLOSED: "Closed",
+            # Map domain status to Jira status names
+            # Note: "To Do" is also considered OPEN status
+            status_names = {
+                TicketStatus.OPEN: ["Open", "To Do"],
+                TicketStatus.IN_PROGRESS: ["In Progress", "Doing"],
+                TicketStatus.RESOLVED: ["Done", "Resolved"],
+                TicketStatus.CLOSED: ["Closed"],
             }[status]
-            clauses.append(f'status = "{name}"')
+            # Use IN clause to match multiple possible status names
+            status_list = ", ".join(f'"{name}"' for name in status_names)
+            clauses.append(f"status IN ({status_list})")
         if assignee:
             clauses.append(f'assignee in (currentUser(), "{assignee}")')
         if reporter:

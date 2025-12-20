@@ -42,14 +42,16 @@ class TestOpenAITicketAdapter:
         mock_response = Mock()
         mock_choice = Mock()
         mock_message = Mock()
-        mock_message.content = json.dumps({
-            "tool": "create_ticket",
-            "parameters": {
-                "title": "Test Ticket",
-                "description": "Test Description",
-                "priority": "high",
-            },
-        })
+        mock_message.content = json.dumps(
+            {
+                "tool": "create_ticket",
+                "parameters": {
+                    "title": "Test Ticket",
+                    "description": "Test Description",
+                    "priority": "high",
+                },
+            }
+        )
         mock_choice.message = mock_message
         mock_response.choices = [mock_choice]
         adapter.openai_client.chat.completions.create.return_value = mock_response  # type: ignore[attr-defined]
@@ -120,16 +122,19 @@ class TestOpenAITicketAdapter:
         mock_response = Mock()
         mock_choice = Mock()
         mock_message = Mock()
-        mock_message.content = json.dumps({
-            "tool": "create_ticket",
-            "parameters": {"title": "Test", "description": "Test"},
-        })
+        mock_message.content = json.dumps(
+            {
+                "tool": "create_ticket",
+                "parameters": {"title": "Test", "description": "Test"},
+            }
+        )
         mock_choice.message = mock_message
         mock_response.choices = [mock_choice]
         adapter.openai_client.chat.completions.create.return_value = mock_response  # type: ignore[attr-defined]
 
         # Mock service error
         from ticket_api import ServiceError
+
         mock_ticket_service.create_ticket.side_effect = ServiceError("Service unavailable")
 
         result = await adapter.process_command("Create ticket")

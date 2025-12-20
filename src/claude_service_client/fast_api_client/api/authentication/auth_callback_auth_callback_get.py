@@ -34,7 +34,7 @@ def _get_kwargs(
 
     _kwargs: dict[str, Any] = {
         "method": "get",
-        "url": "/auth/callback",
+        "url": "/api/v1/auth/callback",
         "params": params,
     }
 
