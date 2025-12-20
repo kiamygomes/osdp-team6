@@ -558,14 +558,16 @@ async def process_command(request: ProcessCommandRequest) -> CommandResponse:
                 logger.info("🔍 DEBUG: Converting list of %d items", len(data))
                 converted_list = []
                 for item in data:
-                    if dataclasses.is_dataclass(item):
+                    if dataclasses.is_dataclass(item) and not isinstance(
+                        item, type
+                    ):
                         converted_list.append(dataclasses.asdict(item))
                     elif hasattr(item, "model_dump"):
                         converted_list.append(item.model_dump())
                     else:
                         converted_list.append(item)
                 data = converted_list
-            elif dataclasses.is_dataclass(data):
+            elif dataclasses.is_dataclass(data) and not isinstance(data, type):
                 # Convert dataclass to dict
                 logger.info("🔍 DEBUG: Converting dataclass: %s", type(data).__name__)
                 data = dataclasses.asdict(data)
@@ -659,14 +661,16 @@ async def process_chat_message(request: ProcessChatRequest) -> CommandResponse:
                 logger.info("🔍 DEBUG: Converting list of %d items", len(data))
                 converted_list = []
                 for item in data:
-                    if dataclasses.is_dataclass(item):
+                    if dataclasses.is_dataclass(item) and not isinstance(
+                        item, type
+                    ):
                         converted_list.append(dataclasses.asdict(item))
                     elif hasattr(item, "model_dump"):
                         converted_list.append(item.model_dump())
                     else:
                         converted_list.append(item)
                 data = converted_list
-            elif dataclasses.is_dataclass(data):
+            elif dataclasses.is_dataclass(data) and not isinstance(data, type):
                 # Convert dataclass to dict
                 logger.info("🔍 DEBUG: Converting dataclass: %s", type(data).__name__)
                 data = dataclasses.asdict(data)
