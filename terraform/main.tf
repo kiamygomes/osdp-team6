@@ -19,32 +19,38 @@ provider "render" {
 }
 
 resource "render_web_service" "ticket_service" {
-  name        = "ticket-service"
-  plan        = var.render_plan
-  region      = var.render_region
-  runtime     = "docker"
-  auto_deploy = var.auto_deploy
+  name   = "ticket-service"
+  plan   = var.render_plan
+  region = var.render_region
 
   runtime_source = {
-    native_runtime = {
-      auto_deploy     = var.auto_deploy
-      branch          = var.repo_branch
+    docker = {
       repo_url        = var.repo_url
-      runtime         = "docker"
+      branch          = var.repo_branch
       dockerfile_path = "Dockerfile"
+      auto_deploy     = var.auto_deploy
     }
   }
 
   env_vars = {
-    # Jira Configuration
-    JIRA_CLOUD_ID       = var.jira_cloud_id
-    JIRA_API_BASE       = "https://api.atlassian.com/ex/jira/${var.jira_cloud_id}"
-    OAUTH_CLIENT_ID     = var.oauth_client_id
-    OAUTH_CLIENT_SECRET = var.oauth_client_secret
-    OAUTH_REDIRECT_URI  = "https://ticket-service.onrender.com/api/v1/auth/callback"
-    
-    # Database - SQLite (simple file-based)
-    DB_URL = "sqlite:///./jira_tokens.db"
+    JIRA_CLOUD_ID = {
+      value = var.jira_cloud_id
+    }
+    JIRA_API_BASE = {
+      value = "https://api.atlassian.com/ex/jira/${var.jira_cloud_id}"
+    }
+    OAUTH_CLIENT_ID = {
+      value = var.oauth_client_id
+    }
+    OAUTH_CLIENT_SECRET = {
+      value = var.oauth_client_secret
+    }
+    OAUTH_REDIRECT_URI = {
+      value = "https://ticket-service.onrender.com/api/v1/auth/callback"
+    }
+    DB_URL = {
+      value = "sqlite:///./jira_tokens.db"
+    }
   }
 }
 
