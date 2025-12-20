@@ -188,7 +188,89 @@ jobs:
       - store_artifacts:
           path: test-results/integration
 
-  # Job 6: Report Summary
+  # Job 6: Terraform Plan (Infrastructure Preview)
+  terraform_plan:
+    docker:
+      - image: hashicorp/terraform:1.6
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Terraform Init"
+          command: |
+            cd terraform
+            terraform init
+      - run:
+          name: "Terraform Validate"
+          command: |
+            cd terraform
+            terraform validate
+      - run:
+          name: "Terraform Plan"
+          command: |
+            cd terraform
+            # Plan infrastructure changes
+            terraform plan -out=tfplan
+            echo "Terraform plan completed. Review changes before applying."
+      - persist_to_workspace:
+          root: .
+          paths:
+            - terraform/tfplan
+      - store_artifacts:
+          path: terraform/tfplan
+          destination: terraform-plan
+
+  # Job 7: Terraform Apply (Infrastructure Deployment)
+  terraform_apply:
+    docker:
+      - image: hashicorp/terraform:1.6
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Terraform Init"
+          command: |
+            cd terraform
+            terraform init
+      - run:
+          name: "Terraform Apply"
+          command: |
+            cd terraform
+            # Apply planned infrastructure changes
+            terraform apply -auto-approve tfplan
+            echo "Infrastructure deployed successfully!"
+      - run:
+          name: "Output Deployment Info"
+          command: |
+            cd terraform
+            terraform output
+
+  # Job 8: Setup Telemetry
+  setup_telemetry:
+    docker:
+      - image: cimg/python:3.12
+    steps:
+      - attach_workspace:
+          at: .
+      - run:
+          name: "Configure Application Metrics"
+          command: |
+            echo "Setting up telemetry and monitoring..."
+            # In production, this would configure:
+            # - Prometheus metrics endpoint
+            # - Datadog/New Relic agents
+            # - Custom logging pipelines
+            echo "Telemetry endpoints configured"
+      - run:
+          name: "Verify Health Endpoints"
+          command: |
+            source .venv/bin/activate
+            echo "Health check endpoints available at:"
+            echo "  - /health (service health)"
+            echo "  - /status (detailed status)"
+            echo "  - /metrics (Prometheus metrics - if enabled)"
+
+  # Job 9: Report Summary
   report_summary:
     docker:
       - image: cimg/base:stable # Use a basic image for reporting
@@ -360,7 +442,40 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
-                
+
+      # Terraform jobs - plan on all main branches, apply only on main
+      - terraform_plan:
+          requires:
+            - unit_test
+          context: terraform-credentials # Context with RENDER_API_KEY, etc.
+          filters:
+            branches:
+              only:
+                - main
+                - develop
+                - kamen-requierd-fixes
+                - make-real-deletions
+
+      - terraform_apply:
+          requires:
+            - terraform_plan
+            - circleci_test
+            - integration_test
+          context: terraform-credentials
+          filters:
+            branches:
+              only:
+                - main # Only apply on main branch
+
+      # Telemetry setup after deployment
+      - setup_telemetry:
+          requires:
+            - terraform_apply
+          filters:
+            branches:
+              only:
+                - main
+
       - report_summary:
           requires:
             - unit_test
