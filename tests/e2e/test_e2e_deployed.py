@@ -27,8 +27,8 @@ OAUTH_REDIRECT_URI = os.getenv(
 
 
 @pytest.mark.skipif(
-    os.getenv("CI") == "true",
-    reason="Deployed tests require browser OAuth, skip in CI",
+    os.getenv("CI") == "true" or os.getenv("SKIP_DEPLOYED_TESTS", "true").lower() == "true",
+    reason="Deployed tests require browser OAuth, skip in CI or when SKIP_DEPLOYED_TESTS=true",
 )
 class TestE2ETicketManagementDeployed:
     """End-to-end tests hitting the deployed service."""

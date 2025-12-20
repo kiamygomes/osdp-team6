@@ -34,9 +34,15 @@ def mock_token_storage(request: pytest.FixtureRequest) -> Generator[MagicMock | 
         yield None
         return
 
-    with patch("ticket_service.main.get_user_tokens") as mock_get_tokens:
+    with (
+        patch("ticket_service.main.get_user_tokens") as mock_get_tokens,
+        patch("orchestrator.main_app.get_tokens") as mock_get_tokens_orch,
+        patch("orchestrator.main_app.is_expired") as mock_is_expired,
+    ):
         # Allow test- prefixed users to pass token verification
         mock_get_tokens.return_value = {"access_token": "test-token"}
+        mock_get_tokens_orch.return_value = {"access_token": "test-token"}
+        mock_is_expired.return_value = False
         yield mock_get_tokens
 
 

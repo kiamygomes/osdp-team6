@@ -28,6 +28,7 @@ from ticket_service.models import (
     TicketResponse,
     TicketUpdateRequest,
 )
+from ticket_service.telemetry import PrometheusMiddleware, get_metrics, track_ticket_operation
 
 logger = logging.getLogger("ticket_service")
 
@@ -53,6 +54,9 @@ app = FastAPI(
     redoc_url="/redoc",
     lifespan=lifespan,
 )
+
+# Add Prometheus telemetry middleware
+app.add_middleware(PrometheusMiddleware)
 
 # Configure CORS - allow credentials for cookies
 app.add_middleware(
@@ -193,6 +197,7 @@ async def oauth_login(
             "redirect_to": auth_url,
         }
 
+
 @app.get(
     "/api/v1/auth/callback",
     tags=["authentication"],
@@ -318,6 +323,21 @@ async def health_check() -> HealthResponse:
     return HealthResponse(status="healthy", service="ticket_service", version="0.1.0")
 
 
+@app.get("/metrics", tags=["observability"], summary="Prometheus metrics")
+async def metrics() -> Response:
+    """Expose Prometheus metrics for monitoring.
+
+    Metrics include:
+    - http_request_duration_seconds: Request latency histogram
+    - http_requests_total: Total request count by endpoint and status
+    - http_requests_success_total: Successful requests (2xx)
+    - http_requests_failure_total: Failed requests (4xx, 5xx)
+    - http_requests_active: Currently active requests
+    - ticket_operations_total: Ticket operations by type and status
+    """
+    return Response(content=get_metrics(), media_type="text/plain; charset=utf-8")
+
+
 # ============================================================================
 # TICKET ENDPOINTS - All use cookie-based authentication automatically
 # ============================================================================
@@ -340,10 +360,13 @@ async def create_ticket(
             priority=request.priority,
             assignee=request.assignee,
         )
+        track_ticket_operation("create", "success")
         return TicketResponse.model_validate(ticket)
     except ValueError as e:
+        track_ticket_operation("create", "error")
         raise HTTPException(status_code=HTTPStatus.BAD_REQUEST, detail=str(e)) from e
     except Exception as e:
+        track_ticket_operation("create", "error")
         raise HTTPException(
             status_code=HTTPStatus.INTERNAL_SERVER_ERROR,
             detail=f"Failed to create ticket: {e!s}",

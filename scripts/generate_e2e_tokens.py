@@ -70,11 +70,7 @@ def extract_user_email_from_token(access_token: str) -> str | None:
         claims = json.loads(decoded)
 
         # Try multiple possible email field names
-        email: str | None = (
-            claims.get("email")
-            or claims.get("preferred_username")
-            or claims.get("sub")
-        )
+        email: str | None = claims.get("email") or claims.get("preferred_username") or claims.get("sub")
         return email
     except (ValueError, KeyError, json.JSONDecodeError):
         return None
@@ -129,7 +125,7 @@ async def main() -> None:
                 "demo_user",
                 auth_code,
             )
-            logger.info("✓ Successfully generated tokens for demo_user")
+            logger.info("Successfully generated tokens for demo_user")
             logger.info("  Access token: %s...", access_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Refresh token: %s...", refresh_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Expires in: %d seconds", expires_in)
@@ -138,17 +134,11 @@ async def main() -> None:
             # Directly insert tokens (for CI/CD with existing tokens)
             access_token = sys.argv[2]
             refresh_token = sys.argv[3]
-            expires_in_sec = (
-                int(sys.argv[TOKENS_MAX_ARG_INDEX])
-                if len(sys.argv) > TOKENS_MAX_ARG_INDEX
-                else DEFAULT_EXPIRES_SEC
-            )
+            expires_in_sec = int(sys.argv[TOKENS_MAX_ARG_INDEX]) if len(sys.argv) > TOKENS_MAX_ARG_INDEX else DEFAULT_EXPIRES_SEC
 
             # Optional: allow passing a user_id, otherwise extract from token
             user_id = (
-                sys.argv[USER_ID_ARG_INDEX]
-                if len(sys.argv) > USER_ID_ARG_INDEX
-                else extract_user_email_from_token(access_token)
+                sys.argv[USER_ID_ARG_INDEX] if len(sys.argv) > USER_ID_ARG_INDEX else extract_user_email_from_token(access_token)
             )
 
             if not user_id:
@@ -158,7 +148,7 @@ async def main() -> None:
 
             logger.info("Storing tokens for user: %s", user_id)
             ticket_impl.storage.upsert_tokens(user_id, access_token, refresh_token, expires_in_sec)
-            logger.info("✓ Successfully stored tokens for %s", user_id)
+            logger.info("Successfully stored tokens for %s", user_id)
             logger.info("  Access token: %s...", access_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Refresh token: %s...", refresh_token[:TOKEN_PREVIEW_LENGTH])
             logger.info("  Expires in: %d seconds", expires_in_sec)

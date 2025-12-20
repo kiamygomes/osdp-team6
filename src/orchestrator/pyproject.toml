@@ -1,0 +1,24 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "orchestrator"
+version = "0.1.0"
+description = "Main orchestrator service for 3-vertical integration (Chat → AI → Tickets)"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.111.0",
+    "uvicorn>=0.30.1",
+    "prometheus-client>=0.19.0",
+    "ticket-api",
+    "ticket-impl",
+    "ticket-client-adapter",
+    "ticket-ai-adapter",
+]
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/orchestrator"]
+
+[tool.hatch.build.targets.wheel.force-include]
+"src/orchestrator/py.typed" = "orchestrator/py.typed"

@@ -1,17 +1,35 @@
-# Design Document — Ticket Service
+# Design Document — AI-Powered Ticket Management System
 
-This document describes the architecture and design of the service-based implementation. It covers the FastAPI service, the auto-generated API client, and the adapter that allows user code to consume the service with the same interface as the original library.
+This document describes the architecture and design of the multi-team integration system. It covers the main orchestrator, AI integration layer, FastAPI service, auto-generated API client, and the adapters that enable seamless communication between Chat, AI, and Ticketing services.
 
 ## Architecture Overview
 
-- `ticket_service` (FastAPI service): wraps the existing `ticket_impl` library and exposes it over HTTP.
-- `ticket_client_generated` (auto-generated client): OpenAPI/HTTP client that communicates with the FastAPI service.
-- `ticket_client_adapter` (adapter/shim): implements `TicketServiceAPI` by delegating to the generated client so user code does not have to change.
-- `ticket_impl` / `ticket_api` (existing library code): the original in-process Jira client and ticket models.
+The system implements a **multi-team integration architecture** with the following key components:
 
-**Key idea**: user code calls the same methods (`create_ticket`, `get_ticket`, `list_tickets`, etc.) regardless of whether the implementation is local or remote.
+- **`orchestrator`** (Main Application): Coordinates the complete Chat → AI → Tickets pipeline using the `TicketBotOrchestrator` class.
+- **AI Integration Layer**: Connects with external AI teams (Claude and OpenAI) to process natural language commands into structured ticket operations.
+- **`ticket_service`** (FastAPI service): Wraps the existing `ticket_impl` library and exposes it over HTTP for distributed access.
+- **`ticket_client_generated`** (auto-generated client): OpenAPI/HTTP client that communicates with the FastAPI service.
+- **`ticket_client_adapter`** (adapter/shim): Implements `TicketServiceAPI` by delegating to the generated client for location transparency.
+- **`ticket_impl` / `ticket_api`** (core library): The original in-process Jira client and ticket models.
+- **External Team Packages**: Git submodules containing Claude team, OpenAI team, and Slack team implementations.
+
+**Key idea**: The orchestrator processes natural language commands through AI services to generate structured ticket operations, while maintaining the same `TicketServiceAPI` interface regardless of whether the implementation is local or remote.
 
 ## Components Added
+
+- **orchestrator** (`src/orchestrator/src/orchestrator/main_app.py`)
+  - `TicketBotOrchestrator` class that coordinates the complete Chat → AI → Tickets pipeline
+  - Supports AI provider switching between Claude and OpenAI teams
+  - Implements `process_chat_message()` for natural language command processing
+  - Provides chat integration through `ChatClientProtocol`
+  - Handles bidirectional communication: `process_incoming_chat()` and `send_to_chat()`
+
+- **AI Integration Layer** (`src/ai_adapter/`, `src/ai_implementations/`)
+  - `ClaudeTeamAdapter` and `OpenAITeamAdapter` for connecting with external AI teams
+  - Natural language processing to structured tool calls
+  - Error handling and fallback mechanisms for AI service failures
+  - Integration with external team packages via git submodules
 
 - **ticket_service** (`src/ticket_service/src/ticket_service/main.py`)
   - FastAPI app exposing endpoints:
@@ -39,62 +57,91 @@ This document describes the architecture and design of the service-based impleme
   - Adds retry logic, circuit breaker, and idempotency support.
   - Converts between domain models (dataclasses) and generated models (Pydantic).
 
+- **External Team Integration** (`external/*/`)
+  - Git submodules containing Claude team, OpenAI team, and Slack team packages
+  - Each team provides their own API interfaces and implementations
+  - Integrated through adapter pattern to maintain clean boundaries
+
 ## Example Request Flow
 
-**Scenario:** user code calls `service.create_ticket(title="Bug", description="...", reporter="...")`
+**Scenario:** User types "Create a high priority ticket for fixing the login bug" in chat
 
-1. **User code obtains a client**
-   - `RemoteTicketService(base_url="http://localhost:8000", user_id="user-123", project_key="PROJ")`
+### Complete Pipeline: Chat → AI → Tickets → Response
 
-2. **Adapter call**
-   - `RemoteTicketService.create_ticket()` generates idempotency key, converts to `TicketCreateRequest`, calls:
+1. **User Input Processing**
    ```python
-   create_ticket_api_v1_tickets_post.asyncio_detailed(
-       client=self._client,
-       body=request,
-       x_user_id=self._user_id,
-       x_project_key=self._project_key
+   orchestrator = TicketBotOrchestrator(
+       user_id="user-123", 
+       project_key="PROJ", 
+       ai_provider="claude"
+   )
+   
+   result = await orchestrator.process_chat_message(
+       "Create a high priority ticket for fixing the login bug"
    )
    ```
 
-3. **HTTP request**
-   - `httpx` sends:
-   ```
-   POST http://localhost:8000/api/v1/tickets
-   Headers: X-User-ID, X-Project-Key, Idempotency-Key
-   Body: {"title": "Bug", "description": "...", "reporter": "...", "priority": "medium"}
-   ```
-
-4. **FastAPI endpoint `/api/v1/tickets` executes:**
-   - Validates request with Pydantic
-   - Calls dependency-injected `TicketImpl`:
-   ```python
-   ticket = await service.create_ticket(
-       title=request.title,
-       description=request.description,
-       reporter=request.reporter,
-       priority=request.priority
-   )
-   ```
-   - `TicketImpl` calls Jira API, stores UUID mapping, returns domain `Ticket`
-   - Serializes `Ticket` to JSON:
+2. **AI Processing**
+   - `ClaudeTeamAdapter.process_command()` sends natural language to Claude AI service
+   - Claude AI analyzes text and returns structured tool call:
    ```json
    {
-     "id": "550e8400-e29b-41d4-a716-446655440000",
-     "title": "Bug",
-     "status": "open",
-     "priority": "medium",
-     "reporter": "user@example.com",
-     "created_at": "2024-01-15T10:30:00Z"
+     "tool": "create_ticket",
+     "parameters": {
+       "title": "Fix login bug",
+       "description": "Users cannot authenticate - login functionality broken",
+       "priority": "high",
+       "reporter": "user-123"
+     }
    }
    ```
 
-5. **Response handling**
-   - Generated client returns parsed `TicketResponse` to adapter.
+3. **Ticket Operation Execution**
+   - AI adapter calls `TicketImpl.create_ticket()` with structured parameters
+   - `TicketImpl` performs OAuth authentication with Jira
+   - Creates ticket in Jira Cloud via REST API
+   - Stores UUID mapping in local database
+   - Returns domain `Ticket` object
 
-6. **Adapter conversion**
-   - `RemoteTicketService` converts `TicketResponse` back to domain `Ticket` dataclass.
-   - Returns to user code.
+4. **Response Generation**
+   - AI adapter formats success response:
+   ```python
+   {
+     "success": True,
+     "message": "Successfully created ticket: Fix login bug (ID: 550e8400-e29b-41d4-a716-446655440000)",
+     "data": ticket_object,
+     "error": None
+   }
+   ```
+
+5. **Chat Integration (Optional)**
+   - If chat client available, sends response back to chat channel
+   - Otherwise logs the response for CLI/demo purposes
+
+### Alternative Flow: HTTP Service Access
+
+For distributed deployments, the same ticket operations can be accessed via HTTP:
+
+1. **HTTP Client Call**
+   ```python
+   remote_service = RemoteTicketService(
+       base_url="http://localhost:8000",
+       user_id="user-123", 
+       project_key="PROJ"
+   )
+   ticket = await remote_service.create_ticket(...)
+   ```
+
+2. **HTTP Request**
+   ```
+   POST http://localhost:8000/api/v1/tickets
+   Headers: X-User-ID, X-Project-Key, Idempotency-Key
+   Body: {"title": "Fix login bug", "description": "...", "priority": "high"}
+   ```
+
+3. **FastAPI Processing**
+   - Same `TicketImpl` logic as direct integration
+   - Returns JSON response that gets converted back to domain objects
 
 ## Sample API Response
 

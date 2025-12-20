@@ -10,6 +10,8 @@ import pytest
 from httpx import ASGITransport, AsyncClient
 from ticket_api import Comment, Ticket, TicketPriority, TicketStatus
 
+from ticket_service.main import _oauth_state_store
+
 # Test constants
 EXPECTED_TICKETS_COUNT = 2
 DEFAULT_LIMIT = 100
@@ -507,8 +509,6 @@ class TestAuthEndpoints:
         with patch("ticket_service.main.exchange_code_for_tokens") as mock_exchange:
             mock_exchange.side_effect = Exception("Token exchange failed")
             # Store a valid state
-            from ticket_service.main import _oauth_state_store
-
             state = "valid-test-state"
             _oauth_state_store[state] = "test-user-id"
 
