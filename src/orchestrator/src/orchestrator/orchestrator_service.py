@@ -12,6 +12,7 @@ Endpoints:
 
 from __future__ import annotations
 
+import dataclasses
 import logging
 import os
 import secrets
@@ -548,17 +549,29 @@ async def process_command(request: ProcessCommandRequest) -> CommandResponse:
         result = await orchestrator.process_chat_message(request.message)
 
         # Return response
-        # Convert data to dict/list format if it's a Pydantic model
+        # Convert data to dict/list format if it's a Pydantic model or dataclass
         data = result.get("data")
         logger.info("🔍 DEBUG: data type before conversion: %s", type(data))
         if data is not None:
             if isinstance(data, list):
                 # Convert list of models to list of dicts
                 logger.info("🔍 DEBUG: Converting list of %d items", len(data))
-                data = [item.model_dump() if hasattr(item, "model_dump") else item for item in data]
+                converted_list = []
+                for item in data:
+                    if dataclasses.is_dataclass(item):
+                        converted_list.append(dataclasses.asdict(item))
+                    elif hasattr(item, "model_dump"):
+                        converted_list.append(item.model_dump())
+                    else:
+                        converted_list.append(item)
+                data = converted_list
+            elif dataclasses.is_dataclass(data):
+                # Convert dataclass to dict
+                logger.info("🔍 DEBUG: Converting dataclass: %s", type(data).__name__)
+                data = dataclasses.asdict(data)
             elif hasattr(data, "model_dump"):
-                # Convert single model to dict
-                logger.info("🔍 DEBUG: Converting single model: %s", type(data).__name__)
+                # Convert Pydantic model to dict
+                logger.info("🔍 DEBUG: Converting Pydantic model: %s", type(data).__name__)
                 data = data.model_dump()
             else:
                 logger.info("🔍 DEBUG: Data is already dict or primitive: %s", type(data))
@@ -637,17 +650,29 @@ async def process_chat_message(request: ProcessChatRequest) -> CommandResponse:
             channel_id=request.channel_id,
         )
 
-        # Convert data to dict/list format if it's a Pydantic model
+        # Convert data to dict/list format if it's a Pydantic model or dataclass
         data = result.get("data")
         logger.info("🔍 DEBUG: data type before conversion: %s", type(data))
         if data is not None:
             if isinstance(data, list):
                 # Convert list of models to list of dicts
                 logger.info("🔍 DEBUG: Converting list of %d items", len(data))
-                data = [item.model_dump() if hasattr(item, "model_dump") else item for item in data]
+                converted_list = []
+                for item in data:
+                    if dataclasses.is_dataclass(item):
+                        converted_list.append(dataclasses.asdict(item))
+                    elif hasattr(item, "model_dump"):
+                        converted_list.append(item.model_dump())
+                    else:
+                        converted_list.append(item)
+                data = converted_list
+            elif dataclasses.is_dataclass(data):
+                # Convert dataclass to dict
+                logger.info("🔍 DEBUG: Converting dataclass: %s", type(data).__name__)
+                data = dataclasses.asdict(data)
             elif hasattr(data, "model_dump"):
-                # Convert single model to dict
-                logger.info("🔍 DEBUG: Converting single model: %s", type(data).__name__)
+                # Convert Pydantic model to dict
+                logger.info("🔍 DEBUG: Converting Pydantic model: %s", type(data).__name__)
                 data = data.model_dump()
             else:
                 logger.info("🔍 DEBUG: Data is already dict or primitive: %s", type(data))
