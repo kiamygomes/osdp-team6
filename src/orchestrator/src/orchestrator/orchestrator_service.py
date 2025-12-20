@@ -550,13 +550,19 @@ async def process_command(request: ProcessCommandRequest) -> CommandResponse:
         # Return response
         # Convert data to dict/list format if it's a Pydantic model
         data = result.get("data")
+        logger.info("🔍 DEBUG: data type before conversion: %s", type(data))
         if data is not None:
             if isinstance(data, list):
                 # Convert list of models to list of dicts
+                logger.info("🔍 DEBUG: Converting list of %d items", len(data))
                 data = [item.model_dump() if hasattr(item, "model_dump") else item for item in data]
             elif hasattr(data, "model_dump"):
                 # Convert single model to dict
+                logger.info("🔍 DEBUG: Converting single model: %s", type(data).__name__)
                 data = data.model_dump()
+            else:
+                logger.info("🔍 DEBUG: Data is already dict or primitive: %s", type(data))
+        logger.info("🔍 DEBUG: data type after conversion: %s", type(data))
 
         return CommandResponse(
             success=result["success"],
@@ -573,9 +579,9 @@ async def process_command(request: ProcessCommandRequest) -> CommandResponse:
         logger.exception("Validation error processing command")
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    except RuntimeError as e:
-        # Handle runtime errors (e.g., AI provider not available)
-        logger.exception("Runtime error processing command")
+    except Exception as e:
+        # Catch-all for any other errors including Pydantic ValidationError
+        logger.exception("Unexpected error processing command")
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {e!s}",
@@ -633,13 +639,19 @@ async def process_chat_message(request: ProcessChatRequest) -> CommandResponse:
 
         # Convert data to dict/list format if it's a Pydantic model
         data = result.get("data")
+        logger.info("🔍 DEBUG: data type before conversion: %s", type(data))
         if data is not None:
             if isinstance(data, list):
                 # Convert list of models to list of dicts
+                logger.info("🔍 DEBUG: Converting list of %d items", len(data))
                 data = [item.model_dump() if hasattr(item, "model_dump") else item for item in data]
             elif hasattr(data, "model_dump"):
                 # Convert single model to dict
+                logger.info("🔍 DEBUG: Converting single model: %s", type(data).__name__)
                 data = data.model_dump()
+            else:
+                logger.info("🔍 DEBUG: Data is already dict or primitive: %s", type(data))
+        logger.info("🔍 DEBUG: data type after conversion: %s", type(data))
 
         return CommandResponse(
             success=result["success"],
@@ -655,8 +667,9 @@ async def process_chat_message(request: ProcessChatRequest) -> CommandResponse:
         logger.exception("Validation error processing chat message")
         raise HTTPException(status_code=400, detail=str(e)) from e
 
-    except RuntimeError as e:
-        logger.exception("Runtime error processing chat message")
+    except Exception as e:
+        # Catch-all for any other errors including Pydantic ValidationError
+        logger.exception("Unexpected error processing chat message")
         raise HTTPException(
             status_code=500,
             detail=f"Internal server error: {e!s}",
