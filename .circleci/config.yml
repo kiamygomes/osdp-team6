@@ -289,26 +289,23 @@ jobs:
           command: |
             cd terraform
             # Set Terraform variables from CircleCI environment
-            export TF_VAR_render_api_key="${RENDER_API_KEY}"
+            export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
             export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
             export TF_VAR_repo_url="${REPO_URL}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
             export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
             export TF_VAR_oauth_client_id="${OAUTH_CLIENT_ID}"
             export TF_VAR_oauth_client_secret="${OAUTH_CLIENT_SECRET}"
-            # Try to import existing service if RENDER_SERVICE_ID is set
-            if [ -n "${RENDER_SERVICE_ID}" ]; then
-              echo "Attempting to import existing service: ${RENDER_SERVICE_ID}"
-              terraform import render_web_service.ticket_service "${RENDER_SERVICE_ID}" || echo "Import failed or service already in state"
-            else
-              echo "RENDER_SERVICE_ID not set, skipping import"
-            fi
+            # Hardcoded service ID for existing deployment
+            RENDER_SERVICE_ID="${RENDER_SERVICE_ID:-srv-d45538i4d50c73fhtdmg}"
+            echo "Attempting to import existing service: ${RENDER_SERVICE_ID}"
+            terraform import render_web_service.ticket_service "${RENDER_SERVICE_ID}" || echo "Import failed or service already in state"
       - run:
           name: "Terraform Plan"
           command: |
             cd terraform
             # Set Terraform variables from CircleCI environment
-            export TF_VAR_render_api_key="${RENDER_API_KEY}"
+            export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
             export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
             export TF_VAR_repo_url="${REPO_URL}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
@@ -349,7 +346,7 @@ jobs:
           command: |
             cd terraform
             # Set Terraform variables from CircleCI environment
-            export TF_VAR_render_api_key="${RENDER_API_KEY}"
+            export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
             export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
             export TF_VAR_repo_url="${REPO_URL}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
