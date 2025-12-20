@@ -29,15 +29,15 @@ provider "render" {
 
 resource "render_web_service" "ticket_service" {
   name   = "osdp-team6"
-  plan   = var.render_plan
-  region = var.render_region
+  plan   = "free" # Match existing service plan
+  region = "oregon" # Match existing service region
 
   runtime_source = {
-    docker = {
-      repo_url        = var.repo_url
-      branch          = var.repo_branch
-      dockerfile_path = "Dockerfile"
-      auto_deploy     = var.auto_deploy
+    native_runtime = {
+      repo_url     = var.repo_url
+      branch       = var.repo_branch
+      build_filter = {}
+      auto_deploy  = var.auto_deploy == true ? "yes" : "no"
     }
   }
 
