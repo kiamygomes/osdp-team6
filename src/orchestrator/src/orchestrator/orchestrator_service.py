@@ -279,7 +279,7 @@ async def service_status() -> StatusResponse:
 # ============================================================================
 
 
-@app.get("/auth/login")
+@app.get("/api/v1/auth/login")
 async def auth_login(user_id: str = "demo_user") -> dict[str, str]:
     """Initiate OAuth 2.0 flow for Jira authentication.
 
@@ -330,7 +330,7 @@ async def auth_login(user_id: str = "demo_user") -> dict[str, str]:
     }
 
 
-@app.get("/auth/callback", response_class=HTMLResponse)
+@app.get("/api/v1/auth/callback", response_class=HTMLResponse)
 async def auth_callback(code: str, state: str) -> HTMLResponse:
     """OAuth 2.0 callback endpoint for Jira.
 
@@ -348,6 +348,9 @@ async def auth_callback(code: str, state: str) -> HTMLResponse:
         HTTPException: If state is invalid or token exchange fails
 
     """
+    logger.info("🔍 DEBUG: Received Jira OAuth callback")
+    logger.info("🔍 DEBUG: code=%s..., state=%s", code[:20] if code else "None", state)
+    logger.info("🔍 DEBUG: _oauth_state_store keys: %s", list(_oauth_state_store.keys()))
     logger.info("Received Jira OAuth callback with state=%s", state)
 
     # Validate state parameter
@@ -369,7 +372,7 @@ async def auth_callback(code: str, state: str) -> HTMLResponse:
                 <div class="error">
                     <h1>❌ Authentication Failed</h1>
                     <p>Invalid state parameter. This could be a security issue.</p>
-                    <p>Please try authenticating again by visiting <a href="/auth/login">/auth/login</a></p>
+                    <p>Please try authenticating again by visiting <a href="/api/v1/auth/login">/api/v1/auth/login</a></p>
                 </div>
             </body>
             </html>
@@ -407,7 +410,7 @@ async def auth_callback(code: str, state: str) -> HTMLResponse:
                     <p>Failed to exchange authorization code for tokens.</p>
                     <p><strong>Error:</strong></p>
                     <pre>{e!s}</pre>
-                    <p>Please try again by visiting <a href="/auth/login?user_id={user_id}">/auth/login</a></p>
+                    <p>Please try again by visiting <a href="/api/v1/auth/login?user_id={user_id}">/api/v1/auth/login</a></p>
                 </div>
             </body>
             </html>
@@ -443,7 +446,7 @@ async def auth_callback(code: str, state: str) -> HTMLResponse:
                     <p>You can now:</p>
                     <ul>
                         <li>Use the orchestrator to create and manage tickets</li>
-                        <li>Check your <a href="/auth/status?user_id={user_id}">authentication status</a></li>
+                        <li>Check your <a href="/api/v1/auth/status?user_id={user_id}">authentication status</a></li>
                         <li>View the <a href="/docs">API documentation</a></li>
                     </ul>
                     <p style="margin-top: 20px; color: #666;">You can close this window now.</p>
@@ -454,7 +457,7 @@ async def auth_callback(code: str, state: str) -> HTMLResponse:
         )
 
 
-@app.get("/auth/status", response_model=AuthStatusResponse)
+@app.get("/api/v1/auth/status", response_model=AuthStatusResponse)
 async def auth_status(user_id: str = "demo_user") -> AuthStatusResponse:
     """Check Jira authentication status for a user.
 
@@ -472,7 +475,7 @@ async def auth_status(user_id: str = "demo_user") -> AuthStatusResponse:
             authenticated=False,
             user_id=user_id,
             has_valid_tokens=False,
-            message=f"User '{user_id}' has not authenticated with Jira yet. Visit /auth/login to authenticate.",
+            message=f"User '{user_id}' has not authenticated with Jira yet. Visit /api/v1/auth/login to authenticate.",
         )
 
     if is_expired(tokens):
@@ -480,7 +483,7 @@ async def auth_status(user_id: str = "demo_user") -> AuthStatusResponse:
             authenticated=False,
             user_id=user_id,
             has_valid_tokens=False,
-            message=f"User '{user_id}' Jira tokens are expired. Visit /auth/login to re-authenticate.",
+            message=f"User '{user_id}' Jira tokens are expired. Visit /api/v1/auth/login to re-authenticate.",
         )
 
     return AuthStatusResponse(

@@ -28,7 +28,7 @@ services:
         sync: false  # Set manually - your Jira Cloud ID
 
       - key: OAUTH_REDIRECT_URI
-        value: https://osdp-ticket-bot-orchestrator.onrender.com/api/v1/auth/callback
+        value: https://osdp-team6.onrender.com/api/v1/auth/callback
 
       # Jira Project Configuration
       - key: JIRA_PROJECT_KEY
