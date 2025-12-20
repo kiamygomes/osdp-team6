@@ -224,11 +224,11 @@ jobs:
       - store_artifacts:
           path: test-results/e2e
 
-  # Job 7: Integration Tests with Real Credentials (Optional - Branch Restricted)
-  integration_test:
+  # Job 7: Extended Integration Tests with Real Credentials (Optional - Branch Restricted)
+  extended_integration_test:
     docker:
       - image: cimg/python:3.12
-    # Environment variables from the 'gmail-client' context will be available here
+    # Environment variables from the 'jira-oauth' context will be available here
     steps:
       - attach_workspace:
           at: . # Attach the workspace persisted from 'build'
@@ -236,9 +236,9 @@ jobs:
           name: "Verify Environment Variables"
           command: |
             echo "Checking for required environment variables..."
-            if [ -z "$GMAIL_CLIENT_ID" ] || [ -z "$GMAIL_CLIENT_SECRET" ] || [ -z "$GMAIL_REFRESH_TOKEN" ]; then
-              echo "WARNING: Missing Gmail environment variables. Integration tests may be skipped."
-              echo "Required: GMAIL_CLIENT_ID, GMAIL_CLIENT_SECRET, GMAIL_REFRESH_TOKEN"
+            if [ -z "$OAUTH_CLIENT_ID" ] || [ -z "$OAUTH_CLIENT_SECRET" ]; then
+              echo "WARNING: Missing OAuth environment variables. Extended integration tests may be skipped."
+              echo "Required: OAUTH_CLIENT_ID, OAUTH_CLIENT_SECRET"
             else
               echo "All required environment variables are present."
             fi
@@ -246,21 +246,21 @@ jobs:
           name: "Activate Venv and Create Test Results Directory"
           command: |
             source .venv/bin/activate
-            mkdir -p test-results/integration # Separate directory for results
+            mkdir -p test-results/extended-integration # Separate directory for results
       - run:
-          name: "Execute Integration Test Suite with Real API Calls"
+          name: "Execute Extended Integration Test Suite with Real API Calls"
           command: |
             source .venv/bin/activate
-            # Run integration tests that require real Gmail API connectivity
+            # Run extended integration tests that require real Jira API connectivity
             # These will use environment variables for authentication
             # Note: No coverage tracking for integration tests - they test component interactions
             pytest -m "integration and not local_credentials" \
-                   --junitxml=test-results/integration/junit.xml -v \
+                   --junitxml=test-results/extended-integration/junit.xml -v \
                    --no-cov
       - store_test_results:
-          path: test-results/integration
+          path: test-results/extended-integration
       - store_artifacts:
-          path: test-results/integration
+          path: test-results/extended-integration
 
   # Job 8: Terraform Plan (Infrastructure Preview)
   terraform_plan:
@@ -540,10 +540,10 @@ workflows:
                 - kamen-requierd-fixes
                 - make-real-deletions
 
-      - integration_test:
+      - extended_integration_test:
           requires:
             - e2e_test # Run after E2E tests pass
-          context: gmail-client # Context containing Gmail API credentials
+          context: jira-oauth # Context containing OAuth credentials
           filters:
             branches:
               only:
@@ -569,7 +569,7 @@ workflows:
           requires:
             - terraform_plan
             - circleci_test
-            - integration_test
+            - extended_integration_test
           context: terraform-credentials
           filters:
             branches:
