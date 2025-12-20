@@ -666,6 +666,7 @@ version = "0.1.0"
 source = { editable = "src/orchestrator" }
 dependencies = [
     { name = "fastapi" },
+    { name = "prometheus-client" },
     { name = "ticket-ai-adapter" },
     { name = "ticket-api" },
     { name = "ticket-client-adapter" },
@@ -676,6 +677,7 @@ dependencies = [
 [package.metadata]
 requires-dist = [
     { name = "fastapi", specifier = ">=0.111.0" },
+    { name = "prometheus-client", specifier = ">=0.19.0" },
     { name = "ticket-ai-adapter", editable = "src/ai_adapter" },
     { name = "ticket-api", editable = "src/ticket_api" },
     { name = "ticket-client-adapter", editable = "src/ticket_client_adapter" },

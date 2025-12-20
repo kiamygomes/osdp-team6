@@ -2,16 +2,19 @@ variable "render_api_key" {
   description = "Render API key from https://dashboard.render.com/account"
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "render_owner_id" {
   description = "Render owner/team ID from dashboard URL"
   type        = string
+  default     = null
 }
 
 variable "repo_url" {
   description = "Git repository URL"
   type        = string
+  default     = null
 }
 
 variable "repo_branch" {
@@ -41,16 +44,19 @@ variable "auto_deploy" {
 variable "jira_cloud_id" {
   description = "Jira Cloud ID"
   type        = string
+  default     = null
 }
 
 variable "oauth_client_id" {
   description = "Jira OAuth Client ID"
   type        = string
   sensitive   = true
+  default     = null
 }
 
 variable "oauth_client_secret" {
   description = "Jira OAuth Client Secret"
   type        = string
   sensitive   = true
+  default     = null
 }

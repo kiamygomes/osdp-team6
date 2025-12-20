@@ -285,9 +285,36 @@ jobs:
             cd terraform
             terraform validate
       - run:
+          name: "Import Existing Service (if needed)"
+          command: |
+            cd terraform
+            # Set Terraform variables from CircleCI environment
+            export TF_VAR_render_api_key="${RENDER_API_KEY}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
+            export TF_VAR_repo_url="${REPO_URL}"
+            export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
+            export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
+            export TF_VAR_oauth_client_id="${OAUTH_CLIENT_ID}"
+            export TF_VAR_oauth_client_secret="${OAUTH_CLIENT_SECRET}"
+            # Try to import existing service if RENDER_SERVICE_ID is set
+            if [ -n "${RENDER_SERVICE_ID}" ]; then
+              echo "Attempting to import existing service: ${RENDER_SERVICE_ID}"
+              terraform import render_web_service.ticket_service "${RENDER_SERVICE_ID}" || echo "Import failed or service already in state"
+            else
+              echo "RENDER_SERVICE_ID not set, skipping import"
+            fi
+      - run:
           name: "Terraform Plan"
           command: |
             cd terraform
+            # Set Terraform variables from CircleCI environment
+            export TF_VAR_render_api_key="${RENDER_API_KEY}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
+            export TF_VAR_repo_url="${REPO_URL}"
+            export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
+            export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
+            export TF_VAR_oauth_client_id="${OAUTH_CLIENT_ID}"
+            export TF_VAR_oauth_client_secret="${OAUTH_CLIENT_SECRET}"
             # Plan infrastructure changes
             terraform plan -out=tfplan
             echo "Terraform plan completed. Review changes before applying."
@@ -310,6 +337,8 @@ jobs:
           name: "Verify Workspace Contents"
           command: |
             ls -la terraform/
+            echo "Checking for state file:"
+            ls -la terraform/terraform.tfstate || echo "No state file found"
       - run:
           name: "Terraform Init"
           command: |
@@ -319,6 +348,14 @@ jobs:
           name: "Terraform Apply"
           command: |
             cd terraform
+            # Set Terraform variables from CircleCI environment
+            export TF_VAR_render_api_key="${RENDER_API_KEY}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
+            export TF_VAR_repo_url="${REPO_URL}"
+            export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
+            export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
+            export TF_VAR_oauth_client_id="${OAUTH_CLIENT_ID}"
+            export TF_VAR_oauth_client_secret="${OAUTH_CLIENT_SECRET}"
             # Apply planned infrastructure changes
             terraform apply -auto-approve tfplan
             echo "Infrastructure deployed successfully!"

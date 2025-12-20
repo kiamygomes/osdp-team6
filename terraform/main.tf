@@ -18,8 +18,16 @@ provider "render" {
   owner_id = var.render_owner_id
 }
 
+# Import existing service - uncomment and add service ID to import
+# Run: terraform import render_web_service.ticket_service <service-id>
+# Or add this block and run terraform plan -generate-config-out=generated.tf
+# import {
+#   to = render_web_service.ticket_service
+#   id = "<your-service-id>"
+# }
+
 resource "render_web_service" "ticket_service" {
-  name   = "ticket-service"
+  name   = "osdp-team6"
   plan   = var.render_plan
   region = var.render_region
 
@@ -46,7 +54,7 @@ resource "render_web_service" "ticket_service" {
       value = var.oauth_client_secret
     }
     OAUTH_REDIRECT_URI = {
-      value = "https://ticket-service.onrender.com/api/v1/auth/callback"
+      value = "https://osdp-team6.onrender.com/api/v1/auth/callback"
     }
     DB_URL = {
       value = "sqlite:///./jira_tokens.db"
@@ -56,5 +64,5 @@ resource "render_web_service" "ticket_service" {
 
 output "service_url" {
   description = "URL of the deployed service"
-  value       = "https://${render_web_service.ticket_service.name}.onrender.com"
+  value       = "https://osdp-team6.onrender.com"
 }
