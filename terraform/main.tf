@@ -14,7 +14,8 @@ terraform {
 }
 
 provider "render" {
-  api_key  = var.render_api_key
+  api_key = var.render_api_key
+  # owner_id is optional - if not provided, uses the account associated with the API key
   owner_id = var.render_owner_id
 }
 
