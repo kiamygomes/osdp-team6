@@ -7,7 +7,7 @@ import os
 from typing import Any
 from unittest.mock import MagicMock, patch
 
-from claude_implementation_pkg.claude_implementation import ClaudeAIClient  # type: ignore[import-not-found]
+from claude_implementation_pkg.claude_implementation import ClaudeAIClient  # type: ignore[import-not-found,import-untyped]
 
 
 class TestClaudeAIClient:
@@ -115,7 +115,16 @@ class TestClaudeAIClient:
         client = ClaudeAIClient()
         client.api_key = "test-key"
 
-        with patch("builtins.__import__", side_effect=ImportError):
+        # Mock sys.modules to make anthropic unavailable
+        original_import = builtins.__import__
+
+        def mock_import(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "anthropic":
+                msg = "anthropic not available"
+                raise ImportError(msg)
+            return original_import(name, *args, **kwargs)
+
+        with patch("builtins.__import__", side_effect=mock_import):
             response = client.generate_response("Create a ticket", response_schema={"type": "object"})
 
             # Should fall back to mock response
@@ -123,16 +132,15 @@ class TestClaudeAIClient:
 
     def test_generate_response_api_error(self) -> None:
         """Test handling of API error."""
-        with patch("builtins.__import__") as mock_import:
-            # Mock the anthropic module to raise an exception
-            def import_side_effect(name: str, *args: Any, **kwargs: Any) -> Any:
-                if name == "anthropic":
-                    error_msg = "API Error"
-                    raise ImportError(error_msg)
-                return builtins.__import__(name, *args, **kwargs)
+        original_import = builtins.__import__
 
-            mock_import.side_effect = import_side_effect
+        def import_side_effect(name: str, *args: Any, **kwargs: Any) -> Any:
+            if name == "anthropic":
+                msg = "API Error"
+                raise ImportError(msg)
+            return original_import(name, *args, **kwargs)
 
+        with patch("builtins.__import__", side_effect=import_side_effect):
             client = ClaudeAIClient()
             client.api_key = "test-key"
 

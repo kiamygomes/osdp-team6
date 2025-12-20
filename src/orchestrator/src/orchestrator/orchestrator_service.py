@@ -8,6 +8,7 @@ Endpoints:
 - POST /process-chat - Process a chat message with channel context
 - GET /health - Health check endpoint
 - GET /status - Service status and configuration
+- GET /metrics - Prometheus metrics endpoint
 """
 
 from __future__ import annotations
@@ -16,6 +17,7 @@ import dataclasses
 import logging
 import os
 import secrets
+import time
 from contextlib import asynccontextmanager
 from typing import TYPE_CHECKING, Any
 
@@ -23,10 +25,12 @@ from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import HTMLResponse
 from pydantic import BaseModel, Field
+from starlette.responses import Response
 from ticket_impl.oauth import build_authorize_url, exchange_code_for_tokens
 from ticket_impl.storage import get_tokens, is_expired
 
 from orchestrator.main_app import TicketBotOrchestrator
+from orchestrator.telemetry import PrometheusMiddleware, get_metrics, track_ai_request, track_ticket_operation
 
 if TYPE_CHECKING:
     from collections.abc import AsyncIterator
@@ -157,6 +161,9 @@ app = FastAPI(
     lifespan=lifespan,
 )
 
+# Add Prometheus telemetry middleware
+app.add_middleware(PrometheusMiddleware)
+
 # Add CORS middleware
 app.add_middleware(
     CORSMiddleware,
@@ -260,6 +267,22 @@ async def health_check() -> HealthResponse:
         service="ticket-bot-orchestrator",
         version="1.0.0",
     )
+
+
+@app.get("/metrics")
+async def metrics() -> Response:
+    """Expose Prometheus metrics for monitoring.
+
+    Metrics include:
+    - orchestrator_request_duration_seconds: Request latency histogram
+    - orchestrator_requests_total: Total request count by endpoint and status
+    - orchestrator_requests_success_total: Successful requests (2xx)
+    - orchestrator_requests_failure_total: Failed requests (4xx, 5xx)
+    - orchestrator_requests_active: Currently active requests
+    - orchestrator_ai_requests_total: AI provider requests by provider and status
+    - orchestrator_ticket_operations_total: Ticket operations by type and status
+    """
+    return Response(content=get_metrics(), media_type="text/plain; charset=utf-8")
 
 
 @app.get("/status", response_model=StatusResponse)
@@ -545,8 +568,21 @@ async def process_command(request: ProcessCommandRequest) -> CommandResponse:
             ai_provider=request.ai_provider,
         )
 
+        # Track AI request start time
+        ai_start_time = time.time()
+
         # Process the command
         result = await orchestrator.process_chat_message(request.message)
+
+        # Track AI request metrics
+        ai_duration = time.time() - ai_start_time
+        track_ai_request(request.ai_provider, "success", ai_duration)
+
+        # Track ticket operation if successful
+        if result["success"]:
+            track_ticket_operation("process_command", "success")
+        else:
+            track_ticket_operation("process_command", "error")
 
         # Return response
         # Convert data to dict/list format if it's a Pydantic model or dataclass

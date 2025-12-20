@@ -678,41 +678,15 @@ LOG_LEVEL="INFO"
 
 ---
 
-##  Telemetry and Observability
+##  Monitoring
 
-The service includes comprehensive Prometheus metrics for monitoring application health and performance.
+The orchestrator exposes Prometheus metrics at `/metrics`:
+- Request latency, success/failure rates
+- Ticket operations and AI provider metrics
 
-### Metrics Endpoint
-Access real-time metrics at: `GET /metrics`
+**Production:** `https://osdp-team6.onrender.com/metrics`
 
-### Key Metrics
-- **Request Latency**: `http_request_duration_seconds` - Histogram tracking response times
-- **Success Rate**: `http_requests_success_total` - Counter for successful requests (2xx)
-- **Failure Rate**: `http_requests_failure_total` - Counter for failed requests (4xx, 5xx)
-- **Active Requests**: `http_requests_active` - Gauge of concurrent requests
-- **Ticket Operations**: `ticket_operations_total` - Counter by operation type and status
-
-### Integration
-The metrics endpoint is compatible with:
-- Prometheus
-- Grafana
-- Datadog
-- New Relic
-- Any Prometheus-compatible monitoring system
-
-### Example Queries
-```promql
-# P95 Latency
-histogram_quantile(0.95, rate(http_request_duration_seconds_bucket[5m]))
-
-# Success Rate
-rate(http_requests_success_total[5m]) / rate(http_requests_total[5m]) * 100
-
-# Error Rate
-rate(http_requests_failure_total[5m]) / rate(http_requests_total[5m]) * 100
-```
-
-See **[docs/telemetry.md](docs/telemetry.md)** for detailed monitoring setup and dashboard configuration.
+See **[docs/monitoring.md](docs/monitoring.md)** for details.
 
 ---
 
@@ -720,7 +694,7 @@ See **[docs/telemetry.md](docs/telemetry.md)** for detailed monitoring setup and
 
 - **[DESIGN.md](DESIGN.md)** - Architecture decisions and design patterns
 - **[docs/testing.md](docs/testing.md)** - Comprehensive testing guide
-- **[docs/telemetry.md](docs/telemetry.md)** - Observability and monitoring guide
+- **[docs/monitoring.md](docs/monitoring.md)** - Observability and monitoring guide
 - **[.env.example](.env.example)** - Environment variable template
 - **Component READMEs** - Detailed documentation in each `src/*/README.md`
 

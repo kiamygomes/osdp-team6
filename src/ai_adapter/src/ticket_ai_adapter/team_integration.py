@@ -65,6 +65,7 @@ class ClaudeTeamAdapter(BaseTicketAIAdapter):
             CommandResult with execution status
 
         """
+        logger.info("🔍 Processing command with Claude AI: %s", prompt)
         try:
             # Call Claude team's AI service with tool calling schema
             tool_schema = {
@@ -76,14 +77,23 @@ class ClaudeTeamAdapter(BaseTicketAIAdapter):
                 "required": ["tool", "parameters"],
             }
 
+            logger.info(
+                "🔍 Calling Claude AI with system prompt length: %d",
+                len(self._system_prompt),
+            )
             response = self.ai_client.generate_response(
                 user_input=prompt,
                 system_prompt=self._system_prompt,
                 response_schema=tool_schema,
             )
 
+            # Log the raw AI response for debugging
+            logger.info("🔍 Claude AI raw response: %s", response)
+            logger.info("🔍 Response type: %s", type(response).__name__)
+
             # Parse response to dictionary using base class method
             tool_data = self._parse_response_to_dict(response)
+            logger.info("🔍 Parsed tool_data: %s", tool_data)
             if not tool_data:
                 return CommandResult(
                     success=False,
@@ -93,6 +103,7 @@ class ClaudeTeamAdapter(BaseTicketAIAdapter):
 
             # Parse tool call using base class method
             tool_call = self._parse_tool_call_from_dict(tool_data)
+            logger.info("🔍 Parsed tool_call: %s", tool_call)
             if not tool_call:
                 return CommandResult(
                     success=True,
@@ -100,6 +111,11 @@ class ClaudeTeamAdapter(BaseTicketAIAdapter):
                 )
 
             # Execute the tool call (base class method handles validation)
+            logger.info(
+                "🔍 Executing tool call: %s with params: %s",
+                tool_call.type,
+                tool_call.parameters,
+            )
             result_data = await self._execute_tool_call(tool_call)
 
             return CommandResult(
@@ -165,6 +181,7 @@ class OpenAITeamAdapter(BaseTicketAIAdapter):
             CommandResult with execution status
 
         """
+        logger.info("🔍 Processing command with OpenAI: %s", prompt)
         try:
             # Call OpenAI team's AI service with tool calling schema
             tool_schema = {
@@ -176,14 +193,20 @@ class OpenAITeamAdapter(BaseTicketAIAdapter):
                 "required": ["tool", "parameters"],
             }
 
+            logger.info("🔍 Calling OpenAI with system prompt length: %d", len(self._system_prompt))
             response = self.ai_client.generate_response(
                 user_input=prompt,
                 system_prompt=self._system_prompt,
                 response_schema=tool_schema,
             )
 
+            # Log the raw AI response for debugging
+            logger.info("🔍 OpenAI raw response: %s", response)
+            logger.info("🔍 Response type: %s", type(response).__name__)
+
             # Parse response to dictionary using base class method
             tool_data = self._parse_response_to_dict(response)
+            logger.info("🔍 Parsed tool_data: %s", tool_data)
             if not tool_data:
                 return CommandResult(
                     success=False,
@@ -193,6 +216,7 @@ class OpenAITeamAdapter(BaseTicketAIAdapter):
 
             # Parse tool call using base class method
             tool_call = self._parse_tool_call_from_dict(tool_data)
+            logger.info("🔍 Parsed tool_call: %s", tool_call)
             if not tool_call:
                 return CommandResult(
                     success=True,
@@ -200,6 +224,11 @@ class OpenAITeamAdapter(BaseTicketAIAdapter):
                 )
 
             # Execute the tool call (base class method handles validation)
+            logger.info(
+                "🔍 Executing tool call: %s with params: %s",
+                tool_call.type,
+                tool_call.parameters,
+            )
             result_data = await self._execute_tool_call(tool_call)
 
             return CommandResult(

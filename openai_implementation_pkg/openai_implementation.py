@@ -145,13 +145,36 @@ class OpenAIClient:
             Extracted title
 
         """
-        # Simple heuristic: take text after "create" and before description words
-        lower = text.lower()
-        if "create" in lower:
-            parts = text.split(":", 1)
-            if len(parts) > 1:
-                return parts[1].strip()
-        return text[:100]  # Fallback to first 100 chars
+        # Look for patterns like "called X", "titled X", "named X"
+        patterns = [
+            r"called\s+(.+?)(?:\s+with|\s+for|$)",
+            r"titled\s+(.+?)(?:\s+with|\s+for|$)",
+            r"named\s+(.+?)(?:\s+with|\s+for|$)",
+            r":\s*(.+?)(?:\s+with|\s+for|$)",
+        ]
+
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                title = match.group(1).strip()
+                # Remove priority words from title
+                title = re.sub(r"\b(high|low|medium|urgent|critical)\s+(priority\s+)?", "", title, flags=re.IGNORECASE).strip()
+                if title:
+                    return title
+
+        # Look for "for X" pattern
+        match = re.search(r"for\s+(.+?)(?:\s+with|$)", text, re.IGNORECASE)
+        if match:
+            title = match.group(1).strip()
+            title = re.sub(r"\b(high|low|medium|urgent|critical)\s+(priority\s+)?", "", title, flags=re.IGNORECASE).strip()
+            if title:
+                return title
+
+        # Fallback: remove command words and take the rest
+        title = re.sub(r"^(create|make|add)\s+(a\s+)?(ticket|task|issue)\s+(for\s+|about\s+|to\s+)?", "", text, flags=re.IGNORECASE).strip()
+        title = re.sub(r"\b(with|having)\s+(high|low|medium|urgent|critical)\s+priority.*$", "", title, flags=re.IGNORECASE).strip()
+
+        return title[:100] if title else text[:100]
 
     def _extract_priority(self, text: str) -> str:
         """Extract priority from user input.

@@ -159,15 +159,24 @@ class BaseTicketAIAdapter:
             ValueError: If tool type is unsupported or required params missing
 
         """
+        logger.info("🔍 Executing tool call type: %s", tool_call.type)
+        logger.info("🔍 Tool call parameters: %s", tool_call.parameters)
+
         if tool_call.type == ToolCallType.CREATE_TICKET:
             self._validate_required_params(tool_call, ["title"])
             # Description is optional, default to empty string
             priority_str = str(tool_call.parameters.get("priority", "medium"))
             priority = TicketPriority[priority_str.upper()]
 
+            title = str(tool_call.parameters["title"])
+            description = str(tool_call.parameters.get("description", ""))
+
+            logger.info("🔍 Creating ticket with title='%s', priority='%s', description='%s'",
+                       title, priority_str, description)
+
             return await self.ticket_service.create_ticket(
-                title=str(tool_call.parameters["title"]),
-                description=str(tool_call.parameters.get("description", "")),
+                title=title,
+                description=description,
                 priority=priority,
                 reporter=self.user_id,
             )
@@ -177,15 +186,28 @@ class BaseTicketAIAdapter:
             status = TicketStatus[str(status_str).upper()] if status_str else None
             limit = int(tool_call.parameters.get("limit", 10))
 
+            # Don't filter by assignee - list all tickets in the project
             return await self.ticket_service.list_tickets(
-                assignee=self.user_id,
+                assignee=None,  # List all tickets, not just assigned to user
                 status=status,
                 limit=limit,
             )
 
         if tool_call.type == ToolCallType.GET_TICKET:
             self._validate_required_params(tool_call, ["ticket_id"])
-            ticket_id = UUID(str(tool_call.parameters["ticket_id"]))
+            ticket_id_str = str(tool_call.parameters["ticket_id"])
+
+            # Clean up the ticket ID - replace spaces with hyphens for Jira keys
+            ticket_id_str = ticket_id_str.replace(" ", "-").strip()
+
+            # Try to parse as UUID first, otherwise treat as Jira key
+            try:
+                ticket_id = UUID(ticket_id_str)
+            except ValueError:
+                # Not a UUID, treat as Jira key - create a stable UUID from it
+                from uuid import NAMESPACE_URL, uuid5
+                ticket_id = uuid5(NAMESPACE_URL, f"{self.user_id}:{ticket_id_str}")
+
             return await self.ticket_service.get_ticket(ticket_id)
 
         msg = f"Unsupported tool type: {tool_call.type}"

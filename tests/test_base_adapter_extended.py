@@ -230,7 +230,7 @@ class TestBaseTicketAIAdapterExtended:
         result = await adapter._execute_tool_call(tool_call)
 
         assert result == mock_tickets
-        mock_service.list_tickets.assert_called_once_with(assignee="test-user", status=TicketStatus.OPEN, limit=5)
+        mock_service.list_tickets.assert_called_once_with(assignee=None, status=TicketStatus.OPEN, limit=5)
 
     @pytest.mark.asyncio
     async def test_execute_tool_call_list_tickets_no_status(self) -> None:
@@ -246,7 +246,7 @@ class TestBaseTicketAIAdapterExtended:
         result = await adapter._execute_tool_call(tool_call)
 
         assert result == mock_tickets
-        mock_service.list_tickets.assert_called_once_with(assignee="test-user", status=None, limit=10)
+        mock_service.list_tickets.assert_called_once_with(assignee=None, status=None, limit=10)
 
     @pytest.mark.asyncio
     async def test_execute_tool_call_get_ticket(self) -> None:
