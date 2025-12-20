@@ -268,8 +268,12 @@ jobs:
     docker:
       - image: hashicorp/terraform:1.6
     steps:
-      - attach_workspace:
-          at: .
+      - checkout
+      - run:
+          name: "Verify Terraform Files Exist"
+          command: |
+            ls -la terraform/
+            cat terraform/main.tf
       - run:
           name: "Terraform Init"
           command: |
@@ -290,7 +294,7 @@ jobs:
       - persist_to_workspace:
           root: .
           paths:
-            - terraform/tfplan
+            - terraform/
       - store_artifacts:
           path: terraform/tfplan
           destination: terraform-plan
@@ -302,6 +306,10 @@ jobs:
     steps:
       - attach_workspace:
           at: .
+      - run:
+          name: "Verify Workspace Contents"
+          command: |
+            ls -la terraform/
       - run:
           name: "Terraform Init"
           command: |
@@ -483,6 +491,7 @@ workflows:
                 - develop # Add other branches as needed
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3
 
       - lint:
           requires:
@@ -494,6 +503,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3
 
       - unit_test:
           requires:
@@ -505,6 +515,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3
 
       - integration_test:
           requires:
@@ -516,6 +527,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3
 
       - circleci_test:
           requires:
@@ -528,6 +540,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3
 
       - e2e_test:
           requires:
@@ -540,6 +553,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3
 
       - extended_integration_test:
           requires:
@@ -552,6 +566,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3
 
       # Terraform jobs - plan on all main branches, apply only on main
       - terraform_plan:
@@ -565,6 +580,7 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3
 
       - terraform_apply:
           requires:
@@ -576,6 +592,7 @@ workflows:
             branches:
               only:
                 - main # Only apply on main branch
+                - hw3 # hw3 is the main branch for this project
 
       # Telemetry setup after deployment
       - setup_telemetry:
@@ -585,6 +602,7 @@ workflows:
             branches:
               only:
                 - main
+                - hw3
 
       - report_summary:
           requires:
@@ -599,3 +617,4 @@ workflows:
                 - develop
                 - kamen-requierd-fixes
                 - make-real-deletions
+                - hw3

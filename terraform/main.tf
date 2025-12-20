@@ -5,6 +5,12 @@ terraform {
       version = "1.8.0"
     }
   }
+
+  # Use local backend for CircleCI - state is ephemeral per workflow
+  # In production, consider using remote backend (S3, Terraform Cloud, etc.)
+  backend "local" {
+    path = "terraform.tfstate"
+  }
 }
 
 provider "render" {
