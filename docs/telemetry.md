@@ -180,3 +180,21 @@ The telemetry middleware adds minimal overhead:
 - Negligible memory footprint
 - Metrics are stored in-memory and reset on restart
 - No external dependencies required
+
+## Testing
+
+Comprehensive test coverage for telemetry is available in `src/ticket_service/tests/test_telemetry.py`:
+
+- **PrometheusMiddleware tests**: Endpoint normalization, request tracking, exception handling
+- **Metrics helper tests**: Operation tracking, metrics export, Prometheus format validation
+- **Coverage**: 96% of telemetry module
+
+Run telemetry tests:
+```bash
+uv run pytest src/ticket_service/tests/test_telemetry.py -v
+```
+
+Run with coverage:
+```bash
+uv run pytest src/ticket_service/tests/test_telemetry.py --cov=src/ticket_service/src/ticket_service/telemetry
+```

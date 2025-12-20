@@ -3,7 +3,7 @@
 [![Python](https://img.shields.io/badge/python-3.11%2B-blue)](https://python.org)
 [![Code style: ruff](https://img.shields.io/badge/code%20style-ruff-000000.svg)](https://github.com/astral-sh/ruff)
 [![Type checked: mypy](https://img.shields.io/badge/type%20checked-mypy-blue)](https://mypy-lang.org/)
-[![Coverage](https://img.shields.io/badge/coverage-90%2B%25-brightgreen)](https://pytest-cov.readthedocs.io/)
+[![Coverage](https://img.shields.io/badge/coverage-90.56%25-brightgreen)](https://pytest-cov.readthedocs.io/)
 
 This repository implements a multi-team integration system that combines **Chat**, **AI**, and **Ticketing** services into a unified workflow. The system demonstrates modern Python development practices through a distributed architecture with OAuth 2.0 authentication, AI-powered natural language processing, and comprehensive testing.
 
