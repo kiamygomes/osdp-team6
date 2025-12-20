@@ -288,10 +288,10 @@ jobs:
           name: "Import Existing Service (if needed)"
           command: |
             cd terraform
-            # Set Terraform variables from CircleCI environment
+            # Set Terraform variables from CircleCI environment (with fallbacks)
             export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
-            export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
-            export TF_VAR_repo_url="${REPO_URL}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID:-team-sxh-hlb-96i}"
+            export TF_VAR_repo_url="${REPO_URL:-https://github.com/kiamygomes/osdp-team6}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
             export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
             export TF_VAR_oauth_client_id="${OAUTH_CLIENT_ID}"
@@ -304,10 +304,10 @@ jobs:
           name: "Terraform Plan"
           command: |
             cd terraform
-            # Set Terraform variables from CircleCI environment
+            # Set Terraform variables from CircleCI environment (with fallbacks)
             export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
-            export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
-            export TF_VAR_repo_url="${REPO_URL}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID:-team-sxh-hlb-96i}"
+            export TF_VAR_repo_url="${REPO_URL:-https://github.com/kiamygomes/osdp-team6}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
             export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
             export TF_VAR_oauth_client_id="${OAUTH_CLIENT_ID}"
@@ -345,10 +345,10 @@ jobs:
           name: "Terraform Apply"
           command: |
             cd terraform
-            # Set Terraform variables from CircleCI environment
+            # Set Terraform variables from CircleCI environment (with fallbacks)
             export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
-            export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
-            export TF_VAR_repo_url="${REPO_URL}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID:-team-sxh-hlb-96i}"
+            export TF_VAR_repo_url="${REPO_URL:-https://github.com/kiamygomes/osdp-team6}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
             export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
             export TF_VAR_oauth_client_id="${OAUTH_CLIENT_ID}"
@@ -606,7 +606,9 @@ workflows:
       - terraform_plan:
           requires:
             - unit_test
-          context: terraform-credentials # Context with RENDER_API_KEY, etc.
+          context:
+            - terraform-credentials # Context with RENDER_API_KEY, etc.
+            - jira-oauth # Context with JIRA and OAuth credentials
           filters:
             branches:
               only:
@@ -621,7 +623,9 @@ workflows:
             - terraform_plan
             - circleci_test
             - extended_integration_test
-          context: terraform-credentials
+          context:
+            - terraform-credentials
+            - jira-oauth # Context with JIRA and OAuth credentials
           filters:
             branches:
               only:
