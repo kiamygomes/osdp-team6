@@ -34,10 +34,13 @@ resource "render_web_service" "ticket_service" {
 
   runtime_source = {
     native_runtime = {
-      repo_url     = var.repo_url
-      branch       = var.repo_branch
-      build_filter = {}
-      auto_deploy  = var.auto_deploy == true ? "yes" : "no"
+      repo_url      = var.repo_url
+      branch        = var.repo_branch
+      runtime       = "python"
+      build_command = "pip install -r requirements.txt && pip install -e src/ticket_api && pip install -e src/ticket_impl && pip install -e src/ticket_client_generated && pip install -e src/ticket_client_adapter && pip install -e external/claude_team/src/ai_chat_api && pip install -e external/openai_team/src/ai_api && pip install -e src/ai_adapter && pip install -e src/orchestrator"
+      start_command = "python -m uvicorn orchestrator.orchestrator_service:app --host 0.0.0.0 --port $PORT"
+      build_filter  = {}
+      auto_deploy   = var.auto_deploy == true ? "yes" : "no"
     }
   }
 
