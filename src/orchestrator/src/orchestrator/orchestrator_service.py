@@ -16,6 +16,7 @@ from __future__ import annotations
 import dataclasses
 import logging
 import os
+import pathlib
 import secrets
 import time
 from contextlib import asynccontextmanager
@@ -283,6 +284,18 @@ async def metrics() -> Response:
     - orchestrator_ticket_operations_total: Ticket operations by type and status
     """
     return Response(content=get_metrics(), media_type="text/plain; charset=utf-8")
+
+
+@app.get("/dashboard", response_class=HTMLResponse)
+async def metrics_dashboard() -> Response:
+    """Metrics dashboard with visualizations."""
+    static_dir = pathlib.Path(__file__).parent / "static"
+    dashboard_file = static_dir / "metrics-dashboard.html"
+
+    # Read and return the HTML file
+    content = dashboard_file.read_bytes()
+
+    return Response(content=content, media_type="text/html")
 
 
 @app.get("/status", response_model=StatusResponse)

@@ -1,0 +1,336 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OSDP Team 6 - Telemetry Dashboard</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            min-height: 100vh;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+        }
+
+        header {
+            background: white;
+            border-radius: 12px;
+            padding: 30px;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        h1 {
+            color: #333;
+            margin-bottom: 10px;
+        }
+
+        .subtitle {
+            color: #666;
+            font-size: 14px;
+        }
+
+        .metrics-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .metric-card {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .metric-card h3 {
+            color: #333;
+            font-size: 14px;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            margin-bottom: 10px;
+        }
+
+        .metric-value {
+            font-size: 36px;
+            font-weight: bold;
+            color: #667eea;
+            margin-bottom: 5px;
+        }
+
+        .metric-label {
+            color: #666;
+            font-size: 12px;
+        }
+
+        .endpoint-list {
+            background: white;
+            border-radius: 12px;
+            padding: 20px;
+            box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        }
+
+        .endpoint-item {
+            padding: 15px;
+            border-bottom: 1px solid #eee;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .endpoint-item:last-child {
+            border-bottom: none;
+        }
+
+        .endpoint-path {
+            font-family: 'Courier New', monospace;
+            color: #333;
+            font-weight: 500;
+        }
+
+        .endpoint-stats {
+            display: flex;
+            gap: 20px;
+        }
+
+        .stat {
+            text-align: right;
+        }
+
+        .stat-value {
+            font-size: 18px;
+            font-weight: bold;
+            color: #667eea;
+        }
+
+        .stat-label {
+            font-size: 11px;
+            color: #999;
+            text-transform: uppercase;
+        }
+
+        .refresh-btn {
+            background: #667eea;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            cursor: pointer;
+            font-size: 14px;
+            font-weight: 600;
+            margin-top: 20px;
+            transition: background 0.3s;
+        }
+
+        .refresh-btn:hover {
+            background: #5568d3;
+        }
+
+        .loading {
+            text-align: center;
+            padding: 40px;
+            color: white;
+            font-size: 18px;
+        }
+
+        .error {
+            background: #fee;
+            border: 1px solid #fcc;
+            color: #c33;
+            padding: 15px;
+            border-radius: 8px;
+            margin: 20px 0;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>🚀 OSDP Team 6 Telemetry Dashboard</h1>
+            <p class="subtitle">Real-time metrics from Prometheus</p>
+        </header>
+
+        <div id="loading" class="loading">Loading metrics...</div>
+        <div id="error" class="error" style="display: none;"></div>
+
+        <div id="dashboard" style="display: none;">
+            <div class="metrics-grid">
+                <div class="metric-card">
+                    <h3>Total Requests</h3>
+                    <div class="metric-value" id="total-requests">-</div>
+                    <div class="metric-label">All HTTP requests</div>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Success Rate</h3>
+                    <div class="metric-value" id="success-rate">-%</div>
+                    <div class="metric-label">2xx responses</div>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Avg Response Time</h3>
+                    <div class="metric-value" id="avg-latency">-ms</div>
+                    <div class="metric-label">Request latency</div>
+                </div>
+
+                <div class="metric-card">
+                    <h3>Active Requests</h3>
+                    <div class="metric-value" id="active-requests">-</div>
+                    <div class="metric-label">Currently processing</div>
+                </div>
+            </div>
+
+            <div class="endpoint-list">
+                <h3 style="margin-bottom: 20px;">Endpoint Statistics</h3>
+                <div id="endpoints"></div>
+            </div>
+
+            <button class="refresh-btn" onclick="loadMetrics()">🔄 Refresh Metrics</button>
+        </div>
+    </div>
+
+    <script>
+        async function loadMetrics() {
+            try {
+                document.getElementById('loading').style.display = 'block';
+                document.getElementById('error').style.display = 'none';
+
+                const response = await fetch('/metrics');
+                const text = await response.text();
+
+                const metrics = parsePrometheusMetrics(text);
+                displayMetrics(metrics);
+
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('dashboard').style.display = 'block';
+            } catch (error) {
+                document.getElementById('loading').style.display = 'none';
+                document.getElementById('error').textContent = 'Failed to load metrics: ' + error.message;
+                document.getElementById('error').style.display = 'block';
+            }
+        }
+
+        function parsePrometheusMetrics(text) {
+            const lines = text.split('\n');
+            const metrics = {
+                totalRequests: 0,
+                successfulRequests: 0,
+                totalLatency: 0,
+                requestCount: 0,
+                activeRequests: 0,
+                endpoints: {}
+            };
+
+            for (const line of lines) {
+                if (line.startsWith('#') || !line.trim()) continue;
+
+                // Parse request counts
+                if (line.includes('orchestrator_requests_total{')) {
+                    const match = line.match(/orchestrator_requests_total{[^}]+} (\d+(\.\d+)?)/);
+                    if (match) metrics.totalRequests += parseFloat(match[1]);
+                }
+
+                // Parse successful requests
+                if (line.includes('orchestrator_requests_success_total{')) {
+                    const match = line.match(/orchestrator_requests_success_total{[^}]+} (\d+(\.\d+)?)/);
+                    if (match) metrics.successfulRequests += parseFloat(match[1]);
+                }
+
+                // Parse latency
+                if (line.includes('orchestrator_request_duration_seconds_sum{')) {
+                    const match = line.match(/orchestrator_request_duration_seconds_sum{[^}]+} (\d+(\.\d+)?)/);
+                    if (match) metrics.totalLatency += parseFloat(match[1]);
+                }
+
+                if (line.includes('orchestrator_request_duration_seconds_count{')) {
+                    const match = line.match(/orchestrator_request_duration_seconds_count{[^}]+} (\d+(\.\d+)?)/);
+                    if (match) metrics.requestCount += parseFloat(match[1]);
+                }
+
+                // Parse active requests
+                if (line.includes('orchestrator_requests_active{')) {
+                    const match = line.match(/orchestrator_requests_active{endpoint="([^"]+)"[^}]+} (\d+(\.\d+)?)/);
+                    if (match) {
+                        const endpoint = match[1];
+                        const count = parseFloat(match[2]);
+                        metrics.activeRequests += count;
+
+                        if (!metrics.endpoints[endpoint]) {
+                            metrics.endpoints[endpoint] = { requests: 0, latency: 0, count: 0 };
+                        }
+                    }
+                }
+
+                // Parse endpoint-specific data
+                if (line.includes('orchestrator_requests_total{')) {
+                    const match = line.match(/endpoint="([^"]+)"[^}]+} (\d+(\.\d+)?)/);
+                    if (match) {
+                        const endpoint = match[1];
+                        const count = parseFloat(match[2]);
+
+                        if (!metrics.endpoints[endpoint]) {
+                            metrics.endpoints[endpoint] = { requests: 0, latency: 0, count: 0 };
+                        }
+                        metrics.endpoints[endpoint].requests += count;
+                    }
+                }
+            }
+
+            return metrics;
+        }
+
+        function displayMetrics(metrics) {
+            // Display summary metrics
+            document.getElementById('total-requests').textContent = metrics.totalRequests.toLocaleString();
+
+            const successRate = metrics.totalRequests > 0
+                ? ((metrics.successfulRequests / metrics.totalRequests) * 100).toFixed(1)
+                : '0';
+            document.getElementById('success-rate').textContent = successRate + '%';
+
+            const avgLatency = metrics.requestCount > 0
+                ? ((metrics.totalLatency / metrics.requestCount) * 1000).toFixed(0)
+                : '0';
+            document.getElementById('avg-latency').textContent = avgLatency + 'ms';
+
+            document.getElementById('active-requests').textContent = metrics.activeRequests;
+
+            // Display endpoint statistics
+            const endpointsHtml = Object.entries(metrics.endpoints)
+                .sort((a, b) => b[1].requests - a[1].requests)
+                .map(([endpoint, data]) => `
+                    <div class="endpoint-item">
+                        <div class="endpoint-path">${endpoint}</div>
+                        <div class="endpoint-stats">
+                            <div class="stat">
+                                <div class="stat-value">${data.requests}</div>
+                                <div class="stat-label">Requests</div>
+                            </div>
+                        </div>
+                    </div>
+                `)
+                .join('');
+
+            document.getElementById('endpoints').innerHTML = endpointsHtml || '<p style="text-align: center; color: #999;">No endpoint data available</p>';
+        }
+
+        // Load metrics on page load
+        loadMetrics();
+
+        // Auto-refresh every 30 seconds
+        setInterval(loadMetrics, 30000);
+    </script>
+</body>
+</html>
