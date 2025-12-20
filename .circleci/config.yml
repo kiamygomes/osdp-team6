@@ -290,8 +290,7 @@ jobs:
             cd terraform
             # Set Terraform variables from CircleCI environment (with fallbacks)
             export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
-            # Skip owner_id - let it use the account associated with API key
-            # export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID:-tea-d454vhh5pdvs73fht95g}"
             export TF_VAR_repo_url="${REPO_URL:-https://github.com/kiamygomes/osdp-team6}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
             export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
@@ -307,8 +306,7 @@ jobs:
             cd terraform
             # Set Terraform variables from CircleCI environment (with fallbacks)
             export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
-            # Skip owner_id - let it use the account associated with API key
-            # export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID:-tea-d454vhh5pdvs73fht95g}"
             export TF_VAR_repo_url="${REPO_URL:-https://github.com/kiamygomes/osdp-team6}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
             export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
@@ -349,8 +347,7 @@ jobs:
             cd terraform
             # Set Terraform variables from CircleCI environment (with fallbacks)
             export TF_VAR_render_api_key="${RENDER_API_KEY:-rnd_HaC2vdkJuTUIkstyOoAxdlduhcXu}"
-            # Skip owner_id - let it use the account associated with API key
-            # export TF_VAR_render_owner_id="${RENDER_OWNER_ID}"
+            export TF_VAR_render_owner_id="${RENDER_OWNER_ID:-tea-d454vhh5pdvs73fht95g}"
             export TF_VAR_repo_url="${REPO_URL:-https://github.com/kiamygomes/osdp-team6}"
             export TF_VAR_repo_branch="${REPO_BRANCH:-hw3}"
             export TF_VAR_jira_cloud_id="${JIRA_CLOUD_ID}"
