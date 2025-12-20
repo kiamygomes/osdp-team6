@@ -28,9 +28,10 @@ provider "render" {
 # }
 
 resource "render_web_service" "ticket_service" {
-  name   = "osdp-team6"
-  plan   = "free" # Match existing service plan
-  region = "oregon" # Match existing service region
+  name          = "osdp-team6"
+  plan          = "free" # Match existing service plan
+  region        = "oregon" # Match existing service region
+  start_command = "python -m uvicorn orchestrator.orchestrator_service:app --host 0.0.0.0 --port $PORT"
 
   runtime_source = {
     native_runtime = {
@@ -38,9 +39,7 @@ resource "render_web_service" "ticket_service" {
       branch        = var.repo_branch
       runtime       = "python"
       build_command = "pip install -r requirements.txt && pip install -e src/ticket_api && pip install -e src/ticket_impl && pip install -e src/ticket_client_generated && pip install -e src/ticket_client_adapter && pip install -e external/claude_team/src/ai_chat_api && pip install -e external/openai_team/src/ai_api && pip install -e src/ai_adapter && pip install -e src/orchestrator"
-      start_command = "python -m uvicorn orchestrator.orchestrator_service:app --host 0.0.0.0 --port $PORT"
-      build_filter  = {}
-      auto_deploy   = var.auto_deploy == true ? "yes" : "no"
+      auto_deploy   = true
     }
   }
 
