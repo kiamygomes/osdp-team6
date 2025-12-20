@@ -51,21 +51,29 @@ class BaseTicketAIAdapter:
         This is the standardized prompt used across all AI providers.
         """
         return (
-            "You are a ticket management assistant that extracts structured information from natural language.\n\n"
+            "You are a ticket management assistant that extracts structured "
+            "information from natural language.\n\n"
             "CRITICAL RULES:\n"
-            "1. Extract ONLY the actual ticket title/content, NOT the entire command\n"
-            "2. Look for keywords like 'CALLED', 'for', 'to', 'about' to identify the title\n"
+            "1. Extract ONLY the actual ticket title/content, NOT the entire "
+            "command\n"
+            "2. Look for keywords like 'CALLED', 'for', 'to', 'about' to identify "
+            "the title\n"
             "3. Extract priority from words like 'high', 'low', 'medium', 'urgent'\n"
-            "4. Remove command words like 'create', 'make', 'ticket', 'priority' from the title\n\n"
+            "4. Remove command words like 'create', 'make', 'ticket', 'priority' "
+            "from the title\n\n"
             "Parsing Examples:\n"
             '- Input: "CREATE A high PRIORITY TICKET CALLED im hungry"\n'
-            '  Output: {"tool": "create_ticket", "parameters": {"title": "im hungry", "priority": "high"}}\n\n'
+            '  Output: {"tool": "create_ticket", "parameters": '
+            '{"title": "im hungry", "priority": "high"}}\n\n'
             '- Input: "create ticket for fixing login bug with high priority"\n'
-            '  Output: {"tool": "create_ticket", "parameters": {"title": "fixing login bug", "priority": "high"}}\n\n'
+            '  Output: {"tool": "create_ticket", "parameters": '
+            '{"title": "fixing login bug", "priority": "high"}}\n\n'
             '- Input: "make a ticket called update docs"\n'
-            '  Output: {"tool": "create_ticket", "parameters": {"title": "update docs", "priority": "medium"}}\n\n'
+            '  Output: {"tool": "create_ticket", "parameters": '
+            '{"title": "update docs", "priority": "medium"}}\n\n'
             '- Input: "urgent ticket about server crash"\n'
-            '  Output: {"tool": "create_ticket", "parameters": {"title": "server crash", "priority": "high"}}\n\n'
+            '  Output: {"tool": "create_ticket", "parameters": '
+            '{"title": "server crash", "priority": "high"}}\n\n'
             "Available tools:\n"
             "- create_ticket: Create a new ticket\n"
             "  Required: title (string - the actual issue/task, NOT the command)\n"

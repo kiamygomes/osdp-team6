@@ -182,6 +182,7 @@ class TestHealthEndpoint:
         assert "service" in data
         assert data["service"] == "OSDP Ticket Bot Orchestrator"
         assert "docs" in data
+        assert data.get("docs") is not None
 
 
 class TestStatusEndpoint:
@@ -422,3 +423,164 @@ class TestRequestModels:
         assert response.success is True
         assert response.data is None
         assert response.error is None
+
+
+class TestAuthEndpoints:
+    """Test Jira OAuth authentication endpoints."""
+
+    def test_auth_login_no_valid_tokens(self) -> None:
+        """Test /api/v1/auth/login when user has no valid tokens."""
+        client = TestClient(app)
+
+        with patch("orchestrator.orchestrator_service.get_tokens", return_value=None):
+            response = client.get("/api/v1/auth/login?user_id=test-user")
+
+        assert response.status_code == HTTP_OK
+        data = response.json()
+        assert "auth_url" in data
+        assert data["user_id"] == "test-user"
+        assert data["service"] == "jira"
+
+    def test_auth_login_with_valid_tokens(self) -> None:
+        """Test /api/v1/auth/login when user already has valid tokens."""
+        client = TestClient(app)
+        mock_tokens = {
+            "access_token": "valid-access",
+            "refresh_token": "valid-refresh",
+            "expires_at": "2099-12-31T00:00:00+00:00",
+        }
+
+        with (
+            patch("orchestrator.orchestrator_service.get_tokens", return_value=mock_tokens),
+            patch("orchestrator.orchestrator_service.is_expired", return_value=False),
+        ):
+            response = client.get("/api/v1/auth/login?user_id=test-user")
+
+        assert response.status_code == HTTP_OK
+        data = response.json()
+        assert data["authenticated"] == "true"
+        assert "Already authenticated" in data["message"]
+
+    def test_auth_callback_invalid_state(self) -> None:
+        """Test /api/v1/auth/callback with invalid state parameter."""
+        client = TestClient(app)
+
+        response = client.get("/api/v1/auth/callback?code=test-code&state=invalid-state")
+
+        assert response.status_code == HTTP_BAD_REQUEST
+        assert b"Authentication Failed" in response.content
+        assert b"Invalid state parameter" in response.content
+
+    @pytest.mark.asyncio
+    async def test_auth_callback_valid_state_success(self) -> None:
+        """Test /api/v1/auth/callback with valid state and successful token exchange."""
+        from orchestrator.orchestrator_service import _oauth_state_store
+
+        client = TestClient(app)
+
+        # Setup valid state
+        test_state = "valid-test-state"
+        _oauth_state_store[test_state] = "test-user"
+
+        mock_tokens = ("access-token", "refresh-token", 3600)
+
+        with patch(
+            "orchestrator.orchestrator_service.exchange_code_for_tokens",
+            new_callable=AsyncMock,
+            return_value=mock_tokens,
+        ):
+            response = client.get(f"/api/v1/auth/callback?code=test-code&state={test_state}")
+
+        assert response.status_code == HTTP_OK
+        assert b"Authentication Successful" in response.content
+        assert b"successfully authenticated" in response.content
+
+    @pytest.mark.asyncio
+    async def test_auth_callback_token_exchange_fails(self) -> None:
+        """Test /api/v1/auth/callback when token exchange fails."""
+        from orchestrator.orchestrator_service import _oauth_state_store
+
+        client = TestClient(app)
+
+        # Setup valid state
+        test_state = "valid-test-state-error"
+        _oauth_state_store[test_state] = "test-user"
+
+        with patch(
+            "orchestrator.orchestrator_service.exchange_code_for_tokens",
+            new_callable=AsyncMock,
+            side_effect=Exception("Token exchange failed"),
+        ):
+            response = client.get(f"/api/v1/auth/callback?code=test-code&state={test_state}")
+
+        assert response.status_code == HTTP_INTERNAL_SERVER_ERROR
+        assert b"Authentication Failed" in response.content
+        assert b"Failed to exchange authorization code" in response.content
+
+    def test_auth_status_authenticated(self) -> None:
+        """Test /api/v1/auth/status for authenticated user."""
+        client = TestClient(app)
+        mock_tokens = {
+            "access_token": "valid-access",
+            "refresh_token": "valid-refresh",
+            "expires_at": "2099-12-31T00:00:00+00:00",
+        }
+
+        with (
+            patch("orchestrator.orchestrator_service.get_tokens", return_value=mock_tokens),
+            patch("orchestrator.orchestrator_service.is_expired", return_value=False),
+        ):
+            response = client.get("/api/v1/auth/status?user_id=test-user")
+
+        assert response.status_code == HTTP_OK
+        data = response.json()
+        assert data["authenticated"] is True
+        assert data["user_id"] == "test-user"
+
+    def test_auth_status_not_authenticated(self) -> None:
+        """Test /api/v1/auth/status for unauthenticated user."""
+        client = TestClient(app)
+
+        with patch("orchestrator.orchestrator_service.get_tokens", return_value=None):
+            response = client.get("/api/v1/auth/status?user_id=test-user")
+
+        assert response.status_code == HTTP_OK
+        data = response.json()
+        assert data["authenticated"] is False
+        assert data["user_id"] == "test-user"
+
+    def test_auth_status_expired_tokens(self) -> None:
+        """Test /api/v1/auth/status with expired tokens."""
+        client = TestClient(app)
+        mock_tokens = {
+            "access_token": "expired-access",
+            "refresh_token": "valid-refresh",
+            "expires_at": "2020-01-01T00:00:00+00:00",
+        }
+
+        with (
+            patch("orchestrator.orchestrator_service.get_tokens", return_value=mock_tokens),
+            patch("orchestrator.orchestrator_service.is_expired", return_value=True),
+        ):
+            response = client.get("/api/v1/auth/status?user_id=test-user")
+
+        assert response.status_code == HTTP_OK
+        data = response.json()
+        assert data["authenticated"] is False
+        assert "expired" in data.get("message", "").lower()
+
+    def test_auth_login_missing_user_id(self) -> None:
+        """Test /api/v1/auth/login without user_id parameter."""
+        client = TestClient(app)
+        response = client.get("/api/v1/auth/login")
+        # Should handle missing user_id gracefully
+        assert response.status_code in (HTTP_OK, 422)  # 422 for validation error
+
+    def test_auth_callback_missing_params(self) -> None:
+        """Test /api/v1/auth/callback with missing parameters."""
+        client = TestClient(app)
+        # Missing both code and state
+        response = client.get("/api/v1/auth/callback")
+        # Should error on validation
+        assert response.status_code in (400, 422)
+
