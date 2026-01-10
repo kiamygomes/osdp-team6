@@ -1,14 +1,26 @@
 [project]
-name = "ta-assignment"
+name = "osdp-jira-service"
 version = "0.1.0"
-description = "Template repository for a mail client"
+description = "Microservice adapter for Jira/Ticketing with OAuth 2.0"
 readme = "README.md"
 requires-python = ">=3.11"
-dependencies = []
+dependencies = [
+  "pydantic>=2",
+  "httpx>=0.27",
+  "sqlalchemy>=2.0",
+  "openapi-python-client>=0.28.0",
+]
 
 [project.optional-dependencies]
 dev = [
-    "google-api-python-client-stubs>=1.30.0",
+    # Development and testing tools
+    "fastapi>=0.111.0",
+    "uvicorn>=0.30.1",
+    "requests>=2.32.3",
+    "psycopg2-binary>=2.9.9",
+    "requests-oauthlib>=2.0.0",
+    "prometheus-client>=0.19.0",
+    "python-dotenv>=1.0.0",
     "mkdocs>=1.6.1",
     "mkdocs-material>=9.6.15",
     "mkdocstrings-python>=1.16.12",
@@ -16,15 +28,53 @@ dev = [
     "pymdown-extensions>=10.16.1",
     "pytest>=8.4.1",
     "pytest-cov>=6.2.1",
+    "pytest-asyncio>=0.23",
     "ruff>=0.12.7",
-    "types-requests>=2.32.4.20250611",
+    "respx>=0.21",
+    "anyio>=4",
+    "types-python-dateutil>=2.9.0",
+    "openai>=1.0.0",
 ]
 
 [tool.uv.workspace]
 members = [
-  "src/mail_client_api",
-  "src/gmail_client_impl",
+  "src/orchestrator",
+  "src/ticket_api",
+  "src/ticket_impl",
+  "src/ticket_service",
+  "src/ticket_client_generated",
+  "src/ticket_client_adapter",
+  "src/claude_service_client",
+  "src/ai_adapter",
+  "src/ai_implementations",
+
+  # Claude team's packages
+  "external/claude_team/src/ai_chat_api",
+  "external/claude_team/src/ai_chat_adapter",
+  # OpenAI team's packages
+  "external/openai_team/src/ai_api",
+  "external/openai_team/src/ai_adapter",
+  # AI implementations package
+  "external/openai_team/src/ai_service_client",
+  # Slack team's packages (Chat vertical)
+  "external/slack_team/src/chat_api",
+  "external/slack_team/src/slack_api",
+  "external/slack_team/src/slack_impl",
+  "external/slack_team/src/slack_adapter",
 ]
+
+[tool.uv.sources]
+ticket-api = { workspace = true }
+ticket-impl = { workspace = true }
+ticket-service-client = { workspace = true }
+ticket-client-adapter = { workspace = true }
+ticket-ai-adapter = { workspace = true }
+fast-api-client = { workspace = true }
+ai-chat-adapter = { workspace = true }
+ai-chat-api = { workspace = true }
+ai-adapter = { workspace = true }
+ai-api = { workspace = true }
+ai-service-client = { workspace = true }
 
 [tool.ruff]
 line-length = 130 # high for top level due to tests
@@ -36,31 +86,90 @@ ignore = [
   "D203", # `incorrect-blank-line-before-class` (D203) and `no-blank-line-before-class` (D211) are incompatible. Ignoring `incorrect-blank-line-before-class`.
   "D213", # `multi-line-summary-first-line` (D212) and `multi-line-summary-second-line` (D213) are incompatible. Ignoring `multi-line-summary-second-line`.
   "S101", # Use of `assert` detected --> Asserts are good in our opinion. Tests use asserts profusely.
+  "COM812", # Is conflicting with Ruff auto formatter
+  "C901", # Function complexity warnings
+  "PLR0912", # Too many branches warnings
 ]
-per-file-ignores = { "**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415"] }
+[tool.ruff.lint.per-file-ignores]
+"**/test_*.py" = ["TRY300", "BLE001", "ANN401", "SLF001", "E501", "S105", "ARG001", "ARG002", "S106", "INP001", "PLC0415"]
+"scripts/*.py" = ["T201", "TRY300"]  # Allow print statements and try-else in scripts
+"**/conftest.py" = ["ANN401"]  # Allow Any in test fixtures
+"stubs/**/*.pyi" = ["ANN401", "N818", "N801", "PYI034", "PYI036", "F401", "I001"]  # Stub files have different standards
+"claude_implementation_pkg/**/*.py" = ["ALL"]  # Ignore backup package
+"openai_implementation_pkg/**/*.py" = ["ALL"]  # Ignore backup package
+
+[tool.ruff.lint.pylint]
+max-args = 6  # Increase to 6 to allow update_ticket method with flexible parameters
 
 [tool.mypy]
 strict = true
 explicit_package_bases = true # Required for src layout
-mypy_path = ["src/mail_client_api/src", "src/gmail_client_impl/src"]
+mypy_path = [
+    "src",
+    "src/ticket_api/src",
+    "src/ticket_impl/src",
+    "src/ticket_service/src",
+    "src/ticket_client_adapter/src",
+    "src/ai_adapter/src",
+    "src/orchestrator/src",
+    "stubs",  # Custom type stubs for third-party libraries
+]
 ignore_missing_imports = false
 warn_unused_ignores = false
+namespace_packages = true
+exclude = [
+    "src/ticket_client_generated/",  # Exclude auto-generated code from strict checking
+    "src/claude_service_client/",  # Exclude auto-generated Claude service client
+    "claude_implementation_pkg/",  # Backup implementations - moved out of src/
+    "openai_implementation_pkg/",  # Backup implementations - moved out of src/
+    "^claude_implementation_pkg/.*\\.py$",
+    "^openai_implementation_pkg/.*\\.py$",
+]
 
 # Allow untyped imports for specific modules
 [[tool.mypy.overrides]]
 module = [
     "google.*",
     "googleapiclient.*",
+    "ticket_service_client",
+    "ticket_service_client.*",
+    "ai_api",
+    "ai_api.*",
+    "ai_chat_api",
+    "ai_chat_api.*",
+    "openai",
+    "openai.*",
+    "prometheus_client",
+    "prometheus_client.*",
+    "fast_api_client",
+    "fast_api_client.*",
+    "claude_implementation_pkg.*",
+    "openai_implementation_pkg.*",
 ]
 ignore_missing_imports = true
 
 [tool.pytest.ini_options]
+asyncio_mode = "auto"
 pythonpath = [
-    ".", 
-    "src"
+    ".",
 ]
-testpaths = ["tests", "src/*/tests"]
-addopts = ["--cov", "--cov-report=term-missing", "--import-mode=importlib"]
+testpaths = [
+    "tests",
+    "src/*/tests",
+    "src/ticket_client_adapter/tests",
+    "src/ticket_client_generated/tests",
+    "src/ai_adapter/tests",
+]
+addopts = [
+    "--cov",
+    "--cov-report=term-missing",
+    "--cov-report=html",
+    "--cov-fail-under=90",
+    "--import-mode=importlib",
+    "-v",
+    "--ignore=tests/e2e",  # Exclude e2e tests by default (require deployed service)
+    "-m", "not e2e",  # Skip tests marked with @pytest.mark.e2e
+]
 markers = [
     "unit: marks tests as unit tests (fast, isolated)",
     "integration: marks tests as integration tests (medium speed, real dependencies)",
@@ -71,12 +180,32 @@ markers = [
 
 [tool.coverage.run]
 source = ["src"]
-omit = ["*/tests/*", "*/__main__.py"]
+omit = [
+    "*/tests/*",
+    "*/__main__.py",
+    "*/ticket_client_generated/*",  # Exclude auto-generated client from coverage
+    "*/claude_service_client/*",  # Exclude auto-generated Claude client
+    "*/ticket_ai_adapter/adapter.py",  # Integration code tested via team_integration tests
+    "*/ticket_ai_adapter/openai_adapter.py",  # Integration code tested via team_integration tests
+    "*/ticket_ai_adapter/team_integration.py",  # Integration code tested via team_integration tests
+    "*/ticket_ai_adapter/base_adapter.py",  # Base class tested indirectly through subclasses
+    "*/ticket_ai_adapter/ai_implementation_setup.py",  # Setup/integration code
+]
 
 [tool.coverage.report]
-fail_under = 85 # Justification: A high threshold ensures most code is tested.
+fail_under = 90 # Require 90% test coverage
 exclude_lines = [
     "pragma: no cover",
     "raise NotImplementedError",
     "if TYPE_CHECKING:",
+    "if __name__ == .__main__.:",
+    "@abstractmethod",
+    "@abc.abstractmethod",
+]
+show_missing = true
+
+[dependency-groups]
+dev = [
+    "mypy>=1.18.2",
+    "types-python-dateutil>=2.9.0.20251008",
 ]

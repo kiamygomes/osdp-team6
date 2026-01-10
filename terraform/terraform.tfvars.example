@@ -1,0 +1,13 @@
+# Example Terraform Variables File
+# Copy this file to terraform.tfvars and fill in your actual values
+# terraform.tfvars is gitignored for security
+
+project_id       = "your-gcp-project-id"
+region           = "us-central1"
+environment      = "production"
+container_image  = "gcr.io/your-gcp-project-id/ticket-bot:latest"
+jira_project_key = "OSDP"
+ai_provider      = "claude"
+min_instances    = 0
+max_instances    = 10
+allow_public_access = false

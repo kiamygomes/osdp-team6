@@ -1,48 +1,110 @@
-site_name: Mail Client Project
-site_description: "A professional-grade template for a modern Python project."
+site_name: OSDP Jira Service
+site_description: "Production-ready ticketing microservice with OAuth 2.0, enterprise reliability features, and comprehensive testing."
+site_author: "OSDP Team"
+repo_url: https://github.com/your-org/osdp-jira-service
+edit_uri: edit/main/docs/
 
 theme:
   name: material
   palette:
     # Light mode
     - scheme: default
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/weather-sunny
         name: Switch to dark mode
     # Dark mode
     - scheme: slate
+      primary: indigo
+      accent: indigo
       toggle:
         icon: material/weather-night
         name: Switch to light mode
   features:
     - navigation.tabs
+    - navigation.tabs.sticky
+    - navigation.sections
+    - navigation.expand
+    - navigation.top
+    - navigation.tracking
+    - search.suggest
+    - search.highlight
     - content.code.copy
+    - content.code.annotate
+    - toc.follow
+  icon:
+    repo: fontawesome/brands/github
 
 nav:
-  - 'Overview': 'index.md'
-  - 'Architecture': 'component.md'
-  - 'API Reference':
-    - 'Message Protocol': 'api/message.md'
-    - 'Mail Client API': 'api/mail_client_api.md'
-    - 'Gmail Client Implementation': 'api/gmail_client_impl.md'
-    - 'Gmail Message Implementation': 'api/gmail_message_impl.md'
+  - Home: 'index.md'
+  - Components: 'component.md'
+  - Testing: 'testing.md'
+  - CI/CD: 'circleci-setup.md'
+  
+  - API Reference:
+    - 'ticket_api': 'api/ticket_api.md'
+    - 'ticket_impl': 'api/ticket_impl.md'
+    - 'ticket_service': 'api/ticket_service.md'
+    - 'ticket_client_generated': 'api/ticket_client_generated.md'
+    - 'ticket_client_adapter': 'api/ticket_client_adapter.md'
 
 markdown_extensions:
   - pymdownx.highlight:
       anchor_linenums: true
-  - pymdownx.superfences
+      line_spans: __span
+      pygments_lang_class: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.inlinehilite
+  - pymdownx.snippets
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.details
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+  - admonition
+  - attr_list
+  - md_in_html
+  - tables
+  - toc:
+      permalink: true
+      toc_depth: 3
 
 plugins:
+  - search:
+      lang: en
   - mkdocstrings:
       handlers:
         python:
+          paths:
+            - src/ticket_api/src
+            - src/ticket_impl/src
+            - src/ticket_service/src
+            - src/ticket_client_generated
+            - src/ticket_client_adapter/src
           options:
-            # This helps mkdocstrings find packages in the src directory
-            search_paths: 
-              - src/message/src
-              - src/mail_client_api/src
-              - src/gmail_client_impl/src
-              - src/gmail_message_impl/src
             show_source: false
             docstring_section_style: spacy
             members_order: source
+            show_root_heading: true
+            show_root_full_path: false
+            show_symbol_type_heading: true
+            show_symbol_type_toc: true
+            signature_crossrefs: true
+
+extra:
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/your-org/osdp-jira-service
+  version:
+    provider: mike
+  
+extra_css:
+  - stylesheets/extra.css
+
+copyright: Copyright &copy; 2025 OSDP Team
